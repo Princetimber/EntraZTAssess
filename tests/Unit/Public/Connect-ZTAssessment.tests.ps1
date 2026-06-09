@@ -3,9 +3,17 @@
 BeforeAll {
     $script:dscModuleName = 'Get-EntraZTAssess'
 
-    Import-Module -Name $script:dscModuleName
-
-    Mock -ModuleName $script:dscModuleName -CommandName Write-ToLog -MockWith { }
+    <#
+        Prefer an installed or built module; fall back to the source manifest
+        so bare Invoke-Pester works without a prior build or PSModulePath
+        registration.
+    #>
+    if (Get-Module -ListAvailable -Name $script:dscModuleName -ErrorAction SilentlyContinue) {
+        Import-Module -Name $script:dscModuleName -Force
+    }
+    else {
+        Import-Module -Name (Join-Path $PSScriptRoot '../../../source/Get-EntraZTAssess.psd1') -Force
+    }
 }
 
 AfterAll {
