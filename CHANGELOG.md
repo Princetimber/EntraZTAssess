@@ -7,28 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Clear-LogFile private function — clears the active log file with optional
-  timestamped archive backup before clearing. ConfirmImpact=High always prompts
-  unless -Force or -Confirm:$false is passed.
+- Phase 0 foundations for the Entra ID Security & Endpoint Zero Trust
+  Assessment toolkit:
+  - Classes: ZTAssessFinding (standard finding object with validation),
+    ZTAssessPlatformProfile (per-platform device assessment profile), and
+    ZTAssessRunManifest (evidence-chain run manifest).
+  - Settings/settings.psd1 — engagement thresholds, Graph retry behaviour,
+    redaction denylist, maturity bands, domain weights, and remediation SLAs.
+  - Settings/permissions.psd1 — assessment module catalogue mapping each
+    module to its least-privilege, read-only Microsoft Graph scopes.
+  - Public: Connect-ZTAssessment (delegated, device code, and app-only
+    certificate authentication with least-privilege scope computation and
+    granted-scope validation), Disconnect-ZTAssessment,
+    Get-ZTAssessModuleCatalog, Get-ZTAssessRequiredPermission, and
+    New-ZTAssessEngagement (engagement folder and settings scaffolding).
+  - Private: Invoke-ZTAssessGraphRequest (GET-only Graph helper with
+    @odata.nextLink paging, 429 Retry-After handling, and exponential
+    backoff), Get-ZTAssessConfiguration (cached configuration loader),
+    Protect-ZTAssessData (recursive snapshot redaction),
+    New-ZTAssessRunManifest, Save-ZTAssessRunManifest, Save-ZTAssessSnapshot,
+    Get-ZTAssessHttpStatusCode, Get-ZTAssessRetryDelay, and mockable
+    wrappers for the Microsoft Graph SDK (Connect/Disconnect/Get-MgContext/
+    Invoke-MgGraphRequest) and Start-Sleep.
+  - tests/QA/ReadOnly.tests.ps1 — static QA gate enforcing the read-only
+    guarantee (no Graph calls outside the GET-only wrapper, no write HTTP
+    methods, no Invoke-Expression, no hard-coded secrets, and no write
+    scopes in the permissions catalogue).
+  - Unit tests for all new public and private functions and classes.
 - Get-LogFilePath private function — returns the current module-scoped log file
   path ($script:LogFile) for inspection or use in external scripts.
-- Get-LogFileSize private function — returns the current log file size in bytes;
-  returns 0 if the log file does not yet exist.
 - Invoke-LogRotation private function — rotates log files by shifting numbered
   backups up (log.4 removed, log.3 → log.4, …, log → log.1). Called inside the
   Write-ToLog mutex; not intended for direct use.
 - Set-LogFilePath private function — sets the module-scoped log file path with
   absolute-path validation; -Force creates the destination directory on demand.
   Also updates $Global:LogFile for backward compatibility.
-- Write-ErrorLog private function — convenience wrapper around Write-ToLog for
-  ErrorRecord objects. Logs the main message at ERROR level; exception type,
-  category, location, and inner exception at DEBUG. -IncludeStackTrace appends
-  the PowerShell script stack trace.
 
 ### Changed
 
+- Renamed the logger mutex and default log file prefix from the inherited
+  Invoke-ADDSDomainController naming to Get-EntraZTAssess.
 - Rebuilt Write-ToLog as a production-grade, thread-safe logging framework:
-  - Named mutex (Global\Invoke-ADDSDomainControllerLog) prevents concurrent write
+  - Named mutex (Global\Get-EntraZTAssessLog) prevents concurrent write
     corruption across threads and runspaces.
   - Auto-rotates at 10 MB, keeping up to 5 numbered backup files.
   - Redacts passwords, tokens, keys, and secrets in key=value, JSON, and XML/HTML
@@ -46,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Unused private functions and their tests: Clear-LogFile, Get-LogFileSize,
+  and Write-ErrorLog (Write-ToLog -ErrorRecord already covers error logging).
 - Windows PowerShell 5.1 test job from azure-pipelines.yml (contradicts PS 7.0
   requirement in #Requires).
 - .github/instructions/ directory and tests/tests.instructions.md.

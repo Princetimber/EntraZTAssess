@@ -18,6 +18,15 @@ BeforeDiscovery {
     $script:mut = Get-Module -Name $script:moduleName -ListAvailable |
         Select-Object -First 1 |
             Import-Module -Force -ErrorAction Stop -PassThru
+
+    <#
+        Fall back to the source manifest so bare Invoke-Pester works without
+        a prior build or PSModulePath registration.
+    #>
+    if (-not $script:mut)
+    {
+        $script:mut = Import-Module -Name (Join-Path $projectPath 'source' "$script:moduleName.psd1") -Force -ErrorAction Stop -PassThru
+    }
 }
 
 BeforeAll {
@@ -40,6 +49,20 @@ BeforeAll {
     }
 
     $script:moduleName = $ProjectName
+
+    <#
+        Resolve an import target that works both for an installed/built module
+        (import by name) and for a source-only checkout (import by manifest
+        path), so bare Invoke-Pester works without a prior build.
+    #>
+    $script:moduleImportTarget = if (Get-Module -Name $script:moduleName -ListAvailable)
+    {
+        $script:moduleName
+    }
+    else
+    {
+        Join-Path $projectPath 'source' "$script:moduleName.psd1"
+    }
 
     $script:sourcePath = (
         Get-ChildItem -Path "$projectPath/*/*.psd1" |
@@ -102,7 +125,7 @@ Describe 'Changelog Management' -Tag 'Changelog' {
 
 Describe 'General module control' -Tags 'FunctionalQuality' {
     It 'Should import without errors' {
-        { Import-Module -Name $script:moduleName -Force -ErrorAction Stop } | Should -Not -Throw
+        { Import-Module -Name $script:moduleImportTarget -Force -ErrorAction Stop } | Should -Not -Throw
 
         Get-Module -Name $script:moduleName | Should -Not -BeNullOrEmpty
     }
@@ -115,8 +138,15 @@ Describe 'General module control' -Tags 'FunctionalQuality' {
 }
 
 BeforeDiscovery {
-    # Must use the imported module to build test cases.
-    $allModuleFunctions = & $script:mut { Get-Command -Module $args[0] -CommandType Function } $script:moduleName
+    <#
+        Build test cases from the module's EXPORTED functions only. Private
+        helper functions are deliberately excluded: the project convention
+        (see CLAUDE.md) requires comment-based help and per-function test
+        files for public functions, while private functions use concise
+        comment headers and are covered by their callers' unit tests or
+        their own test files where behaviour warrants it.
+    #>
+    $allModuleFunctions = Get-Command -Module $script:moduleName -CommandType Function
 
     # Build test cases.
     $testCases = @()
