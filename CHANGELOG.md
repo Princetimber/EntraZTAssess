@@ -1,4 +1,4 @@
-# Changelog for {{MODULE_NAME}}
+# Changelog for Get-EntraZTAssess
 
 The format is based on and uses the types of changes according to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -7,9 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Export-Greeting public function demonstrating correct ShouldProcess usage for
-  state-changing operations (file writes with -WhatIf, -Confirm, -Force, -Append,
-  -PassThru support).
 - Clear-LogFile private function — clears the active log file with optional
   timestamped archive backup before clearing. ConfirmImpact=High always prompts
   unless -Force or -Confirm:$false is passed.
@@ -41,12 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Wrapper functions (Test-PathWrapper, Add-ContentWrapper, Get-ItemWrapper,
     New-ItemDirectoryWrapper) isolate I/O calls for Pester mockability.
   - Mutex is disposed on PowerShell exit via Register-EngineEvent.
-- Removed ShouldProcess from Get-Greeting — read-only functions should not use
-  SupportsShouldProcess. Removed Force parameter accordingly.
-- Replaced string-throw error handling in Get-Greeting with proper ErrorRecord
-  construction via ThrowTerminatingError.
-- Replaced AllowEmptyString with ValidateNotNullOrEmpty and ValidatePattern on
-  Format-GreetingMessage Name parameter.
 - Pinned dependency versions in RequiredModules.psd1 using version ranges instead
   of 'latest'.
 - Consolidated AI agent documentation: removed .github/instructions/ directory
