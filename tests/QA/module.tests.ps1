@@ -115,8 +115,15 @@ Describe 'General module control' -Tags 'FunctionalQuality' {
 }
 
 BeforeDiscovery {
-    # Must use the imported module to build test cases.
-    $allModuleFunctions = & $script:mut { Get-Command -Module $args[0] -CommandType Function } $script:moduleName
+    <#
+        Build test cases from the module's EXPORTED functions only. Private
+        helper functions are deliberately excluded: the project convention
+        (see CLAUDE.md) requires comment-based help and per-function test
+        files for public functions, while private functions use concise
+        comment headers and are covered by their callers' unit tests or
+        their own test files where behaviour warrants it.
+    #>
+    $allModuleFunctions = Get-Command -Module $script:moduleName -CommandType Function
 
     # Build test cases.
     $testCases = @()

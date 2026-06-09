@@ -8,6 +8,17 @@
 #>
 
 
+   # dot-Source Classes first (functions depend on these types)
+ $ClassFiles = Get-ChildItem -Path $PSScriptRoot/Classes/*.ps1 -Recurse -ErrorAction SilentlyContinue | Sort-Object -Property Name
+ foreach ($classFile in $ClassFiles) {
+     try {
+        . $classFile.FullName
+     }
+     catch {
+        Write-Warning "Failed to dot-source class file: $($classFile.FullName). Error: $($_.Exception.Message)"
+     }
+ }
+
    # dot-Source Private functions
  $PrivateFunctions = Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -Recurse
  foreach ($function in $PrivateFunctions) {
