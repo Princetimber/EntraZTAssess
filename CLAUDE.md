@@ -158,6 +158,25 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
    - Update help/examples when behavior changes
    - Document required Graph scopes/permissions and any operational caveats
 
+## Documentation Maintenance (mandatory)
+
+Every change to this module MUST keep the documentation in sync, in the same
+branch and commit series as the change itself:
+
+1. **CHANGELOG.md** — add an entry under `Unreleased` (the QA suite enforces this).
+2. **CLAUDE.md** (this file) — update the build status, module structure,
+   architecture rules, workflow examples, and assumptions whenever they change.
+3. **AGENTS.md** — keep the universal agent context (boundaries, security rules,
+   testing patterns) consistent with CLAUDE.md.
+4. **.github/copilot-instructions.md** — keep the Copilot summary consistent.
+5. **README.md** — update user-facing usage and capability descriptions when
+   exported commands or behaviour change.
+
+Record new design assumptions where they are made (for example licence
+detection defaults, beta endpoint usage, threshold defaults) rather than
+leaving them implicit in code. A change is not complete until the .md files
+describe the repository as it now is.
+
 ## Prohibited Actions
 
 - Do not add or request broad Graph scopes by default

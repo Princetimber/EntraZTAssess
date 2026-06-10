@@ -48,3 +48,5 @@ QA tests validate exported-function help, ScriptAnalyzer, changelog quality, mat
 ## Documentation Discipline
 
 Keep docs repo-specific and concise. Remove old template examples and generic Sampler-module setup guidance unless they are directly relevant to this repository.
+
+**Mandatory:** every change must keep the documentation in sync in the same branch and commit series: `CHANGELOG.md` (QA-enforced `Unreleased` entry), `CLAUDE.md` (build status, architecture rules, assumptions), `AGENTS.md` (boundaries, security rules, testing patterns), this file, and `README.md` when exported commands or behaviour change. Record new design assumptions where they are made rather than leaving them implicit in code. A change is not complete until the .md files describe the repository as it now is.

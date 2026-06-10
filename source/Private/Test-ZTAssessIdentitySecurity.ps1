@@ -84,8 +84,12 @@ function Test-ZTAssessIdentitySecurity {
         $findings.Add((New-ZTAssessFinding -CheckId 'ID-002' -Status NotAssessed -NotAssessedReason 'Requires both userRegistrationDetails and role assignment snapshots (run the PrivilegedAccess module alongside Identity).'))
     }
     else {
+        # By-id lookups skip malformed records with null or blank IDs.
         $registrationById = @{}
         foreach ($record in $regDetails) {
+            if ($null -eq $record -or [string]::IsNullOrWhiteSpace([string]$record.id)) {
+                continue
+            }
             $registrationById[$record.id] = $record
         }
 
@@ -220,8 +224,12 @@ function Test-ZTAssessIdentitySecurity {
         $findings.Add((New-ZTAssessFinding -CheckId 'ID-009' -Status NotAssessed -NotAssessedReason 'Requires users, role assignment, and Conditional Access snapshots (run Identity, ConditionalAccess, and PrivilegedAccess together).'))
     }
     else {
+        # By-id lookups skip malformed records with null or blank IDs.
         $usersById = @{}
         foreach ($user in $users) {
+            if ($null -eq $user -or [string]::IsNullOrWhiteSpace([string]$user.id)) {
+                continue
+            }
             $usersById[$user.id] = $user
         }
 

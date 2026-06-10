@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Documentation maintenance rule in CLAUDE.md, AGENTS.md, and
+  .github/copilot-instructions.md: every change must update the .md
+  documentation set (changelog, agent files, README) in the same branch and
+  commit series, and record new design assumptions where they are made.
+- Malformed-record guards in the identity and privileged access assessors:
+  by-id lookups now skip records with null or blank IDs per the
+  graceful-degradation architecture rule, matching the existing guards in
+  the privileged access lookup tables.
 - Phase 2 endpoint core for the Entra ID Security & Endpoint Zero Trust
   Assessment toolkit:
   - 32 new declarative checks: DeviceTrust DT-001..004, EndpointManagement

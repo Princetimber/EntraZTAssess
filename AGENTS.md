@@ -77,3 +77,22 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - Preserve local artifact writes under engagement/output paths; do not introduce tenant mutation or hidden network calls.
 - Generated/build artifacts under `output/` should not be hand-edited.
 - Keep docs concise and repo-specific. Remove template examples like `Get-Greeting` rather than preserving generic guidance.
+
+## Documentation Maintenance (mandatory)
+
+Every change MUST keep the documentation in sync, in the same branch and
+commit series as the change itself:
+
+1. `CHANGELOG.md` — add an `Unreleased` entry (QA-enforced).
+2. `CLAUDE.md` — build status, module structure, architecture rules,
+   workflow examples, and assumptions.
+3. `AGENTS.md` (this file) — module boundaries, security rules, testing
+   patterns.
+4. `.github/copilot-instructions.md` — the Copilot summary.
+5. `README.md` — user-facing usage when exported commands or behaviour
+   change.
+
+Record new design assumptions (licence detection defaults, beta endpoint
+usage, threshold defaults, and similar) where they are made rather than
+leaving them implicit in code. A change is not complete until the .md files
+describe the repository as it now is.
