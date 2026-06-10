@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 4 reporting MVP:
+  - Public `Export-ZTAssessReport` command for completed local run folders.
+  - Deterministic local report artifacts under `<RunPath>/Reports`:
+    `ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`,
+    `RiskRegister.csv`, and `RemediationRoadmap.json`.
+  - Risk-register and remediation-roadmap generation for Fail/Partial
+    findings only, using `settings.psd1` remediation SLAs (Critical 7 days,
+    High 30, Medium 90, Low 180) and deterministic CSV array flattening.
+  - Report helper coverage for optional run manifest, platform profile, and
+    device classification artifacts; missing required findings/scores files;
+    HTML encoding; NotAssessed appendix treatment; and `-WhatIf` no-write
+    behavior.
 - Orchestrator integration tests for the Phase 3 modules: collection mocks
   for the governance, application, hybrid, and monitoring collectors, a
   25-finding run across the four new domains, and a full 92-finding run

@@ -20,6 +20,7 @@ The module manifest explicitly exports these functions:
 
 - `Connect-ZTAssessment`
 - `Disconnect-ZTAssessment`
+- `Export-ZTAssessReport`
 - `Get-ZTAssessFinding`
 - `Get-ZTAssessModuleCatalog`
 - `Get-ZTAssessRequiredPermission`
@@ -35,10 +36,20 @@ $engagement = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' -Reference 'ENG
 $run = Invoke-ZTAssessment -EngagementPath $engagement.EngagementPath
 Get-ZTAssessScore -RunPath $run.RunPath
 Get-ZTAssessFinding -RunPath $run.RunPath -Severity High
+Export-ZTAssessReport -RunPath $run.RunPath
 Disconnect-ZTAssessment
 ```
 
 `New-ZTAssessEngagement` creates the local engagement folder scaffold. `Invoke-ZTAssessment` orchestrates collection, assessment, scoring, and local artifact writes under that engagement path.
+
+`Export-ZTAssessReport` is the Phase 4 reporting MVP. It reads a completed
+run folder from disk and writes local-only artifacts under `<RunPath>/Reports`:
+`ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`,
+`RiskRegister.csv`, and `RemediationRoadmap.json`. It does not connect to
+Graph, require an active Graph session, or mutate tenant configuration. The
+risk register and remediation roadmap include only `Fail` and `Partial`
+findings; `NotAssessed` findings remain visible in the technical HTML report.
+PDF, Excel workbook, and dashboard outputs are not implemented in this MVP.
 
 ## Build And Test
 

@@ -2,26 +2,51 @@ TOPIC
     about_Get-EntraZTAssess
 
 SHORT DESCRIPTION
-    Orchestrates the assessment of EntraID tenant and generates a professional report
+    Read-only Microsoft Entra ID and Intune Zero Trust assessment toolkit.
 
 LONG DESCRIPTION
-    The Get-EntraZTAssess module provides PowerShell automation capabilities
-    following production-grade standards including:
+    The Get-EntraZTAssess module collects Microsoft Entra ID and Intune
+    configuration through read-only Microsoft Graph scopes, persists redacted
+    evidence to a local engagement run folder, evaluates the tenant against a
+    declarative Zero Trust check library, scores maturity and risk separately,
+    and exports local consultant reporting artifacts.
 
-    - Advanced function patterns with CmdletBinding
-    - SupportsShouldProcess on state-changing operations only
-    - Comprehensive input validation
-    - Logging via native PowerShell streams (Write-Verbose, Write-Warning, etc.)
-    - Full Pester v5+ test coverage
+    The Phase 4 reporting MVP is disk-only. Export-ZTAssessReport reads a
+    completed run folder and writes these files beneath <RunPath>/Reports:
+    ExecutiveReport.html, TechnicalReport.html, RiskRegister.json,
+    RiskRegister.csv, and RemediationRoadmap.json. The report exporter does not
+    connect to Microsoft Graph and does not implement PDF, Excel workbook, or
+    dashboard outputs in this MVP.
 
 COMMANDS
-    # Add your module's exported functions here.
+    Connect-ZTAssessment
+    Disconnect-ZTAssessment
+    Export-ZTAssessReport
+    Get-ZTAssessFinding
+    Get-ZTAssessModuleCatalog
+    Get-ZTAssessRequiredPermission
+    Get-ZTAssessScore
+    Invoke-ZTAssessment
+    New-ZTAssessEngagement
 
 EXAMPLES
-    # Add usage examples for your module's functions here.
+    Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices
+    $engagement = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' -Reference 'ENG-2026-042' -OutputPath ~/Assessments
+    $run = Invoke-ZTAssessment -EngagementPath $engagement.EngagementPath
+    Export-ZTAssessReport -RunPath $run.RunPath
+
+    Get-ZTAssessFinding -RunPath $run.RunPath -Status Fail -Severity Critical,High
+    Get-ZTAssessScore -RunPath $run.RunPath
 
 NOTES
-    This module requires PowerShell 7.0 or later.
+    This module requires PowerShell 7.0 or later. Graph-facing collection is
+    read-only; report export is local filesystem only. Risk-register and
+    remediation-roadmap rows include Fail and Partial findings only, with SLA
+    values sourced from source/Settings/settings.psd1 RemediationSlaDays.
 
 SEE ALSO
-    Write-ToLog
+    Connect-ZTAssessment
+    Invoke-ZTAssessment
+    Export-ZTAssessReport
+    Get-ZTAssessFinding
+    Get-ZTAssessScore
