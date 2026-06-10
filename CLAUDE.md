@@ -4,15 +4,20 @@ Project context for Claude Code and AI agents.
 
 ## Project Overview
 
-PowerShell module template built with the **Sampler** framework. This template serves as a starting point for creating enterprise-grade PowerShell modules with:
+**Get-EntraZTAssess** — the *Entra ID Security & Endpoint Zero Trust Assessment* toolkit. A read-only, consultancy-grade PowerShell module (built with the **Sampler** framework) that collects Microsoft Entra ID and Intune configuration via Microsoft Graph, assesses it against a declarative check library, scores maturity and risk, and persists evidence for report generation.
 
-- **Standardized structure** following Sampler conventions
-- **Comprehensive testing** with Pester v5+
-- **CI/CD integration** for GitHub Actions and Azure Pipelines
-- **Code quality enforcement** via ScriptAnalyzer and code coverage
-- **Complete documentation** with instruction files for AI agents
+Build status: **Phase 2 complete.** Implemented modules: Identity, ConditionalAccess, PrivilegedAccess, Devices (67 checks). Remaining roadmap: Phase 3 (IdentityGovernance, Applications, HybridIdentity, Monitoring), Phase 4 (reporting suite: executive PDF, Excel workbook, risk register, dashboards), Phase 5 (hardening/signing/runbook). The authoritative build specification is the *Master Build Specification* document kept with the engagement records.
 
-After cloning, run `Initialize-Template.ps1` to customize the template with your module name, author, and description.
+### Consultant workflow
+
+```powershell
+Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices
+$eng = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' -Reference 'ENG-2026-042' -OutputPath ~/Assessments
+$run = Invoke-ZTAssessment -EngagementPath $eng.EngagementPath
+Get-ZTAssessScore -RunPath $run.RunPath
+Get-ZTAssessFinding -RunPath $run.RunPath -Status Fail | Format-Table CheckId, Severity, Title
+Disconnect-ZTAssessment
+```
 
 ## PowerShell Development Standards
 
@@ -28,7 +33,8 @@ After cloning, run `Initialize-Template.ps1` to customize the template with your
 
 ## Testing
 
-- Always run the full test suite (`Invoke-Pester`) after any code changes, not just the tests for modified files.
+- Always run the full project test suite (`Invoke-Pester -Path tests`) after any code changes, not just the tests for modified files.
+- Use project-scoped Pester locally once dependencies have been restored; bare `Invoke-Pester` can discover third-party tests under generated `output/RequiredModules`.
 - When tests fail, fix and re-run iteratively until all pass before committing.
 - Mock Windows-only cmdlets (e.g., `Get-Service`, `Get-EventLog`) when writing tests that need to run cross-platform.
 
@@ -37,21 +43,32 @@ After cloning, run `Initialize-Template.ps1` to customize the template with your
 ```
 Get-EntraZTAssess/
 ├── source/
-│   ├── Get-EntraZTAssess.psd1      # Module manifest
-│   ├── Get-EntraZTAssess.psm1      # Dot-sources Public/ and Private/
-│   ├── Public/                   # Exported functions (one per file)
-│   ├── Private/                  # Internal helper functions (one per file)
+│   ├── Get-EntraZTAssess.psd1    # Module manifest (FunctionsToExport kept explicit)
+│   ├── Get-EntraZTAssess.psm1    # Dev loader: dot-sources Classes/, Private/, Public/
+│   ├── Classes/                  # ZTAssessFinding, ZTAssessPlatformProfile, ZTAssessRunManifest
+│   ├── Checks/<Domain>/<Id>.psd1 # Declarative check library (67 checks across 7 domains)
+│   ├── Settings/                 # settings.psd1 (thresholds/weights), permissions.psd1 (module→scope map)
+│   ├── Public/                   # Exported cmdlets (one per file, ZTAssess noun prefix)
+│   ├── Private/                  # Collectors (Invoke-ZTAssess*Collection), assessors (Test-ZTAssess*),
+│   │                             # scoring (Measure-ZTAssessScore), Graph helpers, mockable SDK wrappers
 │   └── en-US/                    # Help files
 ├── tests/
-│   ├── QA/                       # ScriptAnalyzer, changelog, help quality
-│   │   └── module.tests.ps1
-│   └── Unit/
-│       ├── Public/               # Tests mirror source/Public/
-│       └── Private/              # Tests mirror source/Private/
+│   ├── QA/                       # module.tests.ps1 (exported functions only) + ReadOnly.tests.ps1 gate
+│   ├── Fixtures/FixtureHelper.ps1 # Well-configured tenant fixture (all-Pass baseline)
+│   └── Unit/                     # Public/, Private/, Classes/ mirror source
 ├── build.ps1
-├── build.yaml
-└── RequiredModules.psd1
+├── build.yaml                    # CopyPaths must include Settings and Checks
+└── RequiredModules.psd1          # NuGet version ranges (requires ModuleFast, enabled)
 ```
+
+### Architecture rules (do not break these)
+
+- **Layering is strict**: collectors only fetch and persist redacted JSON snapshots to `<Run>/Raw/`; assessors are pure functions over snapshots on disk (no network); scoring consumes findings only. This enables offline re-analysis and fixture-based testing.
+- **Read-only guarantee**: all Graph traffic flows through `Invoke-ZTAssessGraphRequest` → `Invoke-MgGraphRequestWrapper`, which only permits GET (`ValidateSet`). `tests/QA/ReadOnly.tests.ps1` statically enforces this plus no write scopes in the permission catalogue and no `Invoke-Expression`. Never bypass the wrapper.
+- **Checks are declarative**: one PSD1 per check under `source/Checks/<Domain>/`. Adding a check = new PSD1 + logic in the domain assessor + fixture coverage. Findings are created only via `New-ZTAssessFinding`, which merges check metadata; `NotAssessed` always requires a reason.
+- **Graceful degradation**: missing permission/licence/snapshot ⇒ `NotAssessed` finding with reason, never an error. Collector failures warn and continue. Snapshot by-id lookups must skip malformed records with null or blank IDs rather than throwing.
+- **Graph SDK calls are wrapped** (`Connect-MgGraphWrapper`, `Get-MgContextWrapper`, etc.) so unit tests never need a live tenant or the SDK installed.
+- **Beta endpoints** are isolated in collectors with a `(beta)` comment and must degrade to `NotAssessed` if Microsoft changes them.
 
 ## Common Commands
 
@@ -64,8 +81,8 @@ Get-EntraZTAssess/
 
 # Run tests
 ./build.ps1 -tasks test
-# or directly:
-Invoke-Pester
+# or directly against project tests:
+Invoke-Pester -Path tests
 
 # Lint
 Invoke-ScriptAnalyzer -Path source/ -Recurse
@@ -134,7 +151,7 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 4. **Validate**
    - Run lint and tests:
      - `Invoke-ScriptAnalyzer -Path source/ -Recurse`
-     - `Invoke-Pester`
+     - `Invoke-Pester -Path tests`
    - If integration tests exist, they must be opt-in and clearly labeled
 
 5. **Document**

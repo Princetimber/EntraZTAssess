@@ -1,277 +1,116 @@
 # Get-EntraZTAssess
 
-A production-ready PowerShell module template built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. This template provides standardized patterns, comprehensive testing, and CI/CD integration to accelerate your PowerShell module development.
+Get-EntraZTAssess is a PowerShell 7+ Sampler module for read-only Microsoft Entra ID and Intune Zero Trust assessment. It connects to Microsoft Graph, collects tenant configuration snapshots, evaluates them against a declarative check library, scores maturity and risk, and writes local evidence artifacts for consultant reporting.
 
-## Features
+Treat this repository as a security assessment toolkit, not a generic Sampler template. Some older prose may still look template-derived; executable sources, `CLAUDE.md`, and `AGENTS.md` are the preferred sources of truth.
 
-- **PowerShell 7+ Standards** - Advanced functions, proper ShouldProcess usage, comprehensive validation
-- **Sampler Framework** - Industry-standard build system with GitVersion semantic versioning
-- **Comprehensive Testing** - Pester v5+ with 85% code coverage threshold, QA tests for ScriptAnalyzer compliance
-- **CI/CD Integration** - Pre-configured GitHub Actions and Azure Pipelines workflows
-- **Example Functions** - Working examples demonstrating correct patterns (read-only vs state-changing)
-- **Quick Setup** - Interactive `Initialize-Template.ps1` script for rapid customization
+## What It Assesses
 
-## Quick Start
+The assessment library is data-driven:
 
-### 1. Create Your Module from Template
+- `source/Checks/**/*.psd1` defines checks by assessment area, including identity security, conditional access, privileged access, device trust, endpoint management, BYOD governance, and corporate device governance.
+- `source/Settings/settings.psd1` defines thresholds, weights, retry behavior, and redaction settings.
+- `source/Settings/permissions.psd1` defines module metadata and read-only Microsoft Graph scopes.
+- The `Core` collection is always included; other areas are selected from check and permission metadata.
+
+## Public Commands
+
+The module manifest explicitly exports these functions:
+
+- `Connect-ZTAssessment`
+- `Disconnect-ZTAssessment`
+- `Get-ZTAssessFinding`
+- `Get-ZTAssessModuleCatalog`
+- `Get-ZTAssessRequiredPermission`
+- `Get-ZTAssessScore`
+- `Invoke-ZTAssessment`
+- `New-ZTAssessEngagement`
+
+Typical consultant flow:
 
 ```powershell
-# Clone or download this repository
-git clone <your-template-repo-url> MyNewModule
-cd MyNewModule
-
-# Run the initialization script
-./Initialize-Template.ps1
+Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices
+$engagement = New-ZTAssessEngagement -Name 'Contoso-ZT'
+$result = Invoke-ZTAssessment -EngagementPath $engagement.Path -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices
+Get-ZTAssessScore -AssessmentResult $result
+Get-ZTAssessFinding -AssessmentResult $result -Severity High
+Disconnect-ZTAssessment
 ```
 
-The init script will prompt you for:
-- **Module Name** (e.g., `Invoke-MyModule`) - validates approved Verb-Noun pattern
-- **Description** - what your module does
-- **Author** - your name
-- **Company** - your organization
-- **GUID** - auto-generated if not provided
+`New-ZTAssessEngagement` creates the local engagement folder scaffold. `Invoke-ZTAssessment` orchestrates collection, assessment, scoring, and local artifact writes under that engagement path.
 
-### 2. Build Your Module
+## Build And Test
 
 ```powershell
-# First build (resolves dependencies)
+# First build / dependency restore
 ./build.ps1 -ResolveDependency -tasks build
 
-# Subsequent builds
-./build.ps1 -tasks build
+# If dependency bootstrap fails, restore explicitly
+./build.ps1 -ResolveDependency -Tasks noop
 
-# Run tests
+# Normal development commands
+./build.ps1 -tasks build
 ./build.ps1 -tasks test
-
-# Lint
+Invoke-Pester -Path tests
 Invoke-ScriptAnalyzer -Path source/ -Recurse
+./build.ps1 -tasks pack
 ```
 
-### 3. Add Your Functions
+Dependency restore installs required modules into `output/RequiredModules` and uses ModuleFast/NuGet version-range resolution. The build uses Sampler and ModuleBuilder; build output under `output/` is generated and should not be hand-edited.
+
+`build.yaml` sets `CodeCoverageThreshold: 85` and copies `source/Checks`, `source/Settings`, and `source/en-US` into the built module.
+
+## Source Layout
+
+```text
+source/
+  Classes/                 DTOs and support classes
+  Public/                  exported commands, one public function per file
+  Private/                 collectors, assessors, scoring, Graph wrappers, logging
+  Checks/                  declarative assessment definitions
+  Settings/                thresholds, weights, permissions, scope metadata
+  en-US/                   external help
+  Get-EntraZTAssess.psm1   dev-time module loader
+  Get-EntraZTAssess.psd1   module manifest and explicit export list
+
+tests/
+  Fixtures/                shared Pester fixtures and helpers
+  Unit/                    public/private/class unit tests
+  QA/                      read-only, help, ScriptAnalyzer, changelog, export checks
+```
+
+The dev-time module entrypoint is `source/Get-EntraZTAssess.psm1`. Sampler/ModuleBuilder compiles the release module into `output/`.
+
+## Graph And Read-Only Guardrails
+
+This project is intentionally read-only against Microsoft Graph. Do not add Graph write operations, write scopes, hidden telemetry, or production side effects without explicit approval and matching documentation.
+
+Route Graph collection through the central wrappers:
+
+- `Invoke-ZTAssessGraphRequest`
+- `Invoke-MgGraphRequestWrapper`
+
+Those paths preserve paging, retry/backoff behavior, logging, and read-only enforcement. `tests/QA/ReadOnly.tests.ps1` checks for direct `Invoke-MgGraphRequest`, write HTTP verbs, `Invoke-Expression`, hardcoded secrets, and Graph write scopes.
+
+Use `Write-ToLog` for module logging. It handles mutex-protected file logging, rotation, redaction, and stream mapping.
+
+## Testing Notes
+
+Pester tests use v5 patterns and normally import `source/Get-EntraZTAssess.psd1`, so `Invoke-Pester -Path tests` works without a prior build. Prefer the project-scoped path once dependencies have been restored so generated tests under `output/RequiredModules` are not discovered. Unit tests mirror source under `tests/Unit/Public`, `tests/Unit/Private`, and `tests/Unit/Classes`.
+
+Use helpers from `tests/Fixtures/FixtureHelper.ps1`, especially `New-ZTAssessTestRun`, and use `TestDrive` for filesystem writes. Mock `Write-ToLog` in unit tests unless the logger itself is under test. Private tests use `InModuleScope` and wrapper helpers where needed for mockability.
+
+QA tests check exported-function help, ScriptAnalyzer, changelog quality, exported-function unit test coverage, and read-only security rules. `./build.ps1 -tasks test` includes the configured 85% coverage gate.
+
+## CI And Release
+
+- `.github/workflows/ci.yml` runs pack with dependency restore, test, and `Invoke-ScriptAnalyzer -Path source/ -Recurse -Settings PSGallery`.
+- `.github/workflows/release.yml` is tag-driven (`v*`) and publishes to PSGallery plus GitHub Releases.
+- `azure-pipelines.yml` runs pack/test across Linux, Windows PowerShell 7, and macOS.
+
+Release tasks exist but should only be run intentionally:
 
 ```powershell
-# Add a public function
-New-Item -Path source/Public/Get-MyData.ps1 -ItemType File
-
-# Add corresponding test
-New-Item -Path tests/Unit/Public/Get-MyData.tests.ps1 -ItemType File
-```
-
-## Directory Structure
-
-```
-Get-EntraZTAssess/
-├── .github/
-│   ├── copilot-instructions.md           # GitHub Copilot instructions
-│   └── workflows/
-│       ├── ci.yml                        # GitHub Actions CI (multi-platform)
-│       └── release.yml                   # GitHub Actions release to PSGallery
-├── .vscode/
-│   └── tasks.json                        # VS Code build/test tasks
-├── source/
-│   ├── Get-EntraZTAssess.psd1              # Module manifest
-│   ├── Get-EntraZTAssess.psm1              # Root module (dot-sources functions)
-│   ├── en-US/
-│   │   └── about_Get-EntraZTAssess.help.txt # About help file
-│   ├── Public/                           # Exported functions (one per file)
-│   └── Private/                          # Internal helpers (one per file)
-│       ├── Write-ToLog.ps1              # Thread-safe logger (core entry point)
-│       ├── Clear-Logfile.ps1            # Clears the active log (archive option)
-│       ├── Get-LogFilePath.ps1          # Returns current log file path
-│       ├── Get-LogFileSize.ps1          # Returns log file size in bytes
-│       ├── Invoke-LogRotation.ps1       # Rotates numbered log backups
-│       ├── Set-LogFilePath.ps1          # Sets the module-scoped log path
-│       └── Write-ErroLog.ps1            # ErrorRecord convenience wrapper
-├── tests/
-│   ├── QA/
-│   │   └── module.tests.ps1              # ScriptAnalyzer, changelog, help tests
-│   └── Unit/
-│       ├── Public/
-│       └── Private/
-│           ├── Write-ToLog.tests.ps1
-│           ├── Clear-LogFile.tests.ps1
-│           ├── Get-LogFilePath.tests.ps1
-│           ├── Get-LogFileSize.tests.ps1
-│           ├── Invoke-LogRotation.tests.ps1
-│           ├── Set-LogFilePath.tests.ps1
-│           └── Write-ErrorLog.tests.ps1
-├── azure-pipelines.yml                   # Azure Pipelines (multi-platform, PSGallery deploy)
-├── build.ps1                             # Sampler build bootstrap
-├── build.yaml                            # Sampler build configuration
-├── CHANGELOG.md                          # Keep a Changelog format
-├── CLAUDE.md                             # Claude Code context and standards
-├── Initialize-Template.ps1               # One-time setup script (removes itself)
-├── LICENSE                               # MIT License
-├── README.md                             # This file
-├── RequiredModules.psd1                  # Build dependencies (pinned version ranges)
-├── Resolve-Dependency.ps1                # Dependency resolver
-└── Resolve-Dependency.psd1               # Resolver configuration
-```
-
-## Patterns Demonstrated
-
-### Logging Framework (Private)
-
-Seven private functions form a production-grade, thread-safe logging system:
-
-| Function | Purpose |
-|----------|---------|
-| `Write-ToLog` | Core entry point. Writes timestamped entries to `$script:LogFile` under a named mutex. Supports INFO, DEBUG, WARN, ERROR, SUCCESS levels. Redacts sensitive values. ANSI colour console output with PSStyle fallback. |
-| `Clear-LogFile` | Clears the active log. `ConfirmImpact=High` — prompts unless `-Force`. `-Archive` copies a timestamped `.bak` before clearing. |
-| `Get-LogFilePath` | Returns the current module-scoped log file path for inspection or external use. |
-| `Get-LogFileSize` | Returns the log file size in bytes; returns `0` if the file does not yet exist. |
-| `Invoke-LogRotation` | Shifts numbered backups up (`.5` removed, `.4→.5`, …, current→`.1`). Called inside the `Write-ToLog` mutex — not for direct use. |
-| `Set-LogFilePath` | Sets `$script:LogFile` (and `$Global:LogFile` for backward compatibility) to an absolute path. `-Force` creates the directory. |
-| `Write-ErrorLog` | Convenience wrapper for `[ErrorRecord]` objects. Logs the message at ERROR; exception type, category, location, and inner exception at DEBUG. `-IncludeStackTrace` appends the PowerShell script stack trace. |
-
-**Key design choices:**
-- All file I/O calls go through thin wrapper functions (`Add-ContentWrapper`, `Test-PathWrapper`, etc.) so Pester can mock them without touching the filesystem.
-- Auto-rotation at 10 MB keeps up to 5 numbered backups.
-- Sensitive data (passwords, tokens, keys, secrets) is redacted in key=value, JSON, and XML formats before any write.
-
-## CI/CD Setup
-
-### GitHub Actions
-
-1. **CI Workflow** (`.github/workflows/ci.yml`)
-   - Triggers on: push to `main`, pull requests
-   - Platforms: Ubuntu, Windows, macOS
-   - Steps: Build -> Test -> ScriptAnalyzer -> Code Coverage
-
-2. **Release Workflow** (`.github/workflows/release.yml`)
-   - Triggers on: tags matching `v*`
-   - Steps: Build -> Test -> Publish to PSGallery -> Create GitHub Release
-
-**Required Secrets:**
-- `PSGALLERY_API_KEY` - Your PowerShell Gallery API key
-
-### Azure Pipelines
-
-The template includes `azure-pipelines.yml` with:
-- Multi-platform testing: Linux, Windows (PS7), macOS
-- Code coverage reporting
-- Deploy stage: publishes to PSGallery and GitHub Releases on `main` branch
-
-**Required Variables:**
-- `GalleryApiToken` - Your PowerShell Gallery API key
-- `GitHubToken` - GitHub PAT for releases
-
-## Publishing
-
-Two independent publish targets are available — run only the one you need:
-
-| Target | Build task | Destination |
-|--------|-----------|-------------|
-| PSGallery | `./build.ps1 -tasks publish_psgallery` | [PowerShell Gallery](https://www.powershellgallery.com) |
-| GitHub Release | `./build.ps1 -tasks publish_github` | GitHub Releases |
-
-### Step 1 — Obtain your credential
-
-**PSGallery:**
-1. Sign in at [powershellgallery.com](https://www.powershellgallery.com)
-2. Go to **Account → API Keys → Create**
-3. Scope it to your package name (or leave unscoped)
-4. Copy the key — it is shown only once
-
-**GitHub Release:**
-1. Go to [github.com/settings/tokens](https://github.com/settings/tokens)
-2. Generate a new token with `repo` scope
-3. Copy the token — it is shown only once
-
-### Step 2 — Store the credential locally (never commit it)
-
-The easiest way is to pass `-PublishTarget` to `Initialize-Template.ps1` — it creates `secrets.local.ps1` automatically with only the credential needed:
-
-```powershell
-# PSGallery only
-./Initialize-Template.ps1 -PublishTarget PSGallery
-
-# GitHub Release only
-./Initialize-Template.ps1 -PublishTarget GitHub
-```
-
-Alternatively, copy the example file and populate it manually:
-
-```powershell
-Copy-Item secrets.local.ps1.example secrets.local.ps1
-```
-
-`secrets.local.ps1` is listed in `.gitignore` and will never be committed. `secrets.local.ps1.example` is the safe, committed template.
-
-### Step 3 — Publish
-
-```powershell
-# Load your credential into the session
-. ./secrets.local.ps1
-
-# Build first to ensure output is up to date
-./build.ps1 -tasks build
-
-# Publish to PSGallery only
 ./build.ps1 -tasks publish_psgallery
-
-# OR publish a GitHub Release only
 ./build.ps1 -tasks publish_github
 ```
-
-### CI/CD publishing (automated)
-
-For automated pipelines, store credentials as protected secrets/variables — never in code:
-
-| Platform | Variable name | Target | Where to configure |
-|---|---|---|---|
-| GitHub Actions | `PSGALLERY_API_KEY` | PSGallery | Repo → Settings → Secrets and variables → Actions |
-| GitHub Actions | `GITHUB_TOKEN` | GitHub Release | Auto-provided by Actions runtime |
-| Azure Pipelines | `GalleryApiToken` | PSGallery | Pipeline → Edit → Variables (lock icon) |
-| Azure Pipelines | `GitHubToken` | GitHub Release | Pipeline → Edit → Variables (lock icon) |
-
-## Testing
-
-```powershell
-# Run all tests
-./build.ps1 -tasks test
-
-# Run tests directly with Pester
-Invoke-Pester
-
-# Run with coverage
-Invoke-Pester -CodeCoverage source/**/*.ps1
-```
-
-### Test Structure
-- **QA Tests** (`tests/QA/module.tests.ps1`) - ScriptAnalyzer compliance, changelog format, help documentation quality
-- **Unit Tests** (`tests/Unit/`) - Mirrors source structure with mocked dependencies
-
-## Placeholder Reference
-
-| Placeholder | Description | Example |
-|-------------|-------------|---------|
-| `Get-EntraZTAssess` | Module name | `Invoke-MyModule` |
-| `Orchestrates the assessment of EntraID tenant and generates a professional report` | Module description | `Storage management for Windows Server` |
-| `Olamide Olaleye` | Author name | `John Doe` |
-| `Fountview Enterprise Solutions` | Company/organization | `Contoso Ltd` |
-| `6a486feb-1bc5-4b42-b346-0de1d3937a1e` | Unique module GUID | `12345678-1234-1234-1234-123456789012` |
-
-Files named `Get-EntraZTAssess.*` will be renamed to your actual module name.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Acknowledgments
-
-Built with:
-- [Sampler](https://github.com/gaelcolas/Sampler) - PowerShell module build framework
-- [Pester](https://github.com/pester/Pester) - PowerShell testing framework
-- [PSScriptAnalyzer](https://github.com/PowerShell/PSScriptAnalyzer) - PowerShell linter
-- [GitVersion](https://gitversion.net/) - Semantic versioning
-
-## Contributing
-
-1. Fork the template repository
-2. Make your improvements
-3. Submit a pull request with a clear description
-
----
-
-**Ready to build your module?** Run `./Initialize-Template.ps1` to get started!

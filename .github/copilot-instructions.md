@@ -1,64 +1,50 @@
-# GitHub Copilot Repository Instructions
+# Copilot Instructions
 
-## Overview
+This repository is **Get-EntraZTAssess**, a PowerShell 7+ Sampler module for read-only Microsoft Entra ID and Intune Zero Trust assessment. Prefer executable sources, `AGENTS.md`, and `CLAUDE.md` over template-era prose.
 
-**{{MODULE_NAME}}** — a PowerShell module built with [Sampler](https://github.com/gaelcolas/Sampler).
-Target: PowerShell 7.0+. See `CLAUDE.md` for full project context and coding conventions.
+## Project Shape
 
-## Environment
+- Source root: `source/`.
+- Dev-time module entrypoint: `source/Get-EntraZTAssess.psm1`.
+- Module manifest: `source/Get-EntraZTAssess.psd1`, with an explicit `FunctionsToExport` list.
+- Generated build output: `output/`; do not hand-edit it.
+- Assessment checks are declarative data in `source/Checks/**/*.psd1`.
+- Thresholds, weights, retry behavior, redaction, module metadata, and read-only Graph scopes live under `source/Settings/`.
+- Public exported commands live in `source/Public/`; private collectors, assessors, scoring, Graph wrappers, and logging helpers live in `source/Private/`.
+- Private files may include small wrapper helpers when needed for Pester mockability.
 
-- PowerShell 7.x required
-- Pester v5+ for testing
-- PSScriptAnalyzer for linting
-- Sampler framework for builds
-
-## Build / Test / Lint
+## Commands
 
 ```powershell
-# First build (resolves dependencies)
 ./build.ps1 -ResolveDependency -tasks build
-
-# Subsequent builds
+./build.ps1 -ResolveDependency -Tasks noop
 ./build.ps1 -tasks build
-
-# Run tests
 ./build.ps1 -tasks test
-
-# Lint
+Invoke-Pester -Path tests
 Invoke-ScriptAnalyzer -Path source/ -Recurse
+./build.ps1 -tasks pack
 ```
 
-## Project Layout
+Run ScriptAnalyzer after changing `.ps1` or `.psm1` files. After code changes, run the full test suite, not only adjacent tests.
 
-```
-source/
-  Public/       # Exported functions (one per file)
-  Private/      # Internal helpers (one per file)
-  *.psm1        # Root module (dot-sources functions)
-  *.psd1        # Module manifest
-tests/
-  QA/           # ScriptAnalyzer, changelog, help quality
-  Unit/
-    Public/     # Tests mirror source/Public/
-    Private/    # Tests mirror source/Private/
-```
+## Read-Only Rules
 
-## Key Conventions
+This toolkit assesses tenant configuration. Do not add Microsoft Graph write operations, write scopes, background telemetry, or production side effects without explicit approval and matching documentation.
 
-- One function per file, filename matches function name
-- `[CmdletBinding()]` on all advanced functions
-- `SupportsShouldProcess` only on state-changing operations (Set-, New-, Remove-, Export-)
-- Read-only functions (Get-, Test-, Find-) must NOT use ShouldProcess
-- `ValidateNotNullOrEmpty`, `ValidateSet`, `ValidatePattern` for input validation
-- Comment-based help: `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`
-- Structured `try/catch/finally`, never swallow exceptions
-- Use native PowerShell streams for logging (Write-Verbose, Write-Warning, etc.)
-- Never use `Invoke-Expression` or hardcode secrets
+Route Graph reads through `Invoke-ZTAssessGraphRequest` / `Invoke-MgGraphRequestWrapper` so paging, retries, logging, and read-only guardrails stay consistent. Preserve the degraded-mode behavior in `Invoke-ZTAssessCoreCollection` when user collection without `signInActivity` is required.
 
-## Copilot Behavior
+Use `Write-ToLog` for module logging. It handles file logging, rotation, redaction, and stream mapping.
 
-- Follow existing patterns before creating new ones
-- Prioritize security and clarity over cleverness
-- Ask for clarification if requirements are ambiguous
-- Never assume production access or generate insecure defaults
-- See `CLAUDE.md` for detailed standards
+`tests/QA/ReadOnly.tests.ps1` enforces read-only constraints, including no direct `Invoke-MgGraphRequest`, no write HTTP verbs, no `Invoke-Expression`, no hardcoded secrets, and no Graph write scopes.
+
+## Testing Patterns
+
+Pester tests use v5 patterns and normally import `source/Get-EntraZTAssess.psd1`. Use `Invoke-Pester -Path tests` locally so generated dependency tests under `output/RequiredModules` are not discovered. Unit tests mirror source under `tests/Unit/Public`, `tests/Unit/Private`, and `tests/Unit/Classes`.
+
+Use `tests/Fixtures/FixtureHelper.ps1` helpers such as `New-ZTAssessTestRun`; use `TestDrive` for filesystem writes. Mock `Write-ToLog` in unit tests unless the logger itself is under test. Private tests use `InModuleScope` and wrapper helpers instead of reaching directly into external services.
+
+QA tests validate exported-function help, ScriptAnalyzer, changelog quality, matching unit tests for exported functions, and read-only security rules. The Sampler test task includes the 85% coverage gate from `build.yaml`.
+
+## Documentation Discipline
+
+Keep docs repo-specific and concise. Remove old template examples and generic Sampler-module setup guidance unless they are directly relevant to this repository.
