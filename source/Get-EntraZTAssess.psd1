@@ -70,6 +70,7 @@ RequiredModules = @()
 FunctionsToExport = @(
     'Connect-ZTAssessment'
     'Disconnect-ZTAssessment'
+    'Export-ZTAssessReport'
     'Get-ZTAssessFinding'
     'Get-ZTAssessModuleCatalog'
     'Get-ZTAssessRequiredPermission'
