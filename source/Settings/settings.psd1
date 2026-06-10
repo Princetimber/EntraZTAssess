@@ -28,6 +28,39 @@
         CorporateComplianceMinimumPercent   = 90    # CG-001 corporate device compliance floor
         ModernProvisioningMinimumPercent    = 50    # CG-003 Autopilot/ADE/AE corporate enrolment floor
         AutopilotCoverageMinimumPercent     = 50    # EM-005 Autopilot registration floor for corporate Windows
+        HybridSyncStaleFailHours            = 24    # HY-002 sync staleness failure threshold
+        HybridSyncStaleWarnHours            = 2     # HY-002 sync staleness warning threshold
+        ProvisioningErrorMaxPercent         = 1     # HY-003 sync error ceiling (% of synced users)
+        GuestCountReviewThreshold           = 10    # IG-002 guest population requiring access reviews
+    }
+
+    # Application permission risk tiers used by the application security
+    # assessment (AS-002/AS-003). Values are Microsoft Graph app role and
+    # delegated scope names that grant tenant-takeover-equivalent or
+    # broad-data access.
+    ApplicationSecurity = @{
+        Tier0AppRoleValues = @(
+            'RoleManagement.ReadWrite.Directory'
+            'Directory.ReadWrite.All'
+            'AppRoleAssignment.ReadWrite.All'
+            'Application.ReadWrite.All'
+            'Policy.ReadWrite.ConditionalAccess'
+        )
+        HighRiskAppRoleValues = @(
+            'Mail.ReadWrite'
+            'Mail.Send'
+            'Files.ReadWrite.All'
+            'Sites.FullControl.All'
+            'User.ReadWrite.All'
+            'GroupMember.ReadWrite.All'
+            'Exchange.ManageAsApp'
+        )
+        # Tenants whose first-party service principals are excluded from
+        # workload-identity risk listing.
+        MicrosoftAppOwnerTenantIds = @(
+            'f8cdef31-a31e-4b4a-93e4-5f571e91255a' # Microsoft Services
+            '72f988bf-86f1-41af-91ab-2d7cd011db47' # Microsoft
+        )
     }
 
     # Microsoft Graph request behaviour.

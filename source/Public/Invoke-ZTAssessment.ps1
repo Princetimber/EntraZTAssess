@@ -21,8 +21,9 @@ function Invoke-ZTAssessment {
     .PARAMETER Modules
     The assessment modules to execute. Defaults to the modules selected at
     connection time. Supported: Identity, ConditionalAccess,
-    PrivilegedAccess, and Devices; later phases add the remaining
-    catalogue modules.
+    PrivilegedAccess, Devices, IdentityGovernance, Applications,
+    HybridIdentity, and Monitoring. The optional Sentinel module is not
+    yet implemented.
 
     .PARAMETER SignInLookbackDays
     The number of days of sign-in data to aggregate for legacy
@@ -82,14 +83,14 @@ function Invoke-ZTAssessment {
     # with a filtered (possibly empty) array.
     $selectedModules = if ($Modules) { @($Modules) } else { @($connection.Modules) }
 
-    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices')
+    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices', 'IdentityGovernance', 'Applications', 'HybridIdentity', 'Monitoring')
     $unsupported = @($selectedModules | Where-Object { $_ -notin $supportedModules })
     if ($unsupported.Count -gt 0) {
         Write-Warning ("The following selected modules are not yet implemented and will be skipped: {0}." -f ($unsupported -join ', '))
         $selectedModules = @($selectedModules | Where-Object { $_ -in $supportedModules })
     }
     if ($selectedModules.Count -eq 0) {
-        Write-Error -Message "No supported modules selected. Phase 1 supports: $($supportedModules -join ', ')." -Category InvalidArgument -ErrorAction Stop
+        Write-Error -Message "No supported modules selected. Supported modules: $($supportedModules -join ', ')." -Category InvalidArgument -ErrorAction Stop
     }
 
     $settings = Get-ZTAssessConfiguration -Name Settings
@@ -126,6 +127,24 @@ function Invoke-ZTAssessment {
     if ($selectedModules -contains 'Devices') {
         $collectionStatus += Invoke-ZTAssessDeviceCollection -RunPath $runPath -Manifest $manifest
     }
+    if ($selectedModules -contains 'IdentityGovernance' -or $selectedModules -contains 'Applications') {
+        # The authorisation and consent policies feed both IG and AS checks.
+        $collectionStatus += Invoke-ZTAssessGovernanceCollection -RunPath $runPath -Manifest $manifest
+    }
+    if ($selectedModules -contains 'Applications') {
+        $collectionStatus += Invoke-ZTAssessApplicationCollection -RunPath $runPath -Manifest $manifest
+        if ($selectedModules -notcontains 'PrivilegedAccess' -and $selectedModules -notcontains 'Identity') {
+            # Application checks resolve service principals collected by the
+            # privileged access collector; collect them when running alone.
+            $collectionStatus += Invoke-ZTAssessPrivilegedAccessCollection -RunPath $runPath -Manifest $manifest
+        }
+    }
+    if ($selectedModules -contains 'HybridIdentity') {
+        $collectionStatus += Invoke-ZTAssessHybridCollection -RunPath $runPath -Manifest $manifest
+    }
+    if ($selectedModules -contains 'Monitoring') {
+        $collectionStatus += Invoke-ZTAssessMonitoringCollection -RunPath $runPath -Manifest $manifest
+    }
 
     $collectionStatus | ConvertTo-Json -Depth 5 |
         Set-Content -LiteralPath (Join-Path $runPath 'Raw/_collectionStatus.json') -Encoding utf8NoBOM
@@ -140,6 +159,18 @@ function Invoke-ZTAssessment {
     }
     if ($selectedModules -contains 'PrivilegedAccess') {
         $findings.AddRange(@(Test-ZTAssessPrivilegedAccess -RunPath $runPath -Settings $settings))
+    }
+    if ($selectedModules -contains 'IdentityGovernance') {
+        $findings.AddRange(@(Test-ZTAssessIdentityGovernance -RunPath $runPath -Settings $settings))
+    }
+    if ($selectedModules -contains 'Applications') {
+        $findings.AddRange(@(Test-ZTAssessApplicationSecurity -RunPath $runPath -Settings $settings))
+    }
+    if ($selectedModules -contains 'HybridIdentity') {
+        $findings.AddRange(@(Test-ZTAssessHybridIdentity -RunPath $runPath -Settings $settings))
+    }
+    if ($selectedModules -contains 'Monitoring') {
+        $findings.AddRange(@(Test-ZTAssessMonitoring -RunPath $runPath -Settings $settings))
     }
 
     $findingsFolder = Join-Path $runPath 'Findings'

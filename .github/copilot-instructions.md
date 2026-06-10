@@ -10,6 +10,7 @@ This repository is **Get-EntraZTAssess**, a PowerShell 7+ Sampler module for rea
 - Generated build output: `output/`; do not hand-edit it.
 - Assessment checks are declarative data in `source/Checks/**/*.psd1`.
 - Thresholds, weights, retry behavior, redaction, module metadata, and read-only Graph scopes live under `source/Settings/`.
+- Public module names stay user-facing. Internal check/settings/scoring domains map `Applications` to `ApplicationSecurity` and `Monitoring` to `MonitoringDetection`; use public names for UX and permissions, and internal domains for checks/settings/scoring.
 - Public exported commands live in `source/Public/`; private collectors, assessors, scoring, Graph wrappers, and logging helpers live in `source/Private/`.
 - Private files may include small wrapper helpers when needed for Pester mockability.
 

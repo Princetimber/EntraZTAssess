@@ -104,6 +104,7 @@
                 'IdentityRiskEvent.Read.All'
                 'IdentityRiskyUser.Read.All'
                 'AuditLog.Read.All'
+                'SecurityIdentitiesSensors.Read.All'
             )
             AlwaysIncluded = $false
             Optional       = $false

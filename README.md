@@ -8,10 +8,11 @@ Treat this repository as a security assessment toolkit, not a generic Sampler te
 
 The assessment library is data-driven:
 
-- `source/Checks/**/*.psd1` defines checks by assessment area, including identity security, conditional access, privileged access, device trust, endpoint management, BYOD governance, and corporate device governance.
+- `source/Checks/**/*.psd1` defines checks by assessment area, including identity security, conditional access, privileged access, device trust, endpoint management, BYOD governance, corporate device governance, identity governance, application security, hybrid identity, and monitoring/detection.
 - `source/Settings/settings.psd1` defines thresholds, weights, retry behavior, and redaction settings.
 - `source/Settings/permissions.psd1` defines module metadata and read-only Microsoft Graph scopes.
 - The `Core` collection is always included; other areas are selected from check and permission metadata.
+- Public `Applications` maps to internal `ApplicationSecurity`, and public `Monitoring` maps to internal `MonitoringDetection` in check, settings, and scoring data.
 
 ## Public Commands
 
@@ -29,11 +30,11 @@ The module manifest explicitly exports these functions:
 Typical consultant flow:
 
 ```powershell
-Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices
-$engagement = New-ZTAssessEngagement -Name 'Contoso-ZT'
-$result = Invoke-ZTAssessment -EngagementPath $engagement.Path -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices
-Get-ZTAssessScore -AssessmentResult $result
-Get-ZTAssessFinding -AssessmentResult $result -Severity High
+Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring
+$engagement = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' -Reference 'ENG-2026-042' -OutputPath ~/Assessments
+$run = Invoke-ZTAssessment -EngagementPath $engagement.EngagementPath
+Get-ZTAssessScore -RunPath $run.RunPath
+Get-ZTAssessFinding -RunPath $run.RunPath -Severity High
 Disconnect-ZTAssessment
 ```
 

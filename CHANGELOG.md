@@ -131,6 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Clarified Phase 3 supported-module configuration by documenting public module names alongside their internal check/settings domains.
 - Renamed the logger mutex and default log file prefix from the inherited
   Invoke-ADDSDomainController naming to Get-EntraZTAssess.
 - Rebuilt Write-ToLog as a production-grade, thread-safe logging framework:

@@ -6,12 +6,13 @@ Project context for Claude Code and AI agents.
 
 **Get-EntraZTAssess** — the *Entra ID Security & Endpoint Zero Trust Assessment* toolkit. A read-only, consultancy-grade PowerShell module (built with the **Sampler** framework) that collects Microsoft Entra ID and Intune configuration via Microsoft Graph, assesses it against a declarative check library, scores maturity and risk, and persists evidence for report generation.
 
-Build status: **Phase 2 complete.** Implemented modules: Identity, ConditionalAccess, PrivilegedAccess, Devices (67 checks). Remaining roadmap: Phase 3 (IdentityGovernance, Applications, HybridIdentity, Monitoring), Phase 4 (reporting suite: executive PDF, Excel workbook, risk register, dashboards), Phase 5 (hardening/signing/runbook). The authoritative build specification is the *Master Build Specification* document kept with the engagement records.
+Build status: **Phase 3 configuration present.** Implemented public modules: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring (92 checks across 14 domains). Remaining roadmap: Phase 4 (reporting suite: executive PDF, Excel workbook, risk register, dashboards), Phase 5 (hardening/signing/runbook). The authoritative build specification is the *Master Build Specification* document kept with the engagement records.
+Public module names stay user-facing; internal check/settings domains map `Applications` to `ApplicationSecurity` and `Monitoring` to `MonitoringDetection`.
 
 ### Consultant workflow
 
 ```powershell
-Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices
+Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring
 $eng = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' -Reference 'ENG-2026-042' -OutputPath ~/Assessments
 $run = Invoke-ZTAssessment -EngagementPath $eng.EngagementPath
 Get-ZTAssessScore -RunPath $run.RunPath
@@ -46,7 +47,7 @@ Get-EntraZTAssess/
 │   ├── Get-EntraZTAssess.psd1    # Module manifest (FunctionsToExport kept explicit)
 │   ├── Get-EntraZTAssess.psm1    # Dev loader: dot-sources Classes/, Private/, Public/
 │   ├── Classes/                  # ZTAssessFinding, ZTAssessPlatformProfile, ZTAssessRunManifest
-│   ├── Checks/<Domain>/<Id>.psd1 # Declarative check library (67 checks across 7 domains)
+│   ├── Checks/<Domain>/<Id>.psd1 # Declarative check library (92 checks across 14 domains)
 │   ├── Settings/                 # settings.psd1 (thresholds/weights), permissions.psd1 (module→scope map)
 │   ├── Public/                   # Exported cmdlets (one per file, ZTAssess noun prefix)
 │   ├── Private/                  # Collectors (Invoke-ZTAssess*Collection), assessors (Test-ZTAssess*),

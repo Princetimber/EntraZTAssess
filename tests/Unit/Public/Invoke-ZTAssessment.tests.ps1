@@ -122,14 +122,14 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
 
     Context 'When unsupported modules are requested' {
         It 'Should warn and skip them' {
-            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, Monitoring -WarningVariable runWarnings -WarningAction SilentlyContinue
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, Sentinel -WarningVariable runWarnings -WarningAction SilentlyContinue
 
             $runWarnings | Should -Not -BeNullOrEmpty
-            $summary.Modules | Should -Not -Contain 'Monitoring'
+            $summary.Modules | Should -Not -Contain 'Sentinel'
         }
 
         It 'Should fail when no supported module remains' {
-            { Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Monitoring -ErrorAction Stop -WarningAction SilentlyContinue } |
+            { Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Sentinel -ErrorAction Stop -WarningAction SilentlyContinue } |
                 Should -Throw -ExpectedMessage '*No supported modules*'
         }
     }

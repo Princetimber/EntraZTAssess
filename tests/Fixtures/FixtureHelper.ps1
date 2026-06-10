@@ -30,7 +30,7 @@ function New-ZTAssessTestRun {
 
     $snapshots = @{
         organization = @(
-            @{ id = 'tenant-1'; displayName = 'Contoso Ltd' }
+            @{ id = 'tenant-1'; displayName = 'Contoso Ltd'; onPremisesSyncEnabled = $true; onPremisesLastSyncDateTime = [datetime]::UtcNow.AddMinutes(-30).ToString('yyyy-MM-ddTHH:mm:ssZ') }
         )
 
         subscribedSkus = @(
@@ -248,6 +248,86 @@ function New-ZTAssessTestRun {
         )
 
         deviceManagementSettings = @{ secureByDefault = $true; deviceComplianceCheckinThresholdDays = 30 }
+
+        # ----- Governance / applications / hybrid / monitoring snapshots -----
+
+        accessReviewDefinitions = @(
+            @{ id = 'rev-1'; displayName = 'Privileged role assignments review'; scope = @{ query = '/roleManagement/directory/roleAssignments' } }
+            @{ id = 'rev-2'; displayName = 'Guest access review'; scope = @{ query = "/users?`$filter=userType eq 'Guest'" } }
+        )
+
+        accessPackages = @(
+            @{ id = 'pkg-1'; displayName = 'Contractor onboarding'; isHidden = $false }
+        )
+
+        lifecycleWorkflows = @(
+            @{ id = 'wf-1'; displayName = 'Leaver - disable and remove access'; category = 'leaver'; isEnabled = $true }
+        )
+
+        authorizationPolicy = @{
+            id                         = 'authorizationPolicy'
+            allowInvitesFrom           = 'adminsAndGuestInviters'
+            guestUserRoleId            = '2af84b1e-32c8-42b7-82bc-daa82404023b'
+            defaultUserRolePermissions = @{
+                permissionGrantPoliciesAssigned = @('ManagePermissionGrantsForSelf.microsoft-user-default-low')
+            }
+        }
+
+        crossTenantAccessPolicyDefault = @{
+            id           = 'default'
+            inboundTrust = @{ isMfaAccepted = $false; isCompliantDeviceAccepted = $false; isHybridAzureADJoinedDeviceAccepted = $false }
+        }
+
+        adminConsentRequestPolicy = @{ isEnabled = $true }
+
+        applications = @(
+            @{ id = 'app-obj-1'; appId = 'app-1'; displayName = 'Line of Business API'
+                signInAudience = 'AzureADMyOrg'
+                web = @{ redirectUris = @('https://lob.contoso.com/auth') }
+                spa = @{ redirectUris = @() }
+                publicClient = @{ redirectUris = @() }
+                keyCredentials = @(@{ keyId = 'kc-1'; startDateTime = [datetime]::UtcNow.AddDays(-30).ToString('yyyy-MM-ddTHH:mm:ssZ'); endDateTime = [datetime]::UtcNow.AddDays(335).ToString('yyyy-MM-ddTHH:mm:ssZ') })
+                passwordCredentials = @()
+                verifiedPublisher = @{ displayName = 'Contoso Ltd' }
+                owners = @(@{ id = 'u-1' })
+            }
+        )
+
+        oauth2PermissionGrants = @()
+
+        graphServicePrincipal = @{
+            id = 'graph-sp'; appId = '00000003-0000-0000-c000-000000000000'; displayName = 'Microsoft Graph'
+            appRoles = @(
+                @{ id = 'role-dir-rw'; value = 'Directory.ReadWrite.All' }
+                @{ id = 'role-role-rw'; value = 'RoleManagement.ReadWrite.Directory' }
+                @{ id = 'role-mail-rw'; value = 'Mail.ReadWrite' }
+                @{ id = 'role-user-read'; value = 'User.Read.All' }
+            )
+        }
+
+        graphAppRoleAssignments = @(
+            @{ id = 'ara-1'; principalId = 'sp-1'; principalDisplayName = 'Workload App'; appRoleId = 'role-user-read'; resourceId = 'graph-sp' }
+        )
+
+        spSignInActivities = @(
+            @{ id = 'act-1'; appId = 'app-1'; lastSignInActivity = @{ lastSignInDateTime = [datetime]::UtcNow.AddDays(-3).ToString('yyyy-MM-ddTHH:mm:ssZ') } }
+        )
+
+        onPremisesSynchronization = @(
+            @{ id = 'sync-1'; features = @{ passwordSyncEnabled = $true; deviceWritebackEnabled = $false; groupWriteBackEnabled = $false } }
+        )
+
+        provisioningErrorsSummary = @{ syncedUserCount = 1; usersWithErrors = 0; errorsByCategory = @() }
+
+        riskyUsers = @()
+
+        riskDetectionsSummary = @{ totalDetections = 0; countsByType = @(); countsByLevel = @() }
+
+        directoryAuditProbe = @{ available = $true; sampledActivity = 'Update user' }
+
+        mdiSensors = @(
+            @{ id = 'sensor-1'; displayName = 'DC01'; healthStatus = 'healthy'; sensorType = 'domainControllerIntegrated' }
+        )
     }
 
     foreach ($key in $Overrides.Keys) {
