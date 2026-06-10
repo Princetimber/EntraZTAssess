@@ -34,7 +34,9 @@ function Save-ZTAssessSnapshot {
     if ($PSCmdlet.ShouldProcess($snapshotPath, 'Write redacted raw snapshot')) {
         try {
             $cleansed = Protect-ZTAssessData -InputObject $Data
-            $cleansed | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $snapshotPath -Encoding utf8NoBOM -ErrorAction Stop
+            # -InputObject (not pipeline) so empty arrays serialise as [] rather
+            # than producing an empty file.
+            ConvertTo-Json -InputObject $cleansed -Depth 20 | Set-Content -LiteralPath $snapshotPath -Encoding utf8NoBOM -ErrorAction Stop
             Write-ToLog -Message "Snapshot '$Name' written to $snapshotPath" -Level DEBUG -NoConsole
         }
         catch {

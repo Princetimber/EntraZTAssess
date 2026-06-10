@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 1 identity core for the Entra ID Security & Endpoint Zero Trust
+  Assessment toolkit:
+  - Declarative check library (35 checks): IdentitySecurity ID-001..012,
+    ConditionalAccess CA-001..013, and PrivilegedAccess PA-001..010, each
+    with severity, maturity weight, Zero Trust pillar tags, rationale,
+    remediation guidance, and Microsoft Learn references.
+  - Check infrastructure: Get-ZTAssessCheckDefinition (cached library
+    loader with schema validation) and New-ZTAssessFinding (factory merging
+    check metadata with assessment outcomes, including conditional severity
+    escalation).
+  - Collectors: core tenant data (organisation, SKUs, domains, users with
+    signInActivity fallback, groups), identity (registration details,
+    authentication methods policy, security defaults, legacy sign-in
+    aggregation - counts only, never raw sign-ins), Conditional Access
+    (policies, named locations, authentication strengths), and privileged
+    access (role definitions/assignments, PIM schedules, role management
+    policies, service principals), all via a shared graceful-degradation
+    collection runner.
+  - Assessors: Test-ZTAssessIdentitySecurity, Test-ZTAssessConditionalAccess,
+    and Test-ZTAssessPrivilegedAccess - pure functions over persisted
+    snapshots implementing all 35 checks with NotAssessed degradation for
+    missing permissions, licences, or snapshots.
+  - Scoring engine (Measure-ZTAssessScore): weighted domain maturity
+    scores, Zero Trust pillar scores, overall maturity with six-level
+    banding, InsufficientData handling, and a separate risk posture where
+    any Critical finding caps the posture at "At Risk".
+  - Public: Invoke-ZTAssessment (run orchestrator producing findings.json,
+    scores.json, and the run manifest in a timestamped run folder),
+    Get-ZTAssessFinding (filterable findings reader), and Get-ZTAssessScore.
+  - Test fixture helper modelling a well-configured tenant, plus unit tests
+    for the check library, finding factory, all three assessors, the
+    scoring engine, snapshot reader, collection runner, and the new public
+    functions.
 - Phase 0 foundations for the Entra ID Security & Endpoint Zero Trust
   Assessment toolkit:
   - Classes: ZTAssessFinding (standard finding object with validation),
