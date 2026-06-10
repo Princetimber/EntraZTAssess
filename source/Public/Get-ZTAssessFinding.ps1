@@ -51,7 +51,7 @@ function Get-ZTAssessFinding {
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)]
-        [ValidateScript({ Test-Path -LiteralPath (Join-Path $_ 'Findings/findings.json') -PathType Leaf })]
+        [ValidateNotNullOrEmpty()]
         [string]$RunPath,
 
         [Parameter()]
@@ -67,7 +67,13 @@ function Get-ZTAssessFinding {
         [string[]]$Severity
     )
 
+    # Resolve tilde and relative paths, then verify this is a run folder.
+    $RunPath = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($RunPath)
     $findingsPath = Join-Path $RunPath 'Findings/findings.json'
+
+    if (-not (Test-Path -LiteralPath $findingsPath -PathType Leaf)) {
+        Write-Error -Message "No findings found at '$findingsPath'. Pass the run folder produced by Invoke-ZTAssessment (it contains a Findings subfolder)." -Category ObjectNotFound -ErrorAction Stop
+    }
 
     try {
         $findings = Get-Content -LiteralPath $findingsPath -Raw -ErrorAction Stop | ConvertFrom-Json -Depth 20

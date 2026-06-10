@@ -40,11 +40,17 @@ function Get-ZTAssessScore {
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)]
-        [ValidateScript({ Test-Path -LiteralPath (Join-Path $_ 'Scores/scores.json') -PathType Leaf })]
+        [ValidateNotNullOrEmpty()]
         [string]$RunPath
     )
 
+    # Resolve tilde and relative paths, then verify this is a run folder.
+    $RunPath = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($RunPath)
     $scoresPath = Join-Path $RunPath 'Scores/scores.json'
+
+    if (-not (Test-Path -LiteralPath $scoresPath -PathType Leaf)) {
+        Write-Error -Message "No scores found at '$scoresPath'. Pass the run folder produced by Invoke-ZTAssessment (it contains a Scores subfolder)." -Category ObjectNotFound -ErrorAction Stop
+    }
 
     try {
         return Get-Content -LiteralPath $scoresPath -Raw -ErrorAction Stop | ConvertFrom-Json -Depth 20

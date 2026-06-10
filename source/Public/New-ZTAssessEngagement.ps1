@@ -23,8 +23,9 @@ function New-ZTAssessEngagement {
     and underscores only.
 
     .PARAMETER OutputPath
-    The parent folder beneath which the engagement folder is created. Must
-    already exist; the engagement folder itself must not.
+    The parent folder beneath which the engagement folder is created.
+    Tilde (~) and relative paths are resolved; the folder is created if it
+    does not already exist. The engagement folder itself must not exist.
 
     .PARAMETER Classification
     The protective marking applied to all generated reports, for example
@@ -62,7 +63,7 @@ function New-ZTAssessEngagement {
         [string]$Reference,
 
         [Parameter(Mandatory)]
-        [ValidateScript({ Test-Path -LiteralPath $_ -PathType Container })]
+        [ValidateNotNullOrEmpty()]
         [string]$OutputPath,
 
         [Parameter()]
@@ -70,10 +71,25 @@ function New-ZTAssessEngagement {
         [string]$Classification = 'Confidential'
     )
 
+    # Resolve tilde and relative paths, then create the output folder if it
+    # does not exist yet.
+    $resolvedOutputPath = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($OutputPath)
+
+    if (-not (Test-Path -LiteralPath $resolvedOutputPath -PathType Container)) {
+        if ($PSCmdlet.ShouldProcess($resolvedOutputPath, 'Create output folder')) {
+            try {
+                $null = New-Item -Path $resolvedOutputPath -ItemType Directory -Force -ErrorAction Stop
+            }
+            catch {
+                Write-Error -Message "Failed to create output folder '$resolvedOutputPath': $($_.Exception.Message)" -Category WriteError -ErrorAction Stop
+            }
+        }
+    }
+
     # Folder-safe customer name: letters, digits, hyphens.
     $safeCustomer = ($CustomerName -replace '[^a-zA-Z0-9]+', '-').Trim('-')
     $engagementFolderName = "$safeCustomer-$Reference"
-    $engagementPath = Join-Path -Path $OutputPath -ChildPath $engagementFolderName
+    $engagementPath = Join-Path -Path $resolvedOutputPath -ChildPath $engagementFolderName
 
     if (Test-Path -LiteralPath $engagementPath) {
         Write-Error -Message "Engagement folder already exists: $engagementPath. Use a different reference or remove the existing folder." -Category ResourceExists -ErrorAction Stop
