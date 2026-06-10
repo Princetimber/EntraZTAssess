@@ -57,7 +57,13 @@
         script and correct parameter values. This will also affect the use of parameter
         `-UseModuleFast` of the Resolve-Dependency.ps1 or build.ps1 script.
     #>
-    #UseModuleFast = $true
+    <#
+        ModuleFast enabled: RequiredModules.psd1 uses NuGet version-range
+        syntax (for example '[3.0,4.0)') which PowerShellGet v2 cannot parse
+        (it fails with 'Cannot convert value [3.0,4.0) to type System.Version').
+        ModuleFast supports version ranges natively and requires PS 7.2+.
+    #>
+    UseModuleFast                              = $true
     #ModuleFastVersion = '0.1.2'
     #ModuleFastBleedingEdge = $true
 
