@@ -25,6 +25,9 @@
         AppCredentialMaxValidityYears       = 2     # AS-003 credential validity ceiling
         RiskyUserUnremediatedMaxDays        = 7     # MD-002 open risky user age
         DomainInsufficientDataPercent       = 40    # NotAssessed weight above which a domain is not scored
+        CorporateComplianceMinimumPercent   = 90    # CG-001 corporate device compliance floor
+        ModernProvisioningMinimumPercent    = 50    # CG-003 Autopilot/ADE/AE corporate enrolment floor
+        AutopilotCoverageMinimumPercent     = 50    # EM-005 Autopilot registration floor for corporate Windows
     }
 
     # Microsoft Graph request behaviour.

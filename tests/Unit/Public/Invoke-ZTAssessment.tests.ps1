@@ -53,6 +53,7 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessIdentityCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessConditionalAccessCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessPrivilegedAccessCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessDeviceCollection -MockWith { @{} }
 
         # Engagement scaffold.
         $script:engagementPath = Join-Path $TestDrive "engagement-$([guid]::NewGuid().ToString('n').Substring(0,8))"
@@ -102,16 +103,33 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         }
     }
 
+    Context 'When running the Devices module' {
+        It 'Should emit the 32 device findings and persist classification and platform profiles' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Devices
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 32
+            (@($findings).Domain | Sort-Object -Unique) | Should -Be @('ByodGovernance', 'CorporateDeviceGovernance', 'DeviceTrust', 'EndpointManagement')
+
+            Test-Path (Join-Path $summary.RunPath 'Findings/deviceClassification.json') | Should -BeTrue
+            Test-Path (Join-Path $summary.RunPath 'Findings/platformProfiles.json') | Should -BeTrue
+
+            $profiles = Get-Content (Join-Path $summary.RunPath 'Findings/platformProfiles.json') -Raw | ConvertFrom-Json -Depth 20
+            @($profiles).Platform | Should -Contain 'Windows'
+            @($profiles).Platform | Should -Contain 'Android'
+        }
+    }
+
     Context 'When unsupported modules are requested' {
         It 'Should warn and skip them' {
-            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, Devices -WarningVariable runWarnings -WarningAction SilentlyContinue
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, Monitoring -WarningVariable runWarnings -WarningAction SilentlyContinue
 
             $runWarnings | Should -Not -BeNullOrEmpty
-            $summary.Modules | Should -Not -Contain 'Devices'
+            $summary.Modules | Should -Not -Contain 'Monitoring'
         }
 
         It 'Should fail when no supported module remains' {
-            { Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Devices -ErrorAction Stop -WarningAction SilentlyContinue } |
+            { Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Monitoring -ErrorAction Stop -WarningAction SilentlyContinue } |
                 Should -Throw -ExpectedMessage '*No supported modules*'
         }
     }

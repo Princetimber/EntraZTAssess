@@ -20,8 +20,9 @@ function Invoke-ZTAssessment {
 
     .PARAMETER Modules
     The assessment modules to execute. Defaults to the modules selected at
-    connection time. Phase 1 supports Identity, ConditionalAccess, and
-    PrivilegedAccess; later phases add the remaining catalogue modules.
+    connection time. Supported: Identity, ConditionalAccess,
+    PrivilegedAccess, and Devices; later phases add the remaining
+    catalogue modules.
 
     .PARAMETER SignInLookbackDays
     The number of days of sign-in data to aggregate for legacy
@@ -81,7 +82,7 @@ function Invoke-ZTAssessment {
     # with a filtered (possibly empty) array.
     $selectedModules = if ($Modules) { @($Modules) } else { @($connection.Modules) }
 
-    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess')
+    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices')
     $unsupported = @($selectedModules | Where-Object { $_ -notin $supportedModules })
     if ($unsupported.Count -gt 0) {
         Write-Warning ("The following selected modules are not yet implemented and will be skipped: {0}." -f ($unsupported -join ', '))
@@ -122,6 +123,9 @@ function Invoke-ZTAssessment {
         # Role data feeds identity checks ID-002 and ID-009.
         $collectionStatus += Invoke-ZTAssessPrivilegedAccessCollection -RunPath $runPath -Manifest $manifest
     }
+    if ($selectedModules -contains 'Devices') {
+        $collectionStatus += Invoke-ZTAssessDeviceCollection -RunPath $runPath -Manifest $manifest
+    }
 
     $collectionStatus | ConvertTo-Json -Depth 5 |
         Set-Content -LiteralPath (Join-Path $runPath 'Raw/_collectionStatus.json') -Encoding utf8NoBOM
@@ -140,6 +144,27 @@ function Invoke-ZTAssessment {
 
     $findingsFolder = Join-Path $runPath 'Findings'
     $null = New-Item -Path $findingsFolder -ItemType Directory -Force
+
+    if ($selectedModules -contains 'Devices') {
+        $findings.AddRange(@(Test-ZTAssessDeviceTrust -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Test-ZTAssessEndpointManagement -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Test-ZTAssessByodGovernance -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Test-ZTAssessCorporateGovernance -RunPath $runPath -Settings $settings))
+
+        # Persist the device classification and per-platform profiles for the
+        # device enrolment and BYOD comparison reports (Phase 4).
+        $managedDevices = Get-ZTAssessSnapshot -RunPath $runPath -Name 'managedDevices'
+        $entraDevices = Get-ZTAssessSnapshot -RunPath $runPath -Name 'entraDevices'
+        if ($managedDevices -or $entraDevices) {
+            $deviceClasses = Get-ZTAssessDeviceClass -ManagedDevices @($managedDevices) -EntraDevices @($entraDevices) -Settings $settings
+            ConvertTo-Json -InputObject @($deviceClasses) -Depth 10 |
+                Set-Content -LiteralPath (Join-Path $findingsFolder 'deviceClassification.json') -Encoding utf8NoBOM
+
+            $platformProfiles = Get-ZTAssessPlatformProfile -RunPath $runPath -DeviceClasses @($deviceClasses)
+            ConvertTo-Json -InputObject @($platformProfiles) -Depth 10 |
+                Set-Content -LiteralPath (Join-Path $findingsFolder 'platformProfiles.json') -Encoding utf8NoBOM
+        }
+    }
     ConvertTo-Json -InputObject @($findings) -Depth 10 |
         Set-Content -LiteralPath (Join-Path $findingsFolder 'findings.json') -Encoding utf8NoBOM
 

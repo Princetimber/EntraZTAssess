@@ -87,6 +87,7 @@ function New-ZTAssessTestRun {
 
         enrollmentConfigurations = @(
             @{ '@odata.type' = '#microsoft.graph.deviceEnrollmentWindowsHelloForBusinessConfiguration'; state = 'enabled' }
+            @{ '@odata.type' = '#microsoft.graph.deviceEnrollmentPlatformRestrictionConfiguration'; platformType = 'windows'; platformRestriction = @{ personalDeviceEnrollmentBlocked = $true } }
         )
 
         namedLocations = @(
@@ -170,6 +171,83 @@ function New-ZTAssessTestRun {
         roleManagementPolicyAssignments = @(
             @{ id = 'pa-ga'; policyId = 'pol-ga'; roleDefinitionId = $gaTemplate }
         )
+
+        # ----- Device / endpoint snapshots (well-configured estate) -----
+
+        managedDevices = @(
+            @{ id = 'md-1'; deviceName = 'WIN-CORP-01'; operatingSystem = 'Windows'; osVersion = '10.0.26100'; managedDeviceOwnerType = 'company'; deviceEnrollmentType = 'windowsAutoEnrollment'; complianceState = 'compliant'; isEncrypted = $true; isSupervised = $false; lastSyncDateTime = $recentSignIn; managementAgent = 'mdm'; userPrincipalName = 'alice@contoso.com'; azureADDeviceId = 'aad-1'; serialNumber = 'SER-WIN-1' }
+            @{ id = 'md-2'; deviceName = 'WIN-CORP-02'; operatingSystem = 'Windows'; osVersion = '10.0.26100'; managedDeviceOwnerType = 'company'; deviceEnrollmentType = 'windowsAutoEnrollment'; complianceState = 'compliant'; isEncrypted = $true; isSupervised = $false; lastSyncDateTime = $recentSignIn; managementAgent = 'configurationManagerClientMdm'; userPrincipalName = 'bob@contoso.com'; azureADDeviceId = 'aad-2'; serialNumber = 'SER-WIN-2' }
+            @{ id = 'md-3'; deviceName = 'IPHONE-CORP-01'; operatingSystem = 'iOS'; osVersion = '18.1'; managedDeviceOwnerType = 'company'; deviceEnrollmentType = 'appleBulkWithUser'; complianceState = 'compliant'; isEncrypted = $true; isSupervised = $true; lastSyncDateTime = $recentSignIn; managementAgent = 'mdm'; userPrincipalName = 'alice@contoso.com'; azureADDeviceId = 'aad-3'; serialNumber = 'SER-IOS-1' }
+            @{ id = 'md-4'; deviceName = 'IPHONE-BYOD-01'; operatingSystem = 'iOS'; osVersion = '18.1'; managedDeviceOwnerType = 'personal'; deviceEnrollmentType = 'userEnrollment'; complianceState = 'compliant'; isEncrypted = $true; isSupervised = $false; lastSyncDateTime = $recentSignIn; managementAgent = 'mdm'; userPrincipalName = 'bob@contoso.com'; azureADDeviceId = 'aad-4'; serialNumber = 'SER-IOS-2' }
+            @{ id = 'md-5'; deviceName = 'MAC-CORP-01'; operatingSystem = 'macOS'; osVersion = '15.1'; managedDeviceOwnerType = 'company'; deviceEnrollmentType = 'appleBulkWithUser'; complianceState = 'compliant'; isEncrypted = $true; isSupervised = $true; lastSyncDateTime = $recentSignIn; managementAgent = 'mdm'; userPrincipalName = 'alice@contoso.com'; azureADDeviceId = 'aad-5'; serialNumber = 'SER-MAC-1' }
+            @{ id = 'md-6'; deviceName = 'AND-BYOD-01'; operatingSystem = 'Android'; osVersion = '15'; managedDeviceOwnerType = 'personal'; deviceEnrollmentType = 'androidEnterpriseWorkProfile'; complianceState = 'compliant'; isEncrypted = $true; isSupervised = $false; lastSyncDateTime = $recentSignIn; managementAgent = 'mdm'; userPrincipalName = 'bob@contoso.com'; azureADDeviceId = 'aad-6'; serialNumber = 'SER-AND-1' }
+            @{ id = 'md-7'; deviceName = 'AND-CORP-01'; operatingSystem = 'Android'; osVersion = '15'; managedDeviceOwnerType = 'company'; deviceEnrollmentType = 'androidEnterpriseFullyManaged'; complianceState = 'compliant'; isEncrypted = $true; isSupervised = $false; lastSyncDateTime = $recentSignIn; managementAgent = 'mdm'; userPrincipalName = 'alice@contoso.com'; azureADDeviceId = 'aad-7'; serialNumber = 'SER-AND-2' }
+        )
+
+        entraDevices = @(
+            @{ id = 'ed-1'; deviceId = 'aad-1'; displayName = 'WIN-CORP-01'; operatingSystem = 'Windows'; trustType = 'AzureAd'; profileType = 'RegisteredDevice'; isManaged = $true; isCompliant = $true; accountEnabled = $true; approximateLastSignInDateTime = $recentSignIn }
+            @{ id = 'ed-2'; deviceId = 'aad-2'; displayName = 'WIN-CORP-02'; operatingSystem = 'Windows'; trustType = 'AzureAd'; profileType = 'RegisteredDevice'; isManaged = $true; isCompliant = $true; accountEnabled = $true; approximateLastSignInDateTime = $recentSignIn }
+            @{ id = 'ed-3'; deviceId = 'aad-3'; displayName = 'IPHONE-CORP-01'; operatingSystem = 'iOS'; trustType = 'Workplace'; profileType = 'RegisteredDevice'; isManaged = $true; isCompliant = $true; accountEnabled = $true; approximateLastSignInDateTime = $recentSignIn }
+            @{ id = 'ed-4'; deviceId = 'aad-4'; displayName = 'IPHONE-BYOD-01'; operatingSystem = 'iOS'; trustType = 'Workplace'; profileType = 'RegisteredDevice'; isManaged = $true; isCompliant = $true; accountEnabled = $true; approximateLastSignInDateTime = $recentSignIn }
+            @{ id = 'ed-5'; deviceId = 'aad-5'; displayName = 'MAC-CORP-01'; operatingSystem = 'MacMDM'; trustType = 'Workplace'; profileType = 'RegisteredDevice'; isManaged = $true; isCompliant = $true; accountEnabled = $true; approximateLastSignInDateTime = $recentSignIn }
+            @{ id = 'ed-6'; deviceId = 'aad-6'; displayName = 'AND-BYOD-01'; operatingSystem = 'Android'; trustType = 'Workplace'; profileType = 'RegisteredDevice'; isManaged = $true; isCompliant = $true; accountEnabled = $true; approximateLastSignInDateTime = $recentSignIn }
+            @{ id = 'ed-7'; deviceId = 'aad-7'; displayName = 'AND-CORP-01'; operatingSystem = 'Android'; trustType = 'Workplace'; profileType = 'RegisteredDevice'; isManaged = $true; isCompliant = $true; accountEnabled = $true; approximateLastSignInDateTime = $recentSignIn }
+        )
+
+        compliancePolicies = @(
+            @{ id = 'cp-win'; '@odata.type' = '#microsoft.graph.windows10CompliancePolicy'; displayName = 'Windows compliance'; osMinimumVersion = '10.0.22631'; bitLockerEnabled = $true; passwordRequired = $true; defenderEnabled = $true }
+            @{ id = 'cp-ios'; '@odata.type' = '#microsoft.graph.iosCompliancePolicy'; displayName = 'iOS compliance'; osMinimumVersion = '17.0'; securityBlockJailbrokenDevices = $true; passwordRequired = $true; storageRequireEncryption = $true }
+            @{ id = 'cp-mac'; '@odata.type' = '#microsoft.graph.macOSCompliancePolicy'; displayName = 'macOS compliance'; osMinimumVersion = '14.0'; storageRequireEncryption = $true; firewallEnabled = $true; passwordRequired = $true }
+            @{ id = 'cp-and'; '@odata.type' = '#microsoft.graph.androidDeviceOwnerCompliancePolicy'; displayName = 'Android compliance'; osMinimumVersion = '13'; securityBlockJailbrokenDevices = $true; storageRequireEncryption = $true; passwordRequired = $true }
+        )
+
+        deviceConfigurations = @(
+            @{ id = 'dc-win'; '@odata.type' = '#microsoft.graph.windows10GeneralConfiguration'; displayName = 'Windows hardening' }
+            @{ id = 'dc-ios'; '@odata.type' = '#microsoft.graph.iosGeneralDeviceConfiguration'; displayName = 'iOS restrictions' }
+            @{ id = 'dc-mac'; '@odata.type' = '#microsoft.graph.macOSGeneralDeviceConfiguration'; displayName = 'macOS Gatekeeper and security' }
+            @{ id = 'dc-and'; '@odata.type' = '#microsoft.graph.androidDeviceOwnerGeneralDeviceConfiguration'; displayName = 'Android restrictions' }
+        )
+
+        configurationPolicies = @(
+            @{ id = 'sc-1'; name = 'Defender Antivirus policy'; platforms = 'windows10'; templateReference = @{ templateFamily = 'endpointSecurityAntivirus' } }
+            @{ id = 'sc-2'; name = 'Firewall policy'; platforms = 'windows10'; templateReference = @{ templateFamily = 'endpointSecurityFirewall' } }
+            @{ id = 'sc-3'; name = 'Attack Surface Reduction rules'; platforms = 'windows10'; templateReference = @{ templateFamily = 'endpointSecurityAttackSurfaceReduction' } }
+            @{ id = 'sc-4'; name = 'EDR onboarding'; platforms = 'windows10'; templateReference = @{ templateFamily = 'endpointSecurityEndpointDetectionAndResponse' } }
+        )
+
+        intents = @(
+            @{ id = 'in-1'; displayName = 'Windows security baseline'; templateId = 'tmpl-baseline'; isAssigned = $true }
+            @{ id = 'in-2'; displayName = 'BitLocker disk encryption'; templateId = 'tmpl-encrypt'; isAssigned = $true }
+        )
+
+        appProtectionPolicies = @(
+            @{ id = 'mam-ios'; '@odata.type' = '#microsoft.graph.iosManagedAppProtection'; displayName = 'iOS app protection' }
+            @{ id = 'mam-and'; '@odata.type' = '#microsoft.graph.androidManagedAppProtection'; displayName = 'Android app protection' }
+            @{ id = 'mam-win'; '@odata.type' = '#microsoft.graph.windowsManagedAppProtection'; displayName = 'Windows app protection' }
+        )
+
+        autopilotDevices = @(
+            @{ id = 'ap-1'; serialNumber = 'SER-WIN-1'; model = 'Surface Laptop'; manufacturer = 'Microsoft' }
+            @{ id = 'ap-2'; serialNumber = 'SER-WIN-2'; model = 'Surface Laptop'; manufacturer = 'Microsoft' }
+        )
+
+        autopilotProfiles = @(
+            @{ id = 'app-1'; displayName = 'Corporate Autopilot profile' }
+        )
+
+        applePushCertificate = @{ id = 'apns-1'; expirationDateTime = [datetime]::UtcNow.AddDays(200).ToString('yyyy-MM-ddTHH:mm:ssZ') }
+
+        depOnboardingSettings = @(
+            @{ id = 'dep-1'; tokenName = 'Contoso ABM'; tokenExpirationDateTime = [datetime]::UtcNow.AddDays(200).ToString('yyyy-MM-ddTHH:mm:ssZ'); appleIdentifier = 'abm@contoso.com' }
+        )
+
+        androidEnterpriseSettings = @{ id = 'ae-1'; bindStatus = 'boundAndValidated'; ownerUserPrincipalName = 'admin@contoso.com' }
+
+        mtdConnectors = @(
+            @{ id = 'mtd-1'; partnerState = 'enabled' }
+        )
+
+        deviceManagementSettings = @{ secureByDefault = $true; deviceComplianceCheckinThresholdDays = 30 }
     }
 
     foreach ($key in $Overrides.Keys) {

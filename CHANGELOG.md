@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 2 endpoint core for the Entra ID Security & Endpoint Zero Trust
+  Assessment toolkit:
+  - 32 new declarative checks: DeviceTrust DT-001..004, EndpointManagement
+    EM-001..007 plus platform checks AND-001..004, IOS-001..004,
+    MAC-001..003, WIN-001..003, ByodGovernance BG-001..004, and
+    CorporateDeviceGovernance CG-001..003 (check library now 67 checks).
+  - Device collector covering Intune managed devices, Entra device objects,
+    compliance policies, configuration profiles, settings catalog policies
+    (beta), security baselines/intents (beta), app protection policies,
+    enrolment configurations, Autopilot devices and profiles, the Apple MDM
+    push certificate, ABM/ADE tokens (beta), Android Enterprise binding
+    (beta), threat defence connectors, and tenant device management
+    settings.
+  - Device classification engine (Get-ZTAssessDeviceClass): six classes -
+    Corporate, BYOD, Shared, Kiosk, PAW, Unknown - with confidence levels,
+    following the ownership/enrolment-profile/PAW-pattern precedence from
+    the specification. PAW candidates are flagged for consultant
+    confirmation, never auto-asserted.
+  - Per-platform profile builder (Get-ZTAssessPlatformProfile) producing
+    ZTAssessPlatformProfile objects with ownership split, enrolment
+    methods, restrictions, and coverage estimates; persisted with the
+    device classification to the run folder for the Phase 4 device
+    enrolment and BYOD comparison reports.
+  - Four new assessors: Test-ZTAssessDeviceTrust,
+    Test-ZTAssessEndpointManagement, Test-ZTAssessByodGovernance, and
+    Test-ZTAssessCorporateGovernance, with conditional escalations (for
+    example devices-compliant-by-default while device CA is in force, and
+    an expired Apple MDM push certificate, both escalate to Critical).
+  - Devices module enabled in Invoke-ZTAssessment; device fixture estate
+    and unit tests covering the classification engine, all four assessors,
+    and the orchestrator integration.
 - Phase 1 identity core for the Entra ID Security & Endpoint Zero Trust
   Assessment toolkit:
   - Declarative check library (35 checks): IdentitySecurity ID-001..012,
