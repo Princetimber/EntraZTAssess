@@ -54,6 +54,10 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessConditionalAccessCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessPrivilegedAccessCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessDeviceCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessGovernanceCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessApplicationCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessHybridCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessMonitoringCollection -MockWith { @{} }
 
         # Engagement scaffold.
         $script:engagementPath = Join-Path $TestDrive "engagement-$([guid]::NewGuid().ToString('n').Substring(0,8))"
@@ -117,6 +121,26 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
             $profiles = Get-Content (Join-Path $summary.RunPath 'Findings/platformProfiles.json') -Raw | ConvertFrom-Json -Depth 20
             @($profiles).Platform | Should -Contain 'Windows'
             @($profiles).Platform | Should -Contain 'Android'
+        }
+    }
+
+    Context 'When running the Phase 3 modules' {
+        It 'Should emit the 25 governance, application, hybrid, and monitoring findings' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules IdentityGovernance, Applications, HybridIdentity, Monitoring
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 25
+            (@($findings).Domain | Sort-Object -Unique) | Should -Be @('ApplicationSecurity', 'HybridIdentity', 'IdentityGovernance', 'MonitoringDetection')
+        }
+    }
+
+    Context 'When running every implemented module' {
+        It 'Should emit all 92 findings' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 92
+            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 11
         }
     }
 

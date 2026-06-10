@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Orchestrator integration tests for the Phase 3 modules: collection mocks
+  for the governance, application, hybrid, and monitoring collectors, a
+  25-finding run across the four new domains, and a full 92-finding run
+  across all eight implemented modules.
+
 - Documentation maintenance rule in CLAUDE.md, AGENTS.md, and
   .github/copilot-instructions.md: every change must update the .md
   documentation set (changelog, agent files, README) in the same branch and
