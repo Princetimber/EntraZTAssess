@@ -78,6 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Path parameter usability (found during the first live tenant test):
+  New-ZTAssessEngagement now resolves tilde and relative paths and creates
+  the output folder when it does not exist; Invoke-ZTAssessment,
+  Get-ZTAssessFinding, and Get-ZTAssessScore resolve their path parameters
+  and fail with actionable errors (for example 'run New-ZTAssessEngagement
+  first') instead of opaque validation-script failures.
 - Dependency resolution: enabled ModuleFast in Resolve-Dependency.psd1 so
   the NuGet version-range syntax in RequiredModules.psd1 (for example
   '[3.0,4.0)') resolves correctly; PowerShellGet v2 fails on version

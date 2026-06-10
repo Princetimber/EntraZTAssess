@@ -66,9 +66,13 @@ Describe 'New-ZTAssessEngagement' -Tag 'Unit' {
                 Should -Throw
         }
 
-        It 'Should reject an output path that does not exist' {
-            { New-ZTAssessEngagement -CustomerName 'Contoso' -Reference 'ENG-1' -OutputPath (Join-Path $TestDrive 'missing') } |
-                Should -Throw
+        It 'Should create the output path when it does not exist' {
+            $missingParent = Join-Path $TestDrive 'not-yet/nested'
+
+            $result = New-ZTAssessEngagement -CustomerName 'Contoso' -Reference 'ENG-NEW' -OutputPath $missingParent
+
+            Test-Path -LiteralPath $missingParent -PathType Container | Should -BeTrue
+            Test-Path -LiteralPath $result.EngagementPath -PathType Container | Should -BeTrue
         }
 
         It 'Should refuse to overwrite an existing engagement folder' {

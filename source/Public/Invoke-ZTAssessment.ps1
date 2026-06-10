@@ -54,7 +54,7 @@ function Invoke-ZTAssessment {
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)]
-        [ValidateScript({ Test-Path -LiteralPath (Join-Path $_ 'engagement.psd1') -PathType Leaf })]
+        [ValidateNotNullOrEmpty()]
         [string]$EngagementPath,
 
         [Parameter()]
@@ -65,6 +65,12 @@ function Invoke-ZTAssessment {
         [ValidateRange(1, 90)]
         [int]$SignInLookbackDays = 30
     )
+
+    # Resolve tilde and relative paths, then verify this is an engagement folder.
+    $EngagementPath = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($EngagementPath)
+    if (-not (Test-Path -LiteralPath (Join-Path $EngagementPath 'engagement.psd1') -PathType Leaf)) {
+        Write-Error -Message "No engagement.psd1 found in '$EngagementPath'. Create the engagement first with New-ZTAssessEngagement." -Category ObjectNotFound -ErrorAction Stop
+    }
 
     $connection = $script:ZTAssessConnection
     if (-not $connection) {
