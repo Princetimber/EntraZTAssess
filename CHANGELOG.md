@@ -109,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- PrivilegedAccess assessment now skips malformed principal snapshot records with null or blank IDs before building users, groups, and service principals lookup tables, preventing partial snapshots from throwing during assessment; regression coverage now exercises malformed user snapshots.
 - Path parameter usability (found during the first live tenant test):
   New-ZTAssessEngagement now resolves tilde and relative paths and creates
   the output folder when it does not exist; Invoke-ZTAssessment,
