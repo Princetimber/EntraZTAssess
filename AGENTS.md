@@ -10,6 +10,7 @@ Repository-specific guidance for future OpenCode sessions in **Get-EntraZTAssess
 - The module is data-driven: `source/Checks/**/*.psd1` defines assessment checks, `source/Settings/settings.psd1` defines thresholds/weights/retry/redaction settings, and `source/Settings/permissions.psd1` defines modules plus read-only Graph scopes.
 - `Core` collection is always included. Other assessment areas are driven by check/permission metadata, not hardcoded public cmdlets.
 - Public module names stay user-facing. Internal check/settings/scoring domains map `Applications` to `ApplicationSecurity` and `Monitoring` to `MonitoringDetection`; use the internal domains in `source/Checks` and `source/Settings`.
+- Phase 4 reporting MVP is local-only. `Export-ZTAssessReport` reads a completed run folder and writes `ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`, `RiskRegister.csv`, and `RemediationRoadmap.json` under `<RunPath>/Reports`; do not document or claim PDF, Excel workbook, or dashboard support unless implemented and tested.
 
 ## Commands
 
@@ -44,6 +45,7 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - Public files should contain one exported function with comment-based help. Private files are allowed to contain small wrapper helpers when needed for Pester mockability.
 - `Connect-ZTAssessment` handles Microsoft Graph connection and scope checks.
 - `Invoke-ZTAssessment` is the main orchestrator and writes local run artifacts under an engagement folder.
+- `Export-ZTAssessReport` is the public disk-only report exporter. It requires `Findings/findings.json` and `Scores/scores.json`, optionally consumes `manifest.json`, `Findings/platformProfiles.json`, and `Findings/deviceClassification.json`, and uses `SupportsShouldProcess` because it writes local files.
 - `New-ZTAssessEngagement` creates the local engagement folder scaffold and is intentionally state-changing.
 - `Invoke-ZTAssessGraphRequest` / `Invoke-MgGraphRequestWrapper` are the central Graph read paths. Route Graph collection through them so paging, retries, logging, and read-only guardrails stay consistent.
 - `Invoke-ZTAssessCollectionSet` collects named snapshots and marks dependent checks `NotAssessed` on collection failure; do not bypass this behavior casually.
@@ -56,6 +58,7 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - `SupportsShouldProcess` belongs on local state-changing functions such as folder/log/artifact writers. Read-only assessment/query functions should not grow ShouldProcess just for style.
 - Use `Write-ToLog` for module logging. It handles mutex-protected file logging, rotation, redaction, and PowerShell stream mapping. `Invoke-LogRotation` is an implementation detail called from `Write-ToLog`.
 - Keep secret/token/password redaction behavior aligned with `settings.psd1` and existing `Write-ToLog` tests.
+- Report generation must remain offline/read-only: no Graph connection checks, no network calls, no telemetry, and no tenant mutation. Risk register and remediation roadmap rows include only `Fail` and `Partial` findings, ordered deterministically, with SLA values from `source/Settings/settings.psd1` `RemediationSlaDays` (Critical=7, High=30, Medium=90, Low=180). CSV array fields are flattened with stable semicolon joins.
 
 ## Testing Patterns
 

@@ -13,6 +13,7 @@ This repository is **Get-EntraZTAssess**, a PowerShell 7+ Sampler module for rea
 - Public module names stay user-facing. Internal check/settings/scoring domains map `Applications` to `ApplicationSecurity` and `Monitoring` to `MonitoringDetection`; use public names for UX and permissions, and internal domains for checks/settings/scoring.
 - Public exported commands live in `source/Public/`; private collectors, assessors, scoring, Graph wrappers, and logging helpers live in `source/Private/`.
 - Private files may include small wrapper helpers when needed for Pester mockability.
+- Phase 4 reporting MVP is local-only: `Export-ZTAssessReport` reads completed run artifacts and writes HTML/JSON/CSV reports under `<RunPath>/Reports`. Do not claim PDF, Excel workbook, or dashboard outputs unless they are implemented and tested.
 
 ## Commands
 
@@ -37,6 +38,8 @@ Route Graph reads through `Invoke-ZTAssessGraphRequest` / `Invoke-MgGraphRequest
 Use `Write-ToLog` for module logging. It handles file logging, rotation, redaction, and stream mapping.
 
 `tests/QA/ReadOnly.tests.ps1` enforces read-only constraints, including no direct `Invoke-MgGraphRequest`, no write HTTP verbs, no `Invoke-Expression`, no hardcoded secrets, and no Graph write scopes.
+
+Report generation is also part of the read-only posture: it must not connect to Graph or require a Graph session. Risk-register and remediation-roadmap rows are limited to `Fail` and `Partial` findings and use `source/Settings/settings.psd1` `RemediationSlaDays` (Critical 7, High 30, Medium 90, Low 180).
 
 ## Testing Patterns
 

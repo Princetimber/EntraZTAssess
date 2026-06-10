@@ -4,9 +4,9 @@ Project context for Claude Code and AI agents.
 
 ## Project Overview
 
-**Get-EntraZTAssess** — the *Entra ID Security & Endpoint Zero Trust Assessment* toolkit. A read-only, consultancy-grade PowerShell module (built with the **Sampler** framework) that collects Microsoft Entra ID and Intune configuration via Microsoft Graph, assesses it against a declarative check library, scores maturity and risk, and persists evidence for report generation.
+**Get-EntraZTAssess** — the *Entra ID Security & Endpoint Zero Trust Assessment* toolkit. A read-only, consultancy-grade PowerShell module (built with the **Sampler** framework) that collects Microsoft Entra ID and Intune configuration via Microsoft Graph, assesses it against a declarative check library, scores maturity and risk, and persists evidence for local report generation.
 
-Build status: **Phase 3 configuration present.** Implemented public modules: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring (92 checks across 14 domains). Remaining roadmap: Phase 4 (reporting suite: executive PDF, Excel workbook, risk register, dashboards), Phase 5 (hardening/signing/runbook). The authoritative build specification is the *Master Build Specification* document kept with the engagement records.
+Build status: **Phase 4 reporting MVP present.** Implemented public modules: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring (92 checks across 14 domains). Reporting currently exports local HTML executive/technical reports plus JSON/CSV risk register and JSON remediation roadmap under each run's `Reports` folder. Remaining roadmap: richer report packaging such as PDF/Excel/dashboard outputs, then Phase 5 hardening/signing/runbook. The authoritative build specification is the *Master Build Specification* document kept with the engagement records.
 Public module names stay user-facing; internal check/settings domains map `Applications` to `ApplicationSecurity` and `Monitoring` to `MonitoringDetection`.
 
 ### Consultant workflow
@@ -17,6 +17,7 @@ $eng = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' -Reference 'ENG-2026-0
 $run = Invoke-ZTAssessment -EngagementPath $eng.EngagementPath
 Get-ZTAssessScore -RunPath $run.RunPath
 Get-ZTAssessFinding -RunPath $run.RunPath -Status Fail | Format-Table CheckId, Severity, Title
+Export-ZTAssessReport -RunPath $run.RunPath
 Disconnect-ZTAssessment
 ```
 
@@ -70,6 +71,7 @@ Get-EntraZTAssess/
 - **Graceful degradation**: missing permission/licence/snapshot ⇒ `NotAssessed` finding with reason, never an error. Collector failures warn and continue. Snapshot by-id lookups must skip malformed records with null or blank IDs rather than throwing.
 - **Graph SDK calls are wrapped** (`Connect-MgGraphWrapper`, `Get-MgContextWrapper`, etc.) so unit tests never need a live tenant or the SDK installed.
 - **Beta endpoints** are isolated in collectors with a `(beta)` comment and must degrade to `NotAssessed` if Microsoft changes them.
+- **Reporting is local-only**: `Export-ZTAssessReport` consumes persisted run artifacts and writes `ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`, `RiskRegister.csv`, and `RemediationRoadmap.json` beneath `<Run>/Reports`. It makes no Graph calls. Risk-register and roadmap rows include only Fail/Partial findings and use `Settings/settings.psd1` `RemediationSlaDays` (Critical 7, High 30, Medium 90, Low 180).
 
 ## Common Commands
 
