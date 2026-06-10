@@ -76,6 +76,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   absolute-path validation; -Force creates the destination directory on demand.
   Also updates $Global:LogFile for backward compatibility.
 
+### Fixed
+
+- Dependency resolution: enabled ModuleFast in Resolve-Dependency.psd1 so
+  the NuGet version-range syntax in RequiredModules.psd1 (for example
+  '[3.0,4.0)') resolves correctly; PowerShellGet v2 fails on version
+  ranges with 'Cannot convert value to type System.Version'.
+
 ### Changed
 
 - Renamed the logger mutex and default log file prefix from the inherited
