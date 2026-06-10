@@ -49,11 +49,26 @@ function Test-ZTAssessPrivilegedAccess {
     }
 
     $usersById = @{}
-    foreach ($user in @($users)) { $usersById[$user.id] = $user }
+    foreach ($user in @($users)) {
+        if ($null -eq $user -or [string]::IsNullOrWhiteSpace([string]$user.id)) {
+            continue
+        }
+        $usersById[$user.id] = $user
+    }
     $groupsById = @{}
-    foreach ($group in @($groups)) { $groupsById[$group.id] = $group }
+    foreach ($group in @($groups)) {
+        if ($null -eq $group -or [string]::IsNullOrWhiteSpace([string]$group.id)) {
+            continue
+        }
+        $groupsById[$group.id] = $group
+    }
     $spById = @{}
-    foreach ($sp in @($servicePrincipals)) { $spById[$sp.id] = $sp }
+    foreach ($sp in @($servicePrincipals)) {
+        if ($null -eq $sp -or [string]::IsNullOrWhiteSpace([string]$sp.id)) {
+            continue
+        }
+        $spById[$sp.id] = $sp
+    }
 
     $gaTemplate = $roleConfig.GlobalAdministratorTemplateId
     $privilegedTemplates = @($roleConfig.PrivilegedTemplateIds)

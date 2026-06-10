@@ -147,6 +147,28 @@ Describe 'Test-ZTAssessPrivilegedAccess' -Tag 'Unit' {
         }
     }
 
+
+    Context 'When user snapshots contain malformed records' {
+        It 'Should ignore user records without usable IDs' {
+            $runPath = New-ZTAssessTestRun -Path (Join-Path $TestDrive 'malformed-users') -Overrides @{
+                users = @(
+                    $null
+                    @{ userPrincipalName = 'missing-id@contoso.com'; accountEnabled = $true; userType = 'Member'; onPremisesSyncEnabled = $false; assignedLicenses = @() }
+                    @{ id = $null; userPrincipalName = 'null-id@contoso.com'; accountEnabled = $true; userType = 'Member'; onPremisesSyncEnabled = $false; assignedLicenses = @() }
+                    @{ id = 'bg-1'; userPrincipalName = 'breakglass1@contoso.com'; accountEnabled = $true; userType = 'Member'; onPremisesSyncEnabled = $false; assignedLicenses = @(); signInActivity = @{ lastSignInDateTime = [datetime]::UtcNow.AddDays(-5).ToString('o') } }
+                    @{ id = 'bg-2'; userPrincipalName = 'breakglass2@contoso.com'; accountEnabled = $true; userType = 'Member'; onPremisesSyncEnabled = $false; assignedLicenses = @(); signInActivity = @{ lastSignInDateTime = [datetime]::UtcNow.AddDays(-4).ToString('o') } }
+                )
+            }
+
+            {
+                InModuleScope -ModuleName $script:dscModuleName -Parameters @{ runPath = $runPath } {
+                    param($runPath)
+                    Test-ZTAssessPrivilegedAccess -RunPath $runPath
+                }
+            } | Should -Not -Throw
+        }
+    }
+
     Context 'When role snapshots are missing entirely' {
         It 'Should mark every check NotAssessed' {
             $runPath = New-ZTAssessTestRun -Path (Join-Path $TestDrive 'no-roles') -ExcludeSnapshots @('roleDefinitions', 'roleAssignments')
