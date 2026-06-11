@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 5 delivery readiness hardening:
+  - Consultant runbook and permissions guidance under `docs/` for scoped,
+    read-only assessment delivery.
+  - `Export-ZTAssessReport -RedactUserIdentifiers` option for client-safe
+    report artifacts while preserving source run evidence unchanged.
+  - Manifest metadata polish for PowerShell Core compatibility and gallery
+    discovery tags.
+  - CI ScriptAnalyzer installation pinned to a concrete version.
 - Phase 4 reporting MVP:
   - Public `Export-ZTAssessReport` command for completed local run folders.
   - Deterministic local report artifacts under `<RunPath>/Reports`:

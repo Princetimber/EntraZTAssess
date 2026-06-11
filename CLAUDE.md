@@ -6,7 +6,7 @@ Project context for Claude Code and AI agents.
 
 **Get-EntraZTAssess** — the *Entra ID Security & Endpoint Zero Trust Assessment* toolkit. A read-only, consultancy-grade PowerShell module (built with the **Sampler** framework) that collects Microsoft Entra ID and Intune configuration via Microsoft Graph, assesses it against a declarative check library, scores maturity and risk, and persists evidence for local report generation.
 
-Build status: **Phase 4 reporting MVP present.** Implemented public modules: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring (92 checks across 14 domains). Reporting currently exports local HTML executive/technical reports plus JSON/CSV risk register and JSON remediation roadmap under each run's `Reports` folder. Remaining roadmap: richer report packaging such as PDF/Excel/dashboard outputs, then Phase 5 hardening/signing/runbook. The authoritative build specification is the *Master Build Specification* document kept with the engagement records.
+Build status: **Phase 5 delivery hardening present.** Implemented public modules: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring (92 checks across 14 domains). Reporting exports local HTML executive/technical reports plus JSON/CSV risk register and JSON remediation roadmap under each run's `Reports` folder, with optional `Export-ZTAssessReport -RedactUserIdentifiers` output redaction for client-safe copies. Consultant runbook, permissions guidance, manifest metadata polish, and CI ScriptAnalyzer pinning are present. Remaining roadmap: richer report packaging such as PDF/Excel/dashboard outputs and signing if required. The authoritative build specification is the *Master Build Specification* document kept with the engagement records.
 Public module names stay user-facing; internal check/settings domains map `Applications` to `ApplicationSecurity` and `Monitoring` to `MonitoringDetection`.
 
 ### Consultant workflow
@@ -18,6 +18,8 @@ $run = Invoke-ZTAssessment -EngagementPath $eng.EngagementPath
 Get-ZTAssessScore -RunPath $run.RunPath
 Get-ZTAssessFinding -RunPath $run.RunPath -Status Fail | Format-Table CheckId, Severity, Title
 Export-ZTAssessReport -RunPath $run.RunPath
+# For client-distribution copies that should suppress user identifiers:
+Export-ZTAssessReport -RunPath $run.RunPath -RedactUserIdentifiers
 Disconnect-ZTAssessment
 ```
 
@@ -58,6 +60,7 @@ Get-EntraZTAssess/
 │   ├── QA/                       # module.tests.ps1 (exported functions only) + ReadOnly.tests.ps1 gate
 │   ├── Fixtures/FixtureHelper.ps1 # Well-configured tenant fixture (all-Pass baseline)
 │   └── Unit/                     # Public/, Private/, Classes/ mirror source
+├── docs/                         # Consultant runbook and permissions guidance
 ├── build.ps1
 ├── build.yaml                    # CopyPaths must include Settings and Checks
 └── RequiredModules.psd1          # NuGet version ranges (requires ModuleFast, enabled)
@@ -71,7 +74,7 @@ Get-EntraZTAssess/
 - **Graceful degradation**: missing permission/licence/snapshot ⇒ `NotAssessed` finding with reason, never an error. Collector failures warn and continue. Snapshot by-id lookups must skip malformed records with null or blank IDs rather than throwing.
 - **Graph SDK calls are wrapped** (`Connect-MgGraphWrapper`, `Get-MgContextWrapper`, etc.) so unit tests never need a live tenant or the SDK installed.
 - **Beta endpoints** are isolated in collectors with a `(beta)` comment and must degrade to `NotAssessed` if Microsoft changes them.
-- **Reporting is local-only**: `Export-ZTAssessReport` consumes persisted run artifacts and writes `ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`, `RiskRegister.csv`, and `RemediationRoadmap.json` beneath `<Run>/Reports`. It makes no Graph calls. Risk-register and roadmap rows include only Fail/Partial findings and use `Settings/settings.psd1` `RemediationSlaDays` (Critical 7, High 30, Medium 90, Low 180).
+- **Reporting is local-only**: `Export-ZTAssessReport` consumes persisted run artifacts and writes `ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`, `RiskRegister.csv`, and `RemediationRoadmap.json` beneath `<Run>/Reports`. It makes no Graph calls. `-RedactUserIdentifiers` redacts generated report artifacts only and must not modify raw findings, snapshots, scores, or the run manifest. Risk-register and roadmap rows include only Fail/Partial findings and use `Settings/settings.psd1` `RemediationSlaDays` (Critical 7, High 30, Medium 90, Low 180).
 
 ## Common Commands
 
@@ -120,6 +123,7 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - **GitHub Actions** (`.github/workflows/ci.yml` and `release.yml`)
   - CI: Runs on push to main and PRs
   - Matrix testing: Linux, Windows, macOS
+  - Linting pins PSScriptAnalyzer to the workflow version before invoking the PSGallery ruleset
   - Release: Publishes to PSGallery and GitHub Releases on tag `v*`
 
 - **Azure Pipelines** (`azure-pipelines.yml`)
