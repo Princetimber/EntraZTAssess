@@ -13,7 +13,7 @@ RootModule = 'Get-EntraZTAssess.psm1'
 ModuleVersion = '0.0.1'
 
 # Supported PSEditions
-# CompatiblePSEditions = @()
+CompatiblePSEditions = @('Core')
 
 # ID used to uniquely identify this module
 GUID = '6a486feb-1bc5-4b42-b346-0de1d3937a1e'
@@ -28,7 +28,7 @@ CompanyName = 'Fountview Enterprise Solutions'
 Copyright = '(c) Olamide Olaleye. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Orchestrates the assessment of EntraID tenant and generates a professional report'
+Description = 'Runs read-only Microsoft Entra ID and Intune Zero Trust assessments using Microsoft Graph collection, declarative checks, maturity scoring, and local report artifact generation for consultant-led delivery.'
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '7.0'
@@ -103,7 +103,7 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('EntraID', 'MicrosoftGraph', 'ZeroTrust', 'Intune', 'SecurityAssessment', 'PowerShell')
 
         # A URL to the license for this module.
         # LicenseUri = ''
