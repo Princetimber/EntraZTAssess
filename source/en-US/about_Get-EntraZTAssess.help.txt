@@ -11,12 +11,14 @@ LONG DESCRIPTION
     declarative Zero Trust check library, scores maturity and risk separately,
     and exports local consultant reporting artifacts.
 
-    The Phase 4 reporting MVP is disk-only. Export-ZTAssessReport reads a
+    Phase 5 delivery-ready reporting is disk-only. Export-ZTAssessReport reads a
     completed run folder and writes these files beneath <RunPath>/Reports:
     ExecutiveReport.html, TechnicalReport.html, RiskRegister.json,
-    RiskRegister.csv, and RemediationRoadmap.json. The report exporter does not
-    connect to Microsoft Graph and does not implement PDF, Excel workbook, or
-    dashboard outputs in this MVP.
+    RiskRegister.csv, and RemediationRoadmap.json. Use -RedactUserIdentifiers
+    when generated reports need client-safe user identifier redaction; source
+    findings, snapshots, scores, and manifests remain unchanged. The report
+    exporter does not connect to Microsoft Graph and does not implement PDF,
+    Excel workbook, or dashboard outputs.
 
 COMMANDS
     Connect-ZTAssessment
@@ -34,6 +36,7 @@ EXAMPLES
     $engagement = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' -Reference 'ENG-2026-042' -OutputPath ~/Assessments
     $run = Invoke-ZTAssessment -EngagementPath $engagement.EngagementPath
     Export-ZTAssessReport -RunPath $run.RunPath
+    Export-ZTAssessReport -RunPath $run.RunPath -RedactUserIdentifiers
 
     Get-ZTAssessFinding -RunPath $run.RunPath -Status Fail -Severity Critical,High
     Get-ZTAssessScore -RunPath $run.RunPath

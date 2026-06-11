@@ -37,19 +37,26 @@ $run = Invoke-ZTAssessment -EngagementPath $engagement.EngagementPath
 Get-ZTAssessScore -RunPath $run.RunPath
 Get-ZTAssessFinding -RunPath $run.RunPath -Severity High
 Export-ZTAssessReport -RunPath $run.RunPath
+# For client-distribution copies that should suppress user identifiers:
+Export-ZTAssessReport -RunPath $run.RunPath -RedactUserIdentifiers
 Disconnect-ZTAssessment
 ```
 
 `New-ZTAssessEngagement` creates the local engagement folder scaffold. `Invoke-ZTAssessment` orchestrates collection, assessment, scoring, and local artifact writes under that engagement path.
 
-`Export-ZTAssessReport` is the Phase 4 reporting MVP. It reads a completed
-run folder from disk and writes local-only artifacts under `<RunPath>/Reports`:
+`Export-ZTAssessReport` reads a completed run folder from disk and writes
+delivery-ready local artifacts under `<RunPath>/Reports`:
 `ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`,
 `RiskRegister.csv`, and `RemediationRoadmap.json`. It does not connect to
 Graph, require an active Graph session, or mutate tenant configuration. The
 risk register and remediation roadmap include only `Fail` and `Partial`
 findings; `NotAssessed` findings remain visible in the technical HTML report.
-PDF, Excel workbook, and dashboard outputs are not implemented in this MVP.
+Use `-RedactUserIdentifiers` to suppress user-identifying values in generated
+report artifacts without changing raw findings, snapshots, scores, or the run
+manifest. PDF, Excel workbook, and dashboard outputs are not implemented.
+
+Delivery guidance lives in [`docs/ConsultantRunbook.md`](docs/ConsultantRunbook.md)
+and [`docs/PermissionsGuidance.md`](docs/PermissionsGuidance.md).
 
 ## Build And Test
 
@@ -89,6 +96,10 @@ tests/
   Fixtures/                shared Pester fixtures and helpers
   Unit/                    public/private/class unit tests
   QA/                      read-only, help, ScriptAnalyzer, changelog, export checks
+
+docs/
+  ConsultantRunbook.md     consultant delivery workflow and QA checklist
+  PermissionsGuidance.md   read-only Graph scope review guidance
 ```
 
 The dev-time module entrypoint is `source/Get-EntraZTAssess.psm1`. Sampler/ModuleBuilder compiles the release module into `output/`.
@@ -116,7 +127,7 @@ QA tests check exported-function help, ScriptAnalyzer, changelog quality, export
 
 ## CI And Release
 
-- `.github/workflows/ci.yml` runs pack with dependency restore, test, and `Invoke-ScriptAnalyzer -Path source/ -Recurse -Settings PSGallery`.
+- `.github/workflows/ci.yml` runs pack with dependency restore, test, and pinned-version `Invoke-ScriptAnalyzer -Path source/ -Recurse -Settings PSGallery` linting.
 - `.github/workflows/release.yml` is tag-driven (`v*`) and publishes to PSGallery plus GitHub Releases.
 - `azure-pipelines.yml` runs pack/test across Linux, Windows PowerShell 7, and macOS.
 
