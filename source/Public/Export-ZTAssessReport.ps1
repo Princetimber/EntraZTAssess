@@ -7,7 +7,7 @@ function Export-ZTAssessReport {
 
     .DESCRIPTION
     Reads a completed run folder produced by Invoke-ZTAssessment and writes the
-    Phase 4 reporting MVP artifacts beneath the run's Reports folder:
+    delivery-ready report artifacts beneath the run's Reports folder:
     ExecutiveReport.html, TechnicalReport.html, RiskRegister.json,
     RiskRegister.csv, and RemediationRoadmap.json. The command is intentionally
     disk-only: it performs no Microsoft Graph calls, does not require an active
@@ -22,6 +22,11 @@ function Export-ZTAssessReport {
     consumes optional manifest.json, Findings/platformProfiles.json, and
     Findings/deviceClassification.json when present.
 
+    .PARAMETER RedactUserIdentifiers
+    Redacts user-identifying values from the generated report artifacts. This
+    option affects only the exported reports and does not modify source run
+    artifacts such as Findings/findings.json.
+
     .EXAMPLE
     Export-ZTAssessReport -RunPath 'D:\Assessments\Contoso-ENG-2026-042\Runs\20260610-0930'
 
@@ -35,6 +40,12 @@ function Export-ZTAssessReport {
     or any artifacts. The returned object still contains the deterministic paths
     that would be used.
 
+    .EXAMPLE
+    Export-ZTAssessReport -RunPath $run.RunPath -RedactUserIdentifiers
+
+    Writes report artifacts with user-identifying values replaced by a stable
+    redaction marker for client handoff.
+
     .OUTPUTS
     PSCustomObject
     Returns a ZTAssess.ReportExportResult object with RunPath, ReportsPath,
@@ -42,7 +53,7 @@ function Export-ZTAssessReport {
 
     .NOTES
     This command is a local filesystem export only. It does not generate PDF,
-    Excel workbook, or dashboard artifacts in the Phase 4 MVP; print the HTML
+    Excel workbook, or dashboard artifacts; print the HTML
     files from a browser if a PDF handoff is required.
     #>
     [CmdletBinding(SupportsShouldProcess)]
@@ -50,11 +61,18 @@ function Export-ZTAssessReport {
     param(
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$RunPath
+        [string]$RunPath,
+
+        [Parameter()]
+        [switch]$RedactUserIdentifiers
     )
 
     $resolvedRunPath = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($RunPath)
     $context = Get-ZTAssessReportContext -RunPath $resolvedRunPath
+    $exportContext = $context
+    if ($RedactUserIdentifiers.IsPresent) {
+        $exportContext = Protect-ZTAssessReportUserIdentifier -Context $context
+    }
     $reportsPath = Join-Path -Path $resolvedRunPath -ChildPath 'Reports'
 
     $executiveReportPath = Join-Path -Path $reportsPath -ChildPath 'ExecutiveReport.html'
@@ -63,14 +81,14 @@ function Export-ZTAssessReport {
     $riskRegisterCsvPath = Join-Path -Path $reportsPath -ChildPath 'RiskRegister.csv'
     $roadmapJsonPath = Join-Path -Path $reportsPath -ChildPath 'RemediationRoadmap.json'
 
-    if ($PSCmdlet.ShouldProcess($reportsPath, 'Write Phase 4 MVP report artifacts')) {
+    if ($PSCmdlet.ShouldProcess($reportsPath, 'Write report artifacts')) {
         try {
             $null = New-Item -Path $reportsPath -ItemType Directory -Force -ErrorAction Stop
 
-            $executiveHtml = ConvertTo-ZTAssessExecutiveHtml -Context $context
-            $technicalHtml = ConvertTo-ZTAssessTechnicalHtml -Context $context
-            $riskRegister = @(Get-ZTAssessRiskRegister -Context $context)
-            $roadmap = @(Get-ZTAssessRemediationRoadmap -Context $context)
+            $executiveHtml = ConvertTo-ZTAssessExecutiveHtml -Context $exportContext
+            $technicalHtml = ConvertTo-ZTAssessTechnicalHtml -Context $exportContext
+            $riskRegister = @(Get-ZTAssessRiskRegister -Context $exportContext)
+            $roadmap = @(Get-ZTAssessRemediationRoadmap -Context $exportContext)
 
             Set-Content -LiteralPath $executiveReportPath -Value $executiveHtml -Encoding utf8NoBOM -ErrorAction Stop
             Set-Content -LiteralPath $technicalReportPath -Value $technicalHtml -Encoding utf8NoBOM -ErrorAction Stop
@@ -96,7 +114,7 @@ function Export-ZTAssessReport {
         PSTypeName                  = 'ZTAssess.ReportExportResult'
         RunPath                     = $resolvedRunPath
         ReportsPath                 = $reportsPath
-        GeneratedUtc                = $context.GeneratedUtc
+        GeneratedUtc                = $exportContext.GeneratedUtc
         ExecutiveReportPath         = $executiveReportPath
         TechnicalReportPath         = $technicalReportPath
         RiskRegisterJsonPath        = $riskRegisterJsonPath

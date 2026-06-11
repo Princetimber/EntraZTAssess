@@ -35,8 +35,8 @@ BeforeAll {
 
         @(
             [ordered]@{
-                CheckId = 'CA-001'; Domain = 'ConditionalAccess'; Title = 'Require MFA <all users>'; Status = 'Fail'; Severity = 'Critical'
-                Evidence = 'Policy missing for <All users>'; Rationale = 'Attackers can sign in'; Remediation = 'Create CA policy'; RemediationEffort = 'Medium'
+                CheckId = 'CA-001'; Domain = 'ConditionalAccess'; Title = 'Require MFA for admin@contoso.com'; Status = 'Fail'; Severity = 'Critical'
+                Evidence = 'Policy missing for admin@contoso.com'; Rationale = 'Alice Admin can sign in without MFA'; Remediation = 'Create CA policy for admin@contoso.com'; RemediationEffort = 'Medium'
                 ZeroTrustPillars = @('VerifyExplicitly', 'LeastPrivilege'); References = @('https://learn.microsoft.com/a', 'https://learn.microsoft.com/b')
             }
             [ordered]@{
@@ -129,6 +129,35 @@ Describe 'Export-ZTAssessReport' -Tag 'Unit' {
             $csv[0].CheckId | Should -Be 'CA-001'
             $csv[0].ZeroTrustPillars | Should -Be 'LeastPrivilege; VerifyExplicitly'
             $csv[0].References | Should -Be 'https://learn.microsoft.com/a; https://learn.microsoft.com/b'
+        }
+
+        It 'Should preserve user identifiers by default' {
+            $runPath = New-TestReportRun -Root $TestDrive
+
+            $result = Export-ZTAssessReport -RunPath $runPath
+            $riskRegisterJson = Get-Content -LiteralPath $result.RiskRegisterJsonPath -Raw
+            $technicalHtml = Get-Content -LiteralPath $result.TechnicalReportPath -Raw
+
+            $riskRegisterJson | Should -Match 'admin@contoso\.com'
+            $technicalHtml | Should -Match 'admin@contoso\.com'
+        }
+
+        It 'Should redact user identifiers from exported report artifacts when requested' {
+            $runPath = New-TestReportRun -Root $TestDrive
+
+            $result = Export-ZTAssessReport -RunPath $runPath -RedactUserIdentifiers
+            $artifactContent = @(
+                Get-Content -LiteralPath $result.RiskRegisterJsonPath -Raw
+                Get-Content -LiteralPath $result.RiskRegisterCsvPath -Raw
+                Get-Content -LiteralPath $result.RemediationRoadmapJsonPath -Raw
+                Get-Content -LiteralPath $result.ExecutiveReportPath -Raw
+                Get-Content -LiteralPath $result.TechnicalReportPath -Raw
+            ) -join "`n"
+            $sourceFindings = Get-Content -LiteralPath (Join-Path $runPath 'Findings/findings.json') -Raw
+
+            $artifactContent | Should -Not -Match 'admin@contoso\.com'
+            $artifactContent | Should -Match '\[RedactedUserIdentifier\]'
+            $sourceFindings | Should -Match 'admin@contoso\.com'
         }
     }
 
