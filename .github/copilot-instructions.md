@@ -49,6 +49,13 @@ Use `tests/Fixtures/FixtureHelper.ps1` helpers such as `New-ZTAssessTestRun`; us
 
 QA tests validate exported-function help, ScriptAnalyzer, changelog quality, matching unit tests for exported functions, and read-only security rules. The Sampler test task includes the 85% coverage gate from `build.yaml`.
 
+## Agentic Iteration Limits
+
+- For each request, do at most 1 planning pass, 2 implementation attempts, and 2 verification/fix cycles.
+- If the same failure appears twice or 3 materially different approaches fail, stop and ask for guidance.
+- Do not continue autonomous loops without explicit user approval.
+- Report the attempted approach, current state, blocker, and recommended next action before handing back.
+
 ## Documentation Discipline
 
 Keep docs repo-specific and concise. Remove old template examples and generic Sampler-module setup guidance unless they are directly relevant to this repository.

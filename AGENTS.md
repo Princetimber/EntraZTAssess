@@ -82,6 +82,18 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - Generated/build artifacts under `output/` should not be hand-edited.
 - Keep docs concise and repo-specific. Remove template examples like `Get-Greeting` rather than preserving generic guidance.
 
+## Agentic Iteration Limits
+
+For each user request in this repository:
+
+- Do at most 1 planning pass before acting.
+- Do at most 2 independent implementation attempts.
+- Do at most 2 verification/fix cycles after edits.
+- If the same failure appears twice, stop and ask for guidance.
+- If 3 materially different approaches fail, stop editing immediately.
+- Do not continue autonomous loops without explicit user approval.
+- Report the attempted approach, current state, blocker, and recommended next action before handing back.
+
 ## Documentation Maintenance (mandatory)
 
 Every change MUST keep the documentation in sync, in the same branch and

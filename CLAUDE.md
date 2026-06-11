@@ -138,6 +138,16 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - Never introduce secrets, tokens, or credentials into code or tests
 - Avoid collecting, logging, or exporting sensitive data by default
 
+## AI Agent Iteration Limits
+
+- Do at most 1 planning pass per user request before acting.
+- Do at most 2 independent implementation attempts.
+- Do at most 2 verification/fix cycles after edits.
+- If the same failure appears twice, stop and ask for guidance.
+- If 3 materially different approaches fail, stop editing immediately.
+- Do not continue autonomous loops without explicit user approval.
+- Before handing back, report the attempted approach, current state, blocker, and recommended next action.
+
 ## AI Agent Workflow Rules
 
 1. **Discover**

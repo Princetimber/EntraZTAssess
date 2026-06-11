@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added agentic iteration-limit guidance to `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` so autonomous request handling stops at documented planning, retry, and verification bounds.
 - Phase 5 delivery readiness hardening:
   - Consultant runbook and permissions guidance under `docs/` for scoped,
     read-only assessment delivery.
