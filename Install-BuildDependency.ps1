@@ -1,195 +1,213 @@
 #Requires -Version 7.2
 <#
-    .SYNOPSIS
-        Ensures the build bootstrap modules ModuleFast and Sampler are present.
+.SYNOPSIS
+    Ensures the build bootstrap modules from RequiredModules.psd1 are present.
 
-    .DESCRIPTION
-        Pre-flight guard for the Sampler build pipeline. The standard
-        './build.ps1 -ResolveDependency' flow uses ModuleFast to restore the
-        modules listed in RequiredModules.psd1 (Sampler, InvokeBuild, Pester,
-        etc.). If ModuleFast itself is missing, or if ModuleFast cannot reach
-        its 'pwsh.gallery' source to pull Sampler, dependency resolution aborts
-        and InvokeBuild is never installed (the 'Invoke-Build is not recognized'
-        error).
+.DESCRIPTION
+    The standard Sampler build path uses ./build.ps1 -ResolveDependency to restore the
+    modules listed in RequiredModules.psd1. That preferred path depends on ModuleFast
+    being available and on its package index being able to resolve every required module.
+    If ModuleFast cannot create a dependency plan, dependencies such as InvokeBuild and
+    PSScriptAnalyzer may never be installed and the build can fail later with a less
+    useful "Invoke-Build is not recognized" error.
 
-        This script checks the machine for ModuleFast and Sampler and installs
-        each one only when it is not already available. ModuleFast is installed
-        via its official bootstrap script, falling back to PSGallery. Sampler is
-        installed from PSGallery using the version range declared in
-        RequiredModules.psd1, which sidesteps the 'pwsh.gallery' source that
-        failed in the build log.
+    This helper is an idempotent pre-flight for developer machines and build agents. It:
 
-        The script is idempotent: re-running it is a no-op once both modules are
-        present. It only installs the two bootstrap modules; the remaining
-        dependencies are still restored by './build.ps1 -ResolveDependency'.
+      - Checks the machine for each module listed in RequiredModules.psd1.
+      - Installs ModuleFast by using the official bootstrap script, with a PSGallery
+        Install-Module fallback.
+      - Installs missing RequiredModules.psd1 entries from PSGallery, including
+        InvokeBuild and PSScriptAnalyzer, using the declared version ranges when they can
+        be translated to Install-Module parameters.
 
-    .PARAMETER Scope
-        Installation scope passed to Install-Module ('CurrentUser' or
-        'AllUsers'). 'AllUsers' requires elevation. The default value is
-        'CurrentUser'.
+    Run this script before ./build.ps1 -ResolveDependency -Tasks build when dependency
+    bootstrap reports that a required module was not found through ModuleFast/pwsh.gallery
+    or when InvokeBuild is not available on the machine.
 
-    .PARAMETER Force
-        Reinstall ModuleFast and Sampler even if they are already present.
+.PARAMETER Scope
+    Installation scope passed to Install-Module. Defaults to CurrentUser.
 
-    .EXAMPLE
-        ./Install-BuildDependency.ps1
+.PARAMETER Force
+    Reinstall the required build modules even when they are already available.
 
-        Installs ModuleFast and Sampler for the current user only if missing,
-        then you can run './build.ps1 -ResolveDependency -tasks build'.
+.EXAMPLE
+    ./Install-BuildDependency.ps1
 
-    .EXAMPLE
-        ./Install-BuildDependency.ps1 -Scope AllUsers -Verbose
-
-        Installs the bootstrap modules machine-wide (run from an elevated
-        session) with verbose progress output.
+.EXAMPLE
+    ./Install-BuildDependency.ps1 -Scope AllUsers -Force
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
-param
-(
+param(
     [Parameter()]
     [ValidateSet('CurrentUser', 'AllUsers')]
-    [System.String]
+    [string]
     $Scope = 'CurrentUser',
 
     [Parameter()]
-    [System.Management.Automation.SwitchParameter]
+    [switch]
     $Force
 )
 
 $ErrorActionPreference = 'Stop'
 
-function Test-ModulePresent
-{
+function Test-ModulePresent {
     [CmdletBinding()]
-    [OutputType([System.Boolean])]
-    param
-    (
+    param(
         [Parameter(Mandatory = $true)]
-        [System.String]
+        [string]
         $Name
     )
 
-    return [System.Boolean]((Get-Module -Name $Name -ListAvailable -ErrorAction 'SilentlyContinue') -or
-        (Get-Module -Name $Name -ErrorAction 'SilentlyContinue'))
-}
-
-function Initialize-PSGallery
-{
-    [CmdletBinding(SupportsShouldProcess = $true)]
-    param ()
-
-    # Ensure the NuGet package provider is available so Install-Module works unattended.
-    $nuGetProvider = Get-PackageProvider -Name 'NuGet' -ListAvailable -ErrorAction 'SilentlyContinue'
-
-    if (-not $nuGetProvider)
-    {
-        if ($PSCmdlet.ShouldProcess('NuGet', 'Install package provider'))
-        {
-            Write-Verbose -Message 'Installing the NuGet package provider.'
-
-            $null = Install-PackageProvider -Name 'NuGet' -MinimumVersion '2.8.5.201' -Scope $Scope -Force
-        }
+    $availableModule = Get-Module -Name $Name -ListAvailable -ErrorAction 'SilentlyContinue' | Select-Object -First 1
+    if ($null -ne $availableModule) {
+        return $true
     }
 
-    $gallery = Get-PSRepository -Name 'PSGallery' -ErrorAction 'SilentlyContinue'
+    return [bool] (Get-Module -Name $Name -ErrorAction 'SilentlyContinue')
+}
 
-    if ($gallery -and $gallery.InstallationPolicy -ne 'Trusted')
-    {
-        if ($PSCmdlet.ShouldProcess('PSGallery', 'Temporarily trust repository'))
-        {
-            Write-Verbose -Message 'Temporarily trusting PSGallery for this bootstrap.'
+function Initialize-PSGallery {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('CurrentUser', 'AllUsers')]
+        [string]
+        $Scope
+    )
 
+    if ($PSCmdlet.ShouldProcess('PSGallery', 'Ensure NuGet provider and trusted repository')) {
+        $null = Get-PackageProvider -Name 'NuGet' -ErrorAction 'SilentlyContinue'
+        if ($null -eq (Get-PackageProvider -Name 'NuGet' -ErrorAction 'SilentlyContinue')) {
+            Install-PackageProvider -Name 'NuGet' -MinimumVersion '2.8.5.201' -Scope $Scope -Force | Out-Null
+        }
+
+        $repository = Get-PSRepository -Name 'PSGallery' -ErrorAction 'Stop'
+        if ($repository.InstallationPolicy -ne 'Trusted') {
             Set-PSRepository -Name 'PSGallery' -InstallationPolicy 'Trusted'
         }
     }
 }
 
-# Read the Sampler version range from RequiredModules.psd1 so this stays in sync.
-$requiredModulesPath = Join-Path -Path $PSScriptRoot -ChildPath 'RequiredModules.psd1'
+function Convert-VersionRangeToInstallModuleParameter {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]
+        $VersionRange
+    )
 
-$samplerMinimumVersion = $null
-$samplerMaximumVersion = $null
+    $versionParameter = @{}
 
-if (Test-Path -Path $requiredModulesPath)
-{
-    $requiredModules = Import-PowerShellDataFile -Path $requiredModulesPath
+    if ([string]::IsNullOrWhiteSpace($VersionRange)) {
+        return $versionParameter
+    }
 
-    $samplerSpecification = $requiredModules['Sampler']
+    $normalizedRange = $VersionRange.Trim()
+    if ($normalizedRange -notmatch '^[\[\(]\s*([^,\]\)]+)\s*,\s*([^\]\)]+)\s*[\]\)]$') {
+        Write-Warning "Could not parse version range '$VersionRange'. Installing the module without an explicit version constraint."
+        return $versionParameter
+    }
 
-    # Parse a NuGet-style range such as '[0.118,1.0)' into min/max versions.
-    if ($samplerSpecification -is [System.String] -and $samplerSpecification -match '([\d\.]+)\s*,\s*(\d+)')
-    {
-        $samplerMinimumVersion = $Matches[1]
+    $minimumVersion = $Matches[1].Trim()
+    $upperVersion = $Matches[2].Trim()
 
-        # The upper bound is exclusive in NuGet syntax (e.g. '1.0)' means < 1.0).
-        # Install-Module's MaximumVersion is inclusive, so target the highest
-        # release below the next major boundary, e.g. '1.0)' -> '0.999.999'.
-        $samplerMaximumVersion = '{0}.999.999' -f ([System.Int32] $Matches[2] - 1)
+    if (-not [string]::IsNullOrWhiteSpace($minimumVersion)) {
+        $versionParameter['MinimumVersion'] = $minimumVersion
+    }
+
+    $isExclusiveUpperBound = $normalizedRange.EndsWith(')')
+    if (-not [string]::IsNullOrWhiteSpace($upperVersion)) {
+        if ($isExclusiveUpperBound) {
+            $upperVersionParts = $upperVersion -split '\.'
+            $upperMajor = 0
+            if ([int]::TryParse($upperVersionParts[0], [ref] $upperMajor) -and $upperMajor -gt 0) {
+                $versionParameter['MaximumVersion'] = ('{0}.999.999' -f ($upperMajor - 1))
+            } else {
+                Write-Warning "Could not translate exclusive upper bound '$upperVersion'. Installing without MaximumVersion."
+            }
+        } else {
+            $versionParameter['MaximumVersion'] = $upperVersion
+        }
+    }
+
+    return $versionParameter
+}
+
+function Install-RequiredBuildModule {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Name,
+
+        [Parameter()]
+        [string]
+        $VersionRange,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('CurrentUser', 'AllUsers')]
+        [string]
+        $Scope,
+
+        [Parameter()]
+        [switch]
+        $Force
+    )
+
+    if (-not $Force.IsPresent -and (Test-ModulePresent -Name $Name)) {
+        Write-Information -MessageData "[bootstrap] $Name is already available." -InformationAction 'Continue'
+        return
+    }
+
+    if ($PSCmdlet.ShouldProcess($Name, 'Install required build module from PSGallery')) {
+        Initialize-PSGallery -Scope $Scope
+
+        $installModuleParameters = @{
+            Name        = $Name
+            Scope       = $Scope
+            Force       = $true
+            AllowClobber = $true
+        }
+
+        $versionParameter = Convert-VersionRangeToInstallModuleParameter -VersionRange $VersionRange
+        foreach ($parameterName in $versionParameter.Keys) {
+            $installModuleParameters[$parameterName] = $versionParameter[$parameterName]
+        }
+
+        Install-Module @installModuleParameters
     }
 }
 
-if (-not $samplerMinimumVersion)
-{
-    # Fallback that matches the documented baseline if the manifest could not be parsed.
-    $samplerMinimumVersion = '0.118.0'
-    $samplerMaximumVersion = '0.999.999'
+$requiredModuleManifest = Join-Path -Path $PSScriptRoot -ChildPath 'RequiredModules.psd1'
+if (-not (Test-Path -Path $requiredModuleManifest -PathType 'Leaf')) {
+    throw "Required module manifest was not found at '$requiredModuleManifest'."
 }
 
-# --- ModuleFast -----------------------------------------------------------
-if ($Force -or -not (Test-ModulePresent -Name 'ModuleFast'))
-{
-    if ($PSCmdlet.ShouldProcess('ModuleFast', 'Install module'))
-    {
-        Write-Verbose -Message 'ModuleFast is not present. Installing it.'
+$requiredModules = Import-PowerShellDataFile -Path $requiredModuleManifest
 
-        try
-        {
-            # Preferred path: the official ModuleFast bootstrap script (same source build.ps1 uses).
-            $moduleFastBootstrap = Invoke-WebRequest -Uri 'https://bit.ly/modulefast' -ErrorAction 'Stop' # cSpell: disable-line
-
-            $moduleFastScriptBlock = [System.Management.Automation.ScriptBlock]::Create($moduleFastBootstrap.Content)
-
-            & $moduleFastScriptBlock
-        }
-        catch
-        {
-            Write-Warning -Message ('ModuleFast bootstrap script failed ({0}). Falling back to PSGallery.' -f $_.Exception.Message)
-
-            Initialize-PSGallery
-
+if ($Force.IsPresent -or -not (Test-ModulePresent -Name 'ModuleFast')) {
+    if ($PSCmdlet.ShouldProcess('ModuleFast', 'Install bootstrap module')) {
+        try {
+            Write-Information -MessageData '[bootstrap] Installing ModuleFast using the official bootstrap script.' -InformationAction 'Continue'
+            $moduleFastInstaller = Invoke-WebRequest -Uri 'https://bit.ly/modulefast' -UseBasicParsing
+            $moduleFastInstallerScript = [scriptblock]::Create($moduleFastInstaller.Content)
+            & $moduleFastInstallerScript -Scope $Scope -Confirm:$false
+        } catch {
+            Write-Warning "ModuleFast bootstrap script failed. Falling back to PSGallery Install-Module. Error: $($_.Exception.Message)"
+            Initialize-PSGallery -Scope $Scope
             Install-Module -Name 'ModuleFast' -Scope $Scope -Force -AllowClobber
         }
     }
-}
-else
-{
-    Write-Verbose -Message 'ModuleFast is already present. Skipping.'
+} else {
+    Write-Information -MessageData '[bootstrap] ModuleFast is already available.' -InformationAction 'Continue'
 }
 
-# --- Sampler --------------------------------------------------------------
-if ($Force -or -not (Test-ModulePresent -Name 'Sampler'))
-{
-    if ($PSCmdlet.ShouldProcess('Sampler', 'Install module'))
-    {
-        Write-Verbose -Message ('Sampler is not present. Installing version range [{0},{1}].' -f $samplerMinimumVersion, $samplerMaximumVersion)
-
-        Initialize-PSGallery
-
-        $installSamplerParameters = @{
-            Name            = 'Sampler'
-            MinimumVersion  = $samplerMinimumVersion
-            MaximumVersion  = $samplerMaximumVersion
-            Scope           = $Scope
-            Force           = $true
-            AllowClobber    = $true
-        }
-
-        Install-Module @installSamplerParameters
+foreach ($moduleName in ($requiredModules.Keys | Sort-Object)) {
+    if ($moduleName -eq 'ModuleFast') {
+        continue
     }
-}
-else
-{
-    Write-Verbose -Message 'Sampler is already present. Skipping.'
+
+    Install-RequiredBuildModule -Name $moduleName -VersionRange $requiredModules[$moduleName] -Scope $Scope -Force:$Force
 }
 
-Write-Information -MessageData "[bootstrap] ModuleFast and Sampler are ready. Run './build.ps1 -ResolveDependency -tasks build' next." -InformationAction 'Continue'
+Write-Information -MessageData "[bootstrap] Required build modules are ready. Run './build.ps1 -ResolveDependency -Tasks build' next." -InformationAction 'Continue'

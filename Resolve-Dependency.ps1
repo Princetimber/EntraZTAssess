@@ -859,7 +859,23 @@ try
                     Confirm              = $false
                 }
 
-                $moduleFastPlan = Install-ModuleFast -Specification $modulesToSave -Plan @installModuleFastParameters
+                try
+
+                {
+
+                    $moduleFastPlan = Install-ModuleFast -Specification $modulesToSave -Plan @installModuleFastParameters
+
+                }
+
+                catch
+
+                {
+
+                    $moduleFastPlanError = $_.Exception.Message
+
+                    throw ("ModuleFast could not create a dependency plan from RequiredModules.psd1. Run './Install-BuildDependency.ps1' to install required build modules through PSGallery, then retry './build.ps1 -ResolveDependency -Tasks build'. Original error: {0}" -f $moduleFastPlanError)
+
+                }
 
                 Write-Debug -Message ("Missing modules that need to be saved:`n{0}" -f ($moduleFastPlan | Out-String))
 

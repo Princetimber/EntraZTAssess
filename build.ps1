@@ -463,7 +463,23 @@ begin {
 
         Write-Host -Object "[pre-build] Starting bootstrap process." -ForegroundColor Green
 
-        .\Resolve-Dependency.ps1 @resolveDependencyParams
+        try
+
+        {
+
+            .\Resolve-Dependency.ps1 @resolveDependencyParams
+
+        }
+
+        catch
+
+        {
+
+            $bootstrapError = $_.Exception.Message
+
+            throw ("Dependency bootstrap failed before the build could start. Run './Install-BuildDependency.ps1', then retry './build.ps1 -ResolveDependency -Tasks build'. Original error: {0}" -f $bootstrapError)
+
+        }
     }
 
     if ($MyInvocation.ScriptName -notlike '*Invoke-Build.ps1') {
@@ -476,6 +492,15 @@ begin {
         }
 
         Write-Host -Object "[build] Starting build with InvokeBuild." -ForegroundColor Green
+
+        if (-not (Get-Command -Name 'Invoke-Build' -ErrorAction 'SilentlyContinue'))
+
+        {
+
+            throw "Invoke-Build is not available after dependency bootstrap. Run './Install-BuildDependency.ps1', then retry './build.ps1 -ResolveDependency -Tasks build'."
+
+        }
+
 
         Invoke-Build @PSBoundParameters -Task $Tasks -File $MyInvocation.MyCommand.Path
 
