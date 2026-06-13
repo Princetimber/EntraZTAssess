@@ -39,6 +39,9 @@
 Install-Module -Name Get-EntraZTAssess -Scope CurrentUser
 
 # From source (development)
+# Optional: install the ModuleFast + Sampler bootstrap modules only if missing.
+# Run this first if dependency restore cannot reach the pwsh.gallery source.
+./Install-BuildDependency.ps1
 ./build.ps1 -ResolveDependency -tasks build
 Import-Module ./output/Get-EntraZTAssess/<version>/Get-EntraZTAssess.psd1
 ```
@@ -366,6 +369,7 @@ Get-EntraZTAssess/
 │       └── release.yml                # Tag-driven: PSGallery + GitHub Releases
 │
 ├── azure-pipelines.yml                # Azure Pipelines: Build → Test → Code Coverage → Deploy
+├── Install-BuildDependency.ps1        # Optional pre-flight: installs ModuleFast + Sampler if missing
 ├── build.ps1                          # Sampler build entry point
 ├── build.yaml                         # CopyPaths, CodeCoverageThreshold: 85
 └── RequiredModules.psd1               # NuGet version ranges (ModuleFast enabled)
@@ -378,6 +382,11 @@ Get-EntraZTAssess/
 ## Build and Test
 
 ```powershell
+# Optional pre-flight — install ModuleFast + Sampler only if missing (idempotent).
+# Use when dependency restore can't fetch Sampler/ModuleFast (e.g. pwsh.gallery
+# is unreachable), which otherwise leaves InvokeBuild uninstalled.
+./Install-BuildDependency.ps1
+
 # First build — resolves and installs all RequiredModules
 ./build.ps1 -ResolveDependency -tasks build
 

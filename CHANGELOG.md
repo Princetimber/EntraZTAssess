@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Install-BuildDependency.ps1` bootstrap guard at the repository root that
+  conditionally installs the build bootstrap modules **ModuleFast** and
+  **Sampler** only when they are not already present on the machine. ModuleFast
+  is installed via its official bootstrap script with a PSGallery
+  `Install-Module` fallback; Sampler is installed directly from PSGallery using
+  the version range read from `RequiredModules.psd1` (sidestepping the
+  `pwsh.gallery` source that can fail before `./build.ps1 -ResolveDependency`
+  has restored dependencies). The script is idempotent and supports `-Scope`
+  and `-Force`.
 - Added agentic iteration-limit guidance to `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` so autonomous request handling stops at documented planning, retry, and verification bounds.
 - Phase 5 delivery readiness hardening:
   - Consultant runbook and permissions guidance under `docs/` for scoped,

@@ -61,6 +61,7 @@ Get-EntraZTAssess/
 │   ├── Fixtures/FixtureHelper.ps1 # Well-configured tenant fixture (all-Pass baseline)
 │   └── Unit/                     # Public/, Private/, Classes/ mirror source
 ├── docs/                         # Consultant runbook and permissions guidance
+├── Install-BuildDependency.ps1   # Optional pre-flight: installs ModuleFast + Sampler if missing
 ├── build.ps1
 ├── build.yaml                    # CopyPaths must include Settings and Checks
 └── RequiredModules.psd1          # NuGet version ranges (requires ModuleFast, enabled)
@@ -79,6 +80,11 @@ Get-EntraZTAssess/
 ## Common Commands
 
 ```powershell
+# Optional bootstrap guard: install ModuleFast and Sampler only if missing.
+# Useful when './build.ps1 -ResolveDependency' fails to fetch Sampler/ModuleFast
+# (e.g. the pwsh.gallery source is unreachable) before InvokeBuild is restored.
+./Install-BuildDependency.ps1
+
 # First build (resolves dependencies)
 ./build.ps1 -ResolveDependency -tasks build
 
