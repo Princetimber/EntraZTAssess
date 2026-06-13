@@ -39,8 +39,9 @@
 Install-Module -Name Get-EntraZTAssess -Scope CurrentUser
 
 # From source (development)
-# Optional: install the ModuleFast + Sampler bootstrap modules only if missing.
-# Run this first if dependency restore cannot reach the pwsh.gallery source.
+# Optional: install RequiredModules.psd1 build modules only if missing.
+# Run this first if dependency restore reports missing InvokeBuild,
+# PSScriptAnalyzer, or other build modules.
 ./Install-BuildDependency.ps1
 ./build.ps1 -ResolveDependency -tasks build
 Import-Module ./output/Get-EntraZTAssess/<version>/Get-EntraZTAssess.psd1
