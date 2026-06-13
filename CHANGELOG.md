@@ -5,6 +5,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Dependency restore now rejects `Microsoft.PowerShell.PSResourceGet` versions
+  older than 1.2.0 before they can fail on PSGallery V2 repository metadata,
+  surfacing an actionable update message instead of the cross-platform
+  `Requested value 'V2'` exception.
+
 ### Added
 
 - `Install-BuildDependency.ps1` bootstrap guard at the repository root that

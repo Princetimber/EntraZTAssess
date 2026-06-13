@@ -276,6 +276,7 @@ if ($UseModuleFast -and -not (Get-Module -Name 'ModuleFast'))
 if ($UsePSResourceGet)
 {
     $psResourceGetModuleName = 'Microsoft.PowerShell.PSResourceGet'
+    $minimumPSResourceGetVersion = [version] '1.2.0'
 
     # If PSResourceGet was used prior it will be locked and we can't replace it.
     if ((Test-Path -Path "$PSDependTarget/$psResourceGetModuleName" -PathType 'Container') -and (Get-Module -Name $psResourceGetModuleName))
@@ -319,10 +320,8 @@ if ($UsePSResourceGet)
         }
         catch
         {
-            Write-Warning -Message ('{0} could not be bootstrapped. Reverting to PowerShellGet. Error: {1}' -f $psResourceGetModuleName, $_.Exception.Message)
+            throw ('{0} could not be bootstrapped. Install {0} {1} or later, then retry ''./build.ps1 -ResolveDependency -Tasks build''. Original error: {2}' -f $psResourceGetModuleName, $minimumPSResourceGetVersion, $_.Exception.Message)
         }
-
-        $UsePSResourceGet = $false
 
         if ($psResourceGetDownloaded)
         {
@@ -359,39 +358,50 @@ if ($UsePSResourceGet)
     if ($UsePSResourceGet)
     {
         $psResourceGetModule = Get-Module -Name $psResourceGetModuleName
+        $psResourceGetModuleVersion = '<not imported>'
 
-        $psResourceGetModuleVersion = $psResourceGetModule.Version.ToString()
-
-        if ($psResourceGetModule.PrivateData.PSData.Prerelease)
+        if ($psResourceGetModule)
         {
-            $psResourceGetModuleVersion += '-{0}' -f $psResourceGetModule.PrivateData.PSData.Prerelease
+            $psResourceGetModuleVersion = $psResourceGetModule.Version.ToString()
+
+            if ($psResourceGetModule.PrivateData.PSData.Prerelease)
+            {
+                $psResourceGetModuleVersion += '-{0}' -f $psResourceGetModule.PrivateData.PSData.Prerelease
+            }
         }
 
-        Write-Information -MessageData ('Using {0} v{1}.' -f $psResourceGetModuleName, $psResourceGetModuleVersion) -InformationAction 'Continue'
-
-        if ($UsePowerShellGetCompatibilityModule)
+        if (-not $psResourceGetModule -or $psResourceGetModule.Version -lt $minimumPSResourceGetVersion)
         {
-            $savePowerShellGetParameters = @{
-                Name            = 'PowerShellGet'
-                Path            = $PSDependTarget
-                Repository      = 'PSGallery'
-                TrustRepository = $true
-            }
+            throw ('{0} v{1} cannot reliably resolve PSGallery V2 repository metadata. Install {0} {2} or later in a new PowerShell session, then retry ''./build.ps1 -ResolveDependency -Tasks build''.' -f $psResourceGetModuleName, $psResourceGetModuleVersion, $minimumPSResourceGetVersion)
+        }
+        else
+        {
+            Write-Information -MessageData ('Using {0} v{1}.' -f $psResourceGetModuleName, $psResourceGetModuleVersion) -InformationAction 'Continue'
 
-            if ($UsePowerShellGetCompatibilityModuleVersion)
+            if ($UsePowerShellGetCompatibilityModule)
             {
-                $savePowerShellGetParameters.Version = $UsePowerShellGetCompatibilityModuleVersion
-
-                # Check if the version is a prerelease.
-                if ($UsePowerShellGetCompatibilityModuleVersion -match '\d+\.\d+\.\d+-.*')
-                {
-                    $savePowerShellGetParameters.Prerelease = $true
+                $savePowerShellGetParameters = @{
+                    Name            = 'PowerShellGet'
+                    Path            = $PSDependTarget
+                    Repository      = 'PSGallery'
+                    TrustRepository = $true
                 }
+
+                if ($UsePowerShellGetCompatibilityModuleVersion)
+                {
+                    $savePowerShellGetParameters.Version = $UsePowerShellGetCompatibilityModuleVersion
+
+                    # Check if the version is a prerelease.
+                    if ($UsePowerShellGetCompatibilityModuleVersion -match '\d+\.\d+\.\d+-.*')
+                    {
+                        $savePowerShellGetParameters.Prerelease = $true
+                    }
+                }
+
+                Save-PSResource @savePowerShellGetParameters
+
+                Import-Module -Name "$PSDependTarget/PowerShellGet"
             }
-
-            Save-PSResource @savePowerShellGetParameters
-
-            Import-Module -Name "$PSDependTarget/PowerShellGet"
         }
     }
 }
