@@ -187,13 +187,53 @@ $requiredModules = Import-PowerShellDataFile -Path $requiredModuleManifest
 
 if ($Force.IsPresent -or -not (Test-ModulePresent -Name 'ModuleFast')) {
     if ($PSCmdlet.ShouldProcess('ModuleFast', 'Install bootstrap module')) {
-        try {
-            Write-Information -MessageData '[bootstrap] Installing ModuleFast using the official bootstrap script.' -InformationAction 'Continue'
-            $moduleFastInstaller = Invoke-WebRequest -Uri 'https://bit.ly/modulefast' -UseBasicParsing
-            $moduleFastInstallerScript = [scriptblock]::Create($moduleFastInstaller.Content)
-            & $moduleFastInstallerScript -Scope $Scope -Confirm:$false
-        } catch {
-            Write-Warning "ModuleFast bootstrap script failed. Falling back to PSGallery Install-Module. Error: $($_.Exception.Message)"
+        # Prefer the canonical raw GitHub URL; the legacy schemeless 'bit.ly/modulefast'
+        # shortlink resolves over HTTP to an interstitial HTML page on some networks
+        # and a 'byte[]'-typed Content body on Windows PowerShell. Either path makes
+        # '[ScriptBlock]::Create(...)' throw a confusing parser error
+        # (e.g. 'Unexpected token "115" in expression or statement' is the byte form
+        # of 'using namespace System...'). Try the canonical URL first, decode any
+        # byte[] body to UTF-8, and reject HTML interstitials before parsing.
+        $moduleFastBootstrapUris = @(
+            'https://raw.githubusercontent.com/JustinGrote/ModuleFast/main/ModuleFast.ps1'
+            'https://bit.ly/modulefast'
+        )
+
+        $moduleFastInstallerBody = $null
+        $bootstrapErrors = @()
+
+        foreach ($candidateUri in $moduleFastBootstrapUris) {
+            try {
+                $candidateResponse = Invoke-WebRequest -Uri $candidateUri -UseBasicParsing -ErrorAction Stop
+                $candidateBody = if ($candidateResponse.Content -is [byte[]]) {
+                    [System.Text.Encoding]::UTF8.GetString($candidateResponse.Content)
+                } else {
+                    [string] $candidateResponse.Content
+                }
+
+                if ($candidateBody -match '<html|<!DOCTYPE') {
+                    throw "Bootstrap URI '$candidateUri' returned an HTML interstitial instead of the ModuleFast bootstrap script."
+                }
+
+                $moduleFastInstallerBody = $candidateBody
+                Write-Information -MessageData "[bootstrap] Installing ModuleFast from $candidateUri." -InformationAction 'Continue'
+                break
+            } catch {
+                $bootstrapErrors += "$candidateUri : $($_.Exception.Message)"
+            }
+        }
+
+        if ($moduleFastInstallerBody) {
+            try {
+                $moduleFastInstallerScript = [scriptblock]::Create($moduleFastInstallerBody)
+                & $moduleFastInstallerScript -Scope $Scope -Confirm:$false
+            } catch {
+                Write-Warning "ModuleFast bootstrap script failed. Falling back to PSGallery Install-Module. Error: $($_.Exception.Message)"
+                Initialize-PSGallery -Scope $Scope
+                Install-Module -Name 'ModuleFast' -Scope $Scope -Force -AllowClobber
+            }
+        } else {
+            Write-Warning ("ModuleFast bootstrap script could not be downloaded ({0}). Falling back to PSGallery Install-Module." -f ($bootstrapErrors -join '; '))
             Initialize-PSGallery -Scope $Scope
             Install-Module -Name 'ModuleFast' -Scope $Scope -Force -AllowClobber
         }

@@ -46,6 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Sampler[0.118,1.0): module was not found in the https://pwsh.gallery/index.json repository`.
   The fix preserves the existing prerelease (`!`) and pre-colonized
   (`:[...]`) spec values untouched.
+- Hardened the ModuleFast bootstrap path in `Install-BuildDependency.ps1` so
+  it tries the canonical raw GitHub URL first, decodes `Invoke-WebRequest`
+  responses delivered as `byte[]` (the default on Windows PowerShell), and
+  rejects HTML interstitials before handing the body to
+  `[ScriptBlock]::Create`. On Windows the previous code raised
+  `Unexpected token '115' in expression or statement` because the response
+  body was the raw byte array of `using namespace System...` rendered as
+  space-separated numeric tokens. The PSGallery `Install-Module` fallback is
+  retained for environments where every bootstrap URI fails.
 
 ### Added
 
