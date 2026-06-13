@@ -11,6 +11,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   older than 1.2.0 before they can fail on PSGallery V2 repository metadata,
   surfacing an actionable update message instead of the cross-platform
   `Requested value 'V2'` exception.
+- Bumped the pinned `PSResourceGetVersion` in `Resolve-Dependency.psd1` from
+  `1.0.1` to `1.2.0` so the PSResourceGet fallback (used when the ModuleFast
+  bootstrap script cannot be downloaded, for example when `bit.ly/modulefast`
+  responds with an interstitial HTML page) installs a version that satisfies
+  the new minimum-version gate instead of immediately throwing.
+- Tightened the `InvokeBuild` constraint in `RequiredModules.psd1` from
+  `[5.0,6.0)` to `[5.10.5,6.0)` so the build no longer caches the pre-PS 7.4
+  releases that fail with
+  `A parameter with the name 'ProgressAction' was defined multiple times`
+  (Invoke-Build issue #183). `build.ps1` also defensively removes
+  `ProgressAction` from `$PSBoundParameters` before splatting into
+  `Invoke-Build`, which unblocks workspaces that still have an older cached
+  copy under `output/RequiredModules/InvokeBuild/`.
+- Realigned the `Sampler.GitHubTasks` constraint in `RequiredModules.psd1`
+  from `[0.6,1.0)` to `[0.4.1,1.0)` so dependency restore stops emitting
+  `Save-PSResource: Package(s) 'Sampler.GitHubTasks' could not be installed
+  from repository 'PSGallery'` on every build. PSGallery's latest published
+  version is `0.4.1`; the prior lower bound was unsatisfiable.
+- Switched the ModuleFast bootstrap URI in `Resolve-Dependency.ps1` from the
+  schemeless `bit.ly/modulefast` shortlink to the canonical raw GitHub URL
+  `https://raw.githubusercontent.com/JustinGrote/ModuleFast/main/ModuleFast.ps1`,
+  with `bit.ly/modulefast` retained as a fallback. The bit.ly shortlink served
+  a 560 KB interstitial HTML page over HTTP on some networks, which caused
+  `[ScriptBlock]::Create(...)` to throw the noisy
+  `html, ... Missing argument in parameter list` warning at the start of every
+  build. The fallback loop also validates that the downloaded body is not HTML
+  before handing it to the parser.
+- Corrected the ModuleFast specification format in `Resolve-Dependency.ps1` so
+  NuGet-range values from `RequiredModules.psd1` (e.g. `[0.118,1.0)`) are
+  emitted as `Module:[range]` instead of `Module[range]`. ModuleFast 1.x reads
+  the colonless form as a single package id and fails the
+  `pwsh.gallery/registration/<name>/index.json` lookup with
+  `Sampler[0.118,1.0): module was not found in the https://pwsh.gallery/index.json repository`.
+  The fix preserves the existing prerelease (`!`) and pre-colonized
+  (`:[...]`) spec values untouched.
 
 ### Added
 

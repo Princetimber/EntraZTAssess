@@ -491,6 +491,14 @@ begin {
             $null = $PSBoundParameters.Remove('ResolveDependency')
         }
 
+        # PowerShell 7.4 added 'ProgressAction' as a common parameter, which collides
+        # with the same-named parameter on Invoke-Build <5.10.5 when splatted, raising
+        # 'A parameter with the name ''ProgressAction'' was defined multiple times'.
+        # Drop it before handing off so cached older InvokeBuild builds keep working.
+        if ($PSBoundParameters.ContainsKey('ProgressAction')) {
+            $null = $PSBoundParameters.Remove('ProgressAction')
+        }
+
         Write-Host -Object "[build] Starting build with InvokeBuild." -ForegroundColor Green
 
         if (-not (Get-Command -Name 'Invoke-Build' -ErrorAction 'SilentlyContinue'))

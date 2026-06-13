@@ -73,7 +73,9 @@
         set to $false then PowerShellGet will be used to resolve dependencies.
     #>
     UsePSResourceGet                           = $false # Disabled to avoid Save-PSResource issues
-    PSResourceGetVersion                       = '1.0.1'
+    # Must be >= 1.2.0 so the PSResourceGet fallback can resolve PSGallery V2 metadata.
+    # Resolve-Dependency.ps1 enforces the same minimum after bootstrap.
+    PSResourceGetVersion                       = '1.2.0'
 
     # PowerShellGet compatibility module only works when using PSResourceGet or ModuleFast.
     # Disable to avoid Save-PSResource errors in some environments.

@@ -249,16 +249,50 @@ if ($UseModuleFast -and -not (Get-Module -Name 'ModuleFast'))
             Write-Information -MessageData 'ModuleFast is configured to use latest released version.' -InformationAction 'Continue'
         }
 
-        $moduleFastBootstrapUri = 'bit.ly/modulefast' # cSpell: disable-line
+        # Fetch the bootstrap from raw.githubusercontent.com directly. The legacy
+        # 'bit.ly/modulefast' shortlink resolves over HTTP to an interstitial HTML
+        # page on some networks (the ScriptBlock parser then throws a confusing
+        # 'html, ... Missing argument in parameter list' error), so prefer the
+        # canonical GitHub URL and keep bit.ly only as a final fallback.
+        $moduleFastBootstrapUris = @(
+            'https://raw.githubusercontent.com/JustinGrote/ModuleFast/main/ModuleFast.ps1'
+            'https://bit.ly/modulefast' # cSpell: disable-line
+        )
 
-        Write-Debug -Message ('Using bootstrap script at {0}' -f $moduleFastBootstrapUri)
+        $moduleFastBootstrapScript = $null
+        $moduleFastBootstrapErrors = @()
 
-        $invokeWebRequestParameters = @{
-            Uri         = $moduleFastBootstrapUri
-            ErrorAction = 'Stop'
+        foreach ($candidateUri in $moduleFastBootstrapUris)
+        {
+            Write-Debug -Message ('Trying bootstrap script at {0}' -f $candidateUri)
+
+            try
+            {
+                $candidateResponse = Invoke-WebRequest -Uri $candidateUri -UseBasicParsing -ErrorAction 'Stop'
+                $candidateBody = if ($candidateResponse.Content -is [byte[]]) {
+                    [System.Text.Encoding]::UTF8.GetString($candidateResponse.Content)
+                } else {
+                    [string] $candidateResponse.Content
+                }
+
+                if ($candidateBody -match '<html|<!DOCTYPE')
+                {
+                    throw ('Bootstrap URI {0} returned an HTML interstitial instead of the ModuleFast bootstrap script.' -f $candidateUri)
+                }
+
+                $moduleFastBootstrapScript = $candidateBody
+                break
+            }
+            catch
+            {
+                $moduleFastBootstrapErrors += ('{0}: {1}' -f $candidateUri, $_.Exception.Message)
+            }
         }
 
-        $moduleFastBootstrapScript = Invoke-WebRequest @invokeWebRequestParameters
+        if (-not $moduleFastBootstrapScript)
+        {
+            throw ('All ModuleFast bootstrap URIs failed. {0}' -f ($moduleFastBootstrapErrors -join '; '))
+        }
 
         $moduleFastBootstrapScriptBlock = [ScriptBlock]::Create($moduleFastBootstrapScript)
 
@@ -844,14 +878,25 @@ try
                         }
                         else
                         {
-                            # Handle different nuget version operators already present.
-                            if ($requiredModule.Value -match '[!|:|[|(|,|>|<|=]')
+                            # ModuleFast spec syntax requires a ':' separator between module
+                            # name and a NuGet version expression (e.g. 'Module:[1.0,2.0)' or
+                            # 'Module:>=1.0'). Without it, ModuleFast treats the concatenated
+                            # string as the package id and pwsh.gallery returns "module was
+                            # not found". Only skip inserting the colon when the value
+                            # already starts with one of the separator characters that
+                            # ModuleFast accepts directly on the name (':' or the '!'
+                            # allow-prerelease suffix).
+                            if ($requiredModule.Value -match '^[!:]')
                             {
                                 $modulesToSave += ('{0}{1}' -f $requiredModule.Name, $requiredModule.Value)
                             }
+                            elseif ($requiredModule.Value -match '[\[\(,><=]')
+                            {
+                                $modulesToSave += ('{0}:{1}' -f $requiredModule.Name, $requiredModule.Value)
+                            }
                             else
                             {
-                                # Assuming the version is a fixed version.
+                                # Assuming the value is a fixed version.
                                 $modulesToSave += ('{0}:[{1}]' -f $requiredModule.Name, $requiredModule.Value)
                             }
                         }
