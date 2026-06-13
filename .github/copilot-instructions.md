@@ -18,7 +18,7 @@ This repository is **Get-EntraZTAssess**, a PowerShell 7+ Sampler module for rea
 ## Commands
 
 ```powershell
-./Install-BuildDependency.ps1   # optional: install ModuleFast + Sampler only if missing
+./Install-BuildDependency.ps1   # optional: install RequiredModules.psd1 build modules if missing
 ./build.ps1 -ResolveDependency -tasks build
 ./build.ps1 -ResolveDependency -Tasks noop
 ./build.ps1 -tasks build

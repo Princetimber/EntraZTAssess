@@ -15,9 +15,9 @@ Repository-specific guidance for future OpenCode sessions in **Get-EntraZTAssess
 ## Commands
 
 ```powershell
-# Optional pre-flight: install ModuleFast + Sampler only if missing (idempotent).
-# Run this first when dependency restore cannot fetch Sampler/ModuleFast
-# (e.g. pwsh.gallery is unreachable) and InvokeBuild is therefore never installed.
+# Optional pre-flight: install RequiredModules.psd1 build modules if missing (idempotent).
+# Run this first when dependency restore cannot fetch InvokeBuild, PSScriptAnalyzer,
+# or other build modules before InvokeBuild is restored.
 ./Install-BuildDependency.ps1
 
 # First build / dependency restore
