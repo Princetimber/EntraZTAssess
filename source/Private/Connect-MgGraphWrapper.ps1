@@ -20,6 +20,9 @@ function Connect-MgGraphWrapper {
         [string]$CertificateThumbprint,
 
         [Parameter()]
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+
+        [Parameter()]
         [string]$Environment = 'Global',
 
         [Parameter()]
@@ -40,9 +43,19 @@ function Connect-MgGraphWrapper {
         $connectParameters['TenantId'] = $TenantId
     }
 
-    if ($ClientId -and $CertificateThumbprint) {
-        # App-only (certificate) authentication: scopes are pre-consented
-        # application permissions, so -Scopes is not passed.
+    if ($ClientId -and $Certificate) {
+        # App-only (certificate) authentication, cross-platform path: the
+        # certificate object is passed directly so no Windows certificate
+        # store lookup is needed. Scopes are pre-consented application
+        # permissions, so -Scopes is not passed.
+        $connectParameters['ClientId'] = $ClientId
+        $connectParameters['Certificate'] = $Certificate
+    }
+    elseif ($ClientId -and $CertificateThumbprint) {
+        # App-only (certificate) authentication, Windows certificate store
+        # path: Connect-MgGraph resolves the thumbprint from the store.
+        # Scopes are pre-consented application permissions, so -Scopes is
+        # not passed.
         $connectParameters['ClientId'] = $ClientId
         $connectParameters['CertificateThumbprint'] = $CertificateThumbprint
     }

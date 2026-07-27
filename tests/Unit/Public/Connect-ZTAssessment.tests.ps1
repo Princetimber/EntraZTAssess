@@ -14,9 +14,25 @@ BeforeAll {
     else {
         Import-Module -Name (Join-Path $PSScriptRoot '../../../source/Get-EntraZTAssess.psd1') -Force
     }
+
+    # A real, in-memory self-signed certificate for mocking Get-ZTAssessCertificate.
+    # Connect-MgGraphWrapper types its -Certificate parameter as X509Certificate2, and
+    # Pester enforces that type on the mocked command, so a pscustomobject will not
+    # coerce. Generated with pure .NET so the test stays offline and cross-platform.
+    $script:testRsa = [System.Security.Cryptography.RSA]::Create(2048)
+    $certificateRequest = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
+        'CN=ZTAssessTest',
+        $script:testRsa,
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+        [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+    $script:testCertificate = $certificateRequest.CreateSelfSigned(
+        [System.DateTimeOffset]::Now.AddDays(-1),
+        [System.DateTimeOffset]::Now.AddDays(1))
 }
 
 AfterAll {
+    if ($script:testCertificate) { $script:testCertificate.Dispose() }
+    if ($script:testRsa) { $script:testRsa.Dispose() }
     Get-Module -Name $script:dscModuleName -All | Remove-Module -Force
 }
 
@@ -25,6 +41,10 @@ Describe 'Connect-ZTAssessment' -Tag 'Unit' {
     BeforeEach {
         Mock -ModuleName $script:dscModuleName -CommandName Write-ToLog -MockWith { }
         Mock -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -MockWith { }
+        # Default to no resolved CBA config so the auto path falls back to
+        # interactive delegated sign-in deterministically, regardless of any
+        # ZTASSESS_* environment variables or ~/.ztassess/auth.json on the host.
+        Mock -ModuleName $script:dscModuleName -CommandName Resolve-ZTAssessAuthConfig -MockWith { $null }
         Mock -ModuleName $script:dscModuleName -CommandName Get-MgContextWrapper -MockWith {
             [pscustomobject]@{
                 TenantId = '11111111-1111-1111-1111-111111111111'
@@ -158,6 +178,133 @@ Describe 'Connect-ZTAssessment' -Tag 'Unit' {
                 Should -Throw -ExpectedMessage '*Unknown module name*'
 
             Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -Times 0 -Exactly
+        }
+    }
+
+    Context 'When auto mode resolves a certificate-based configuration' {
+        BeforeEach {
+            Mock -ModuleName $script:dscModuleName -CommandName Resolve-ZTAssessAuthConfig -MockWith {
+                [pscustomobject]@{
+                    TenantId              = '22222222-2222-2222-2222-222222222222'
+                    ClientId              = '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3'
+                    CertificateThumbprint = 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0'
+                    CertificatePath       = $null
+                    Environment           = 'Global'
+                    Source                = 'Environment'
+                }
+            }
+        }
+
+        It 'Should connect app-only using the resolved client ID and thumbprint' {
+            $result = Connect-ZTAssessment -Modules Identity
+
+            $result.AuthMode | Should -Be 'AppOnly'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -Times 1 -Exactly -ParameterFilter {
+                $ClientId -eq '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' -and
+                $CertificateThumbprint -eq 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0' -and
+                -not $Scopes
+            }
+        }
+
+        It 'Should not warn about missing scopes for app-only authentication' {
+            Mock -ModuleName $script:dscModuleName -CommandName Get-MgContextWrapper -MockWith {
+                [pscustomobject]@{
+                    TenantId = '22222222-2222-2222-2222-222222222222'
+                    Account  = 'app-only'
+                    Scopes   = @()
+                }
+            }
+
+            $result = Connect-ZTAssessment -Modules Identity -WarningVariable connectionWarnings -WarningAction SilentlyContinue
+
+            $result.AuthMode | Should -Be 'AppOnly'
+            $connectionWarnings | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'When auto mode resolves a PFX certificate path' {
+        It 'Should load the certificate and connect app-only' {
+            Mock -ModuleName $script:dscModuleName -CommandName Resolve-ZTAssessAuthConfig -MockWith {
+                [pscustomobject]@{
+                    TenantId              = '22222222-2222-2222-2222-222222222222'
+                    ClientId              = '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3'
+                    CertificateThumbprint = $null
+                    CertificatePath       = '/tmp/ztassess.pfx'
+                    Environment           = $null
+                    Source                = 'File'
+                }
+            }
+            Mock -ModuleName $script:dscModuleName -CommandName Get-ZTAssessCertificate -MockWith {
+                $script:testCertificate
+            }
+
+            $result = Connect-ZTAssessment -Modules Identity
+
+            $result.AuthMode | Should -Be 'AppOnly'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Get-ZTAssessCertificate -Times 1 -Exactly
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -Times 1 -Exactly -ParameterFilter {
+                $ClientId -eq '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' -and
+                $null -ne $Certificate
+            }
+        }
+    }
+
+    Context 'When auto mode finds no configuration' {
+        It 'Should fall back to interactive delegated sign-in' {
+            $result = Connect-ZTAssessment -Modules Identity -WarningAction SilentlyContinue
+
+            $result.AuthMode | Should -Be 'Delegated'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -Times 1 -Exactly -ParameterFilter {
+                $Scopes -contains 'UserAuthenticationMethod.Read.All'
+            }
+        }
+
+        It 'Should throw when interactive fallback is disabled' {
+            { Connect-ZTAssessment -Modules Identity -NoInteractiveFallback -ErrorAction Stop } |
+                Should -Throw -ExpectedMessage '*interactive fallback was disabled*'
+
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -Times 0 -Exactly
+        }
+    }
+
+    Context 'When explicit app-only certificate authentication is used' {
+        It 'Should load the PFX and pass the certificate object to the connection' {
+            Mock -ModuleName $script:dscModuleName -CommandName Get-ZTAssessCertificate -MockWith {
+                $script:testCertificate
+            }
+
+            $result = Connect-ZTAssessment -Modules Identity -TenantId 'contoso.onmicrosoft.com' `
+                -ClientId '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' `
+                -CertificatePath (Join-Path $TestDrive 'client.pfx')
+
+            $result.AuthMode | Should -Be 'AppOnly'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Get-ZTAssessCertificate -Times 1 -Exactly
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -Times 1 -Exactly -ParameterFilter {
+                $null -ne $Certificate -and
+                -not $CertificateThumbprint -and
+                -not $Scopes
+            }
+        }
+    }
+
+    Context 'When a resolved certificate configuration fails to connect' {
+        It 'Should surface a terminating error rather than falling back silently' {
+            Mock -ModuleName $script:dscModuleName -CommandName Resolve-ZTAssessAuthConfig -MockWith {
+                [pscustomobject]@{
+                    TenantId              = '22222222-2222-2222-2222-222222222222'
+                    ClientId              = '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3'
+                    CertificateThumbprint = 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0'
+                    CertificatePath       = $null
+                    Environment           = 'Global'
+                    Source                = 'Environment'
+                }
+            }
+            Mock -ModuleName $script:dscModuleName -CommandName Connect-MgGraphWrapper -MockWith {
+                throw 'Certificate not trusted.'
+            }
+
+            { Connect-ZTAssessment -Modules Identity -ErrorAction Stop } |
+                Should -Throw -ExpectedMessage '*resolved certificate-based configuration*'
         }
     }
 }

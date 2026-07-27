@@ -10,6 +10,7 @@
 
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Authentication](#authentication)
 - [Quick Start](#quick-start)
 - [Public Commands](#public-commands)
 - [Usage Examples](#usage-examples)
@@ -28,7 +29,8 @@
 
 - PowerShell 7.2 or later (cross-platform: Windows, macOS, Linux)
 - [Microsoft.Graph](https://www.powershellgallery.com/packages/Microsoft.Graph) SDK — installed automatically via `RequiredModules.psd1`
-- Delegated or app-only permissions as listed in [`docs/PermissionsGuidance.md`](docs/PermissionsGuidance.md)
+- Certificate-based (app-only) authentication is the **default**, with automatic fallback to interactive delegated sign-in. Provision the assessment app with the repository scripts under `scripts/` — see [`docs/Authentication.md`](docs/Authentication.md)
+- Read-only permissions as listed in [`docs/PermissionsGuidance.md`](docs/PermissionsGuidance.md) and [`docs/Authentication.md`](docs/Authentication.md)
 
 ---
 
@@ -46,6 +48,54 @@ Install-Module -Name Get-EntraZTAssess -Scope CurrentUser
 ./build.ps1 -ResolveDependency -tasks build
 Import-Module ./output/Get-EntraZTAssess/<version>/Get-EntraZTAssess.psd1
 ```
+
+---
+
+## Authentication
+
+`Connect-ZTAssessment` uses **certificate-based, app-only authentication (CBA)** by default and **falls back to interactive delegated sign-in** when no CBA configuration is found. CBA settings resolve from explicit parameters, then environment variables (`ZTASSESS_TENANTID`, `ZTASSESS_CLIENTID`, `ZTASSESS_CERT_THUMBPRINT`, `ZTASSESS_CERT_PATH`, `ZTASSESS_ENVIRONMENT`), then the non-secret file `~/.ztassess/auth.json`. Because interactive fallback is automatic, the [Quick Start](#quick-start) below works with zero authentication arguments.
+
+Full setup, cross-platform certificate guidance, the read-only Application-permissions table, and CI/headless usage are documented in [`docs/Authentication.md`](docs/Authentication.md).
+
+### Provisioning quickstart
+
+The `EntraZTAssess.Provisioning` module lives under `scripts/` and is **repository-based, admin-run, one-time** — it is not installed by `Install-Module`. Run `Get-ZTAssessProvisioningStep` (in the installed module) for the same steps as discoverable guidance.
+
+```powershell
+# 0. Import the repo-local provisioning module (exposes the two functions below)
+Import-Module ./scripts/EntraZTAssess.Provisioning
+
+# 1. Generate a platform-agnostic self-signed certificate (EntraZTAssess.cer + .pfx)
+New-ZTAssessCertificate
+
+# 2. Register the read-only assessment app and write ~/.ztassess/auth.json
+#    (emits the admin-consent URL by default; -GrantAdminConsent grants programmatically)
+New-ZTAssessAppRegistration -TenantId '<tenant>' -CertificatePath ~/.ztassess/EntraZTAssess.cer
+
+# 3. Connect — CBA config auto-resolves from ~/.ztassess/auth.json
+Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, `
+    IdentityGovernance, Applications, HybridIdentity, Monitoring
+```
+
+New `Connect-ZTAssessment` parameters: `-CertificatePath` (cross-platform PFX), `-CertificatePassword` (`SecureString`, never persisted), and `-NoInteractiveFallback` (force a hard failure for headless/CI when no config is found). The existing `-ClientId` / `-CertificateThumbprint` combination continues to work for the Windows certificate store.
+
+### Read-only Application permissions
+
+The CBA app holds only read-only permissions, using the same identifiers as the delegated scopes but granted as **Application** roles requiring Global Administrator consent.
+
+| Module | Application permissions (read-only) |
+|---|---|
+| Core (always) | `Organization.Read.All`, `Directory.Read.All` |
+| Identity | `UserAuthenticationMethod.Read.All`, `Reports.Read.All`, `Policy.Read.All`, `AuditLog.Read.All` |
+| ConditionalAccess | `Policy.Read.All`, `Agreement.Read.All` |
+| PrivilegedAccess | `RoleManagement.Read.Directory`, `RoleEligibilitySchedule.Read.Directory`, `RoleAssignmentSchedule.Read.Directory` |
+| IdentityGovernance | `AccessReview.Read.All`, `EntitlementManagement.Read.All`, `LifecycleWorkflows.Read.All`, `Policy.Read.All` |
+| Applications | `Application.Read.All`, `Policy.Read.All` |
+| HybridIdentity | `OnPremDirectorySynchronization.Read.All`, `Directory.Read.All` |
+| Devices | `DeviceManagementConfiguration.Read.All`, `DeviceManagementManagedDevices.Read.All`, `DeviceManagementServiceConfig.Read.All`, `DeviceManagementApps.Read.All` |
+| Monitoring | `IdentityRiskEvent.Read.All`, `IdentityRiskyUser.Read.All`, `AuditLog.Read.All`, `SecurityIdentitiesSensors.Read.All` |
+
+The Sentinel module uses Azure Reader via ARM and needs no Graph permissions. The provisioning module itself needs elevated **one-time setup** permissions (`Application.ReadWrite.All`, `AppRoleAssignment.ReadWrite.All`, `Directory.Read.All`) — these are for setup only and are not assessment scopes. See [`docs/Authentication.md`](docs/Authentication.md) for details.
 
 ---
 
@@ -90,6 +140,7 @@ The module manifest explicitly exports these nine functions:
 | `Get-ZTAssessFinding` | Query findings from a completed run, with optional status/severity filters |
 | `Export-ZTAssessReport` | Generate local HTML, JSON, and CSV report artifacts from a run |
 | `Get-ZTAssessModuleCatalog` | List available assessment modules and their metadata |
+| `Get-ZTAssessProvisioningStep` | List the ordered app-provisioning commands (read-only guidance; no Graph calls) |
 | `Get-ZTAssessRequiredPermission` | List the Graph scopes required for a given set of modules |
 
 ---
@@ -361,8 +412,17 @@ Get-EntraZTAssess/
 │       └── ReadOnly.tests.ps1         # Static guard: no write verbs, no write scopes, no Invoke-Expression
 │
 ├── docs/
+│   ├── Authentication.md              # CBA setup, cross-platform certs, app permissions
 │   ├── ConsultantRunbook.md           # Delivery workflow and QA checklist
 │   └── PermissionsGuidance.md         # Graph scope review and least-privilege guidance
+│
+├── scripts/                           # Admin-run, one-time provisioning (NOT shipped by Install-Module)
+│   └── EntraZTAssess.Provisioning/     # Repo-local provisioning module (imported deliberately)
+│       ├── EntraZTAssess.Provisioning.psd1
+│       ├── EntraZTAssess.Provisioning.psm1
+│       └── Public/
+│           ├── New-ZTAssessCertificate.ps1     # Platform-agnostic self-signed cert (EntraZTAssess.cer + .pfx)
+│           └── New-ZTAssessAppRegistration.ps1 # Read-only assessment app + admin-consent URL + ~/.ztassess/auth.json
 │
 ├── .github/
 │   └── workflows/

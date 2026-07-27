@@ -56,8 +56,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   space-separated numeric tokens. The PSGallery `Install-Module` fallback is
   retained for environments where every bootstrap URI fails.
 
+### Changed
+
+- `Connect-ZTAssessment` now defaults to certificate-based, app-only
+  authentication (CBA) and falls back to interactive delegated sign-in only
+  when no CBA configuration is found. The Quick Start continues to work with
+  zero authentication arguments.
+
 ### Added
 
+- Certificate-based, app-only authentication (CBA) as the **default** for
+  `Connect-ZTAssessment`, with automatic fallback to interactive delegated
+  sign-in when no CBA configuration is found. CBA settings resolve from
+  explicit parameters, then environment variables (`ZTASSESS_TENANTID`,
+  `ZTASSESS_CLIENTID`, `ZTASSESS_CERT_THUMBPRINT`, `ZTASSESS_CERT_PATH`,
+  `ZTASSESS_ENVIRONMENT`), then the non-secret file `~/.ztassess/auth.json`.
+  If a CBA configuration is present but the connection fails, the error
+  surfaces rather than silently falling back.
+- New `Connect-ZTAssessment` parameters: `-CertificatePath` (cross-platform
+  PFX), `-CertificatePassword` (`SecureString`, never persisted), and
+  `-NoInteractiveFallback` (forces a hard failure for headless/CI when no
+  configuration is found). Existing `-ClientId` / `-CertificateThumbprint`
+  (Windows certificate store) remain. Parameter sets: `Auto` (default),
+  `AppOnlyThumbprint`, `AppOnlyCertificate`, `Delegated`.
+- `EntraZTAssess.Provisioning` — a repo-local, admin-run provisioning module
+  (not shipped by `Install-Module`) that exposes two advanced functions. The
+  provisioning workflow is `Import-Module ./scripts/EntraZTAssess.Provisioning`
+  followed by the function calls:
+  - `New-ZTAssessCertificate` creates a platform-agnostic self-signed
+    certificate via .NET `CertificateRequest`, producing `EntraZTAssess.cer`
+    and `EntraZTAssess.pfx`.
+  - `New-ZTAssessAppRegistration` creates the read-only assessment app, grants
+    the read-only Application permissions (app roles resolved at runtime),
+    emits the admin-consent URL by default (or grants consent programmatically
+    with `-GrantAdminConsent`), and writes `~/.ztassess/auth.json`. Its own
+    elevated setup permissions (`Application.ReadWrite.All`,
+    `AppRoleAssignment.ReadWrite.All`, `Directory.Read.All`) are setup-only and
+    are not assessment scopes.
+- `Get-ZTAssessProvisioningStep` — a read-only core cmdlet (no Graph calls)
+  that lists the ordered provisioning commands as discoverable, Get-Help-able
+  guidance.
+- `docs/Authentication.md` — authentication methods and precedence, the
+  four-step CBA setup, cross-platform certificate guidance, the read-only
+  Application-permissions table, the elevated one-time setup permissions,
+  the `~/.ztassess/auth.json` schema, and CI/headless usage.
 - `Install-BuildDependency.ps1` bootstrap guard at the repository root that
   conditionally installs the build modules declared in `RequiredModules.psd1`
   when they are not already present on the machine, including **InvokeBuild**

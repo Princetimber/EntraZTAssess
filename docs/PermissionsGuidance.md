@@ -19,10 +19,19 @@ Get-ZTAssessRequiredPermission -Modules Identity, ConditionalAccess
 ## Consent Principles
 
 - Request only the modules required for the engagement scope.
-- Prefer delegated read-only Graph permissions for consultant-led interactive assessments.
+- Prefer delegated read-only Graph permissions for consultant-led interactive assessments. For repeatable and unattended (CI / headless) runs, certificate-based app-only authentication is preferred and is the default for `Connect-ZTAssessment` — see the subsection below and [`Authentication.md`](Authentication.md).
 - Do not add Graph write scopes for assessment checks, reporting, or remediation roadmap generation.
 - Record any missing scope as an engagement limitation. The module should mark dependent checks `NotAssessed` rather than failing the whole run.
 - Treat beta endpoint requirements as collection dependencies that can degrade gracefully if Microsoft changes response shape or availability.
+
+## Application Permissions (App-Only / CBA)
+
+Certificate-based authentication is app-only, so the assessment app is granted **Application** permissions rather than delegated scopes. The identifiers are the **same** as the delegated scopes for each module, but as Application roles they require **Global Administrator consent**.
+
+- The required app roles for the selected modules are resolved at runtime, so the granted set stays aligned with the module → scope map in `source/Settings/permissions.psd1`.
+- Provision the app with the repo-local `EntraZTAssess.Provisioning` module under `scripts/` (`Import-Module ./scripts/EntraZTAssess.Provisioning`): `New-ZTAssessCertificate` creates the certificate and `New-ZTAssessAppRegistration` creates the read-only app, grants the Application permissions, and emits the admin-consent URL (or grants consent programmatically with `-GrantAdminConsent`). `Get-ZTAssessProvisioningStep` (in the installed module) lists these steps.
+- The provisioning module itself needs elevated **one-time setup** permissions (`Application.ReadWrite.All`, `AppRoleAssignment.ReadWrite.All`, `Directory.Read.All`). These are setup-only and are **not** assessment scopes; the assessment app holds only the read-only permissions.
+- The full per-module Application-permissions table is in [`Authentication.md`](Authentication.md).
 
 ## Interpreting Missing Permissions
 

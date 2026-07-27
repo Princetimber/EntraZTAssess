@@ -48,7 +48,7 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - Public exported functions live in `source/Public/`; `source/Get-EntraZTAssess.psd1` has an explicit `FunctionsToExport` list. Keep manifest exports in sync with new public commands.
 - Private implementation lives in `source/Private/`; classes live in `source/Classes/`; help lives in `source/en-US/`.
 - Public files should contain one exported function with comment-based help. Private files are allowed to contain small wrapper helpers when needed for Pester mockability.
-- `Connect-ZTAssessment` handles Microsoft Graph connection and scope checks.
+- `Connect-ZTAssessment` handles Microsoft Graph connection and scope checks. It defaults to certificate-based, app-only authentication (CBA) and falls back to interactive delegated sign-in only when no CBA configuration is found (resolved from explicit params → `ZTASSESS_*` env vars → non-secret `~/.ztassess/auth.json`). Parameters include `-CertificatePath`/`-CertificatePassword` (cross-platform PFX; `-CertificatePassword` is never persisted) and `-NoInteractiveFallback` (hard failure for headless/CI). See `docs/Authentication.md`.
 - `Invoke-ZTAssessment` is the main orchestrator and writes local run artifacts under an engagement folder.
 - `Export-ZTAssessReport` is the public disk-only report exporter. It requires `Findings/findings.json` and `Scores/scores.json`, optionally consumes `manifest.json`, `Findings/platformProfiles.json`, and `Findings/deviceClassification.json`, supports generated-report user identifier redaction with `-RedactUserIdentifiers`, and uses `SupportsShouldProcess` because it writes local files.
 - `New-ZTAssessEngagement` creates the local engagement folder scaffold and is intentionally state-changing.
@@ -58,7 +58,8 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 
 ## Read-Only Security Rules
 
-- This repository assesses tenant configuration. Do not add Microsoft Graph write operations, write scopes, background telemetry, or production side effects without explicit user approval and docs.
+- This repository assesses tenant configuration. Do not add Microsoft Graph write operations, write scopes, background telemetry, or production side effects to the module without explicit user approval and docs.
+- The **only** place Graph write operations are permitted is the repo-local `EntraZTAssess.Provisioning` module under `scripts/` (functions `New-ZTAssessCertificate`, `New-ZTAssessAppRegistration`), which is admin-run, one-time, imported deliberately, and not shipped by `Install-Module`. Its elevated setup permissions (`Application.ReadWrite.All`, `AppRoleAssignment.ReadWrite.All`, `Directory.Read.All`) are setup-only and are not assessment scopes. The module under `source/` remains read-only and holds only the read-only Application permissions the assessment app is granted; `tests/QA/ReadOnly.tests.ps1` additionally forbids Graph write SDK cmdlets (`New-Mg*`/`Set-Mg*`/`Remove-Mg*`/`Update-Mg*`) under `source/`. The read-only `Get-ZTAssessProvisioningStep` cmdlet surfaces the provisioning steps as guidance.
 - `tests/QA/ReadOnly.tests.ps1` enforces no direct `Invoke-MgGraphRequest`, no write HTTP verbs, no `Invoke-Expression`, no hardcoded secrets, and no Graph write scopes.
 - `SupportsShouldProcess` belongs on local state-changing functions such as folder/log/artifact writers. Read-only assessment/query functions should not grow ShouldProcess just for style.
 - Use `Write-ToLog` for module logging. It handles mutex-protected file logging, rotation, redaction, and PowerShell stream mapping. `Invoke-LogRotation` is an implementation detail called from `Write-ToLog`.
