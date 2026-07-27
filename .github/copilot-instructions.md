@@ -32,7 +32,9 @@ Run ScriptAnalyzer after changing `.ps1` or `.psm1` files. After code changes, r
 
 ## Read-Only Rules
 
-This toolkit assesses tenant configuration. Do not add Microsoft Graph write operations, write scopes, background telemetry, or production side effects without explicit approval and matching documentation.
+This toolkit assesses tenant configuration. Do not add Microsoft Graph write operations, write scopes, background telemetry, or production side effects to the module without explicit approval and matching documentation. The only place Graph writes are permitted is the repo-local `EntraZTAssess.Provisioning` module under `scripts/` (functions `New-ZTAssessCertificate`, `New-ZTAssessAppRegistration`) — admin-run, one-time, imported deliberately, and not shipped by `Install-Module`. The module under `source/` stays read-only (`tests/QA/ReadOnly.tests.ps1` also forbids `New-Mg*`/`Set-Mg*`/`Remove-Mg*`/`Update-Mg*` there); `Get-ZTAssessProvisioningStep` lists the provisioning steps as read-only guidance.
+
+`Connect-ZTAssessment` defaults to certificate-based, app-only authentication (CBA) and falls back to interactive delegated sign-in only when no CBA configuration is found (resolved from explicit params → `ZTASSESS_*` env vars → non-secret `~/.ztassess/auth.json`; `-CertificatePassword` is never persisted). New parameters: `-CertificatePath`, `-CertificatePassword`, `-NoInteractiveFallback`. The assessment app holds only read-only Application permissions; the provisioning module's elevated setup permissions are setup-only, not assessment scopes. See `docs/Authentication.md`.
 
 Route Graph reads through `Invoke-ZTAssessGraphRequest` / `Invoke-MgGraphRequestWrapper` so paging, retries, logging, and read-only guardrails stay consistent. Preserve the degraded-mode behavior in `Invoke-ZTAssessCoreCollection` when user collection without `signInActivity` is required.
 

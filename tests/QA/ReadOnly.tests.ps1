@@ -52,6 +52,23 @@ Describe 'Read-only enforcement' -Tag 'QA', 'ReadOnly' {
         $wrapper | Should -Not -BeNullOrEmpty
         (Get-Content -LiteralPath $wrapper.FullName -Raw) | Should -Match "\[ValidateSet\('GET'\)\]"
     }
+
+    It 'Should not use Graph write SDK cmdlets anywhere under source/' {
+        # Write-verb Microsoft.Graph SDK cmdlets (this also covers
+        # New-MgServicePrincipalAppRoleAssignment). Read/auth cmdlets such as
+        # Get-Mg*, Connect-MgGraph, and read snapshot names like
+        # 'graphAppRoleAssignments' are deliberately excluded.
+        $writeCmdletPattern = '\b(New|Set|Update|Remove|Add|Grant|Revoke|Enable|Disable|Send|Restore|Confirm|Deny)-Mg[A-Za-z]+\b'
+
+        $offenders = foreach ($file in $script:sourceFiles) {
+            $content = Get-Content -LiteralPath $file.FullName -Raw
+            if ($content -match $writeCmdletPattern) {
+                $file.FullName
+            }
+        }
+
+        $offenders | Should -BeNullOrEmpty -Because 'Graph write operations must live in scripts/EntraZTAssess.Provisioning, never under source/'
+    }
 }
 
 Describe 'Secure execution' -Tag 'QA', 'Security' {
