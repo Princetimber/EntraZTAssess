@@ -44,29 +44,6 @@ Disconnect-ZTAssessment
 
 ## Module Structure (Sampler Layout)
 
-```
-Get-EntraZTAssess/
-├── source/
-│   ├── Get-EntraZTAssess.psd1    # Module manifest (FunctionsToExport kept explicit)
-│   ├── Get-EntraZTAssess.psm1    # Dev loader: dot-sources Classes/, Private/, Public/
-│   ├── Classes/                  # ZTAssessFinding, ZTAssessPlatformProfile, ZTAssessRunManifest
-│   ├── Checks/<Domain>/<Id>.psd1 # Declarative check library (92 checks across 14 domains)
-│   ├── Settings/                 # settings.psd1 (thresholds/weights), permissions.psd1 (module→scope map)
-│   ├── Public/                   # Exported cmdlets (one per file, ZTAssess noun prefix)
-│   ├── Private/                  # Collectors (Invoke-ZTAssess*Collection), assessors (Test-ZTAssess*),
-│   │                             # scoring (Measure-ZTAssessScore), Graph helpers, mockable SDK wrappers
-│   └── en-US/                    # Help files
-├── tests/
-│   ├── QA/                       # module.tests.ps1 (exported functions only) + ReadOnly.tests.ps1 gate
-│   ├── Fixtures/FixtureHelper.ps1 # Well-configured tenant fixture (all-Pass baseline)
-│   └── Unit/                     # Public/, Private/, Classes/ mirror source
-├── docs/                         # Consultant runbook and permissions guidance
-├── Install-BuildDependency.ps1   # Optional pre-flight: installs RequiredModules.psd1 build modules if missing
-├── build.ps1
-├── build.yaml                    # CopyPaths must include Settings and Checks
-└── RequiredModules.psd1          # NuGet version ranges (requires ModuleFast, enabled)
-```
-
 ### Architecture rules (do not break these)
 
 - **Layering is strict**: collectors only fetch and persist redacted JSON snapshots to `<Run>/Raw/`; assessors are pure functions over snapshots on disk (no network); scoring consumes findings only. This enables offline re-analysis and fixture-based testing.
@@ -76,6 +53,7 @@ Get-EntraZTAssess/
 - **Graph SDK calls are wrapped** (`Connect-MgGraphWrapper`, `Get-MgContextWrapper`, etc.) so unit tests never need a live tenant or the SDK installed.
 - **Beta endpoints** are isolated in collectors with a `(beta)` comment and must degrade to `NotAssessed` if Microsoft changes them.
 - **Reporting is local-only**: `Export-ZTAssessReport` consumes persisted run artifacts and writes `ExecutiveReport.html`, `TechnicalReport.html`, `RiskRegister.json`, `RiskRegister.csv`, and `RemediationRoadmap.json` beneath `<Run>/Reports`. It makes no Graph calls. `-RedactUserIdentifiers` redacts generated report artifacts only and must not modify raw findings, snapshots, scores, or the run manifest. Risk-register and roadmap rows include only Fail/Partial findings and use `Settings/settings.psd1` `RemediationSlaDays` (Critical 7, High 30, Medium 90, Low 180).
+- **Build packaging**: `build.yaml` `CopyPaths` must include `Settings` and `Checks` — these hold the declarative check library and thresholds; dropping them from `CopyPaths` silently ships a built module with no checks.
 
 ## Common Commands
 
@@ -123,18 +101,6 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 - Mock all external dependencies (Graph API, OS commands, etc.)
 - QA tests validate: changelog format, ScriptAnalyzer compliance, help documentation quality
 - **85% code coverage threshold** (configured in `build.yaml`)
-
-## CI/CD
-
-- **GitHub Actions** (`.github/workflows/ci.yml` and `release.yml`)
-  - CI: Runs on push to main and PRs
-  - Matrix testing: Linux, Windows, macOS
-  - Linting pins PSScriptAnalyzer to the workflow version before invoking the PSGallery ruleset
-  - Release: Publishes to PSGallery and GitHub Releases on tag `v*`
-
-- **Azure Pipelines** (`azure-pipelines.yml`)
-  - Stages: Build → Test (multi-platform: Linux, Windows PS7, macOS) → Code Coverage → Deploy
-  - Deploy publishes to PSGallery and GitHub Releases on `main` branch
 
 ## AI Agent Operating Principles
 
