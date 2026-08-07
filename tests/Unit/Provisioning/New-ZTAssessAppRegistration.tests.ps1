@@ -15,6 +15,7 @@ BeforeAll {
     # gives them -ErrorAction. This lets the function's Get-Command precondition
     # pass and the tests run with no real SDK installed.
     function global:Connect-MgGraph { [CmdletBinding()] param($TenantId, $Scopes, $Environment, [switch]$NoWelcome) }
+    function global:Get-MgApplication { [CmdletBinding()] param($Filter) }
     function global:Get-MgServicePrincipal { [CmdletBinding()] param($Filter) }
     function global:New-MgApplication { [CmdletBinding()] param($DisplayName, $SignInAudience, $RequiredResourceAccess, $KeyCredentials) }
     function global:New-MgServicePrincipal { [CmdletBinding()] param($AppId) }
@@ -34,7 +35,8 @@ BeforeAll {
 
 AfterAll {
     Get-Module -Name $script:provModuleName -All | Remove-Module -Force -ErrorAction SilentlyContinue
-    Remove-Item Function:\Connect-MgGraph, Function:\Get-MgServicePrincipal, Function:\New-MgApplication, `
+    Remove-Item Function:\Connect-MgGraph, Function:\Get-MgApplication, Function:\Get-MgServicePrincipal, `
+        Function:\New-MgApplication, `
         Function:\New-MgServicePrincipal, `
         Function:\New-MgServicePrincipalAppRoleAssignment -ErrorAction SilentlyContinue
     Remove-Item Env:\ZTPROV_TEST_PERMISSIONS -ErrorAction SilentlyContinue
@@ -44,6 +46,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
 
     BeforeEach {
         Mock -ModuleName $script:provModuleName Connect-MgGraph { }
+        Mock -ModuleName $script:provModuleName Get-MgApplication { $null }
         Mock -ModuleName $script:provModuleName Get-MgServicePrincipal {
             # Build a fake Graph SP whose AppRoles cover every catalogue scope.
             $cat = Import-PowerShellDataFile -Path $env:ZTPROV_TEST_PERMISSIONS
@@ -137,5 +140,80 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
         { New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath (Join-Path $TestDrive 'missing.cer') -Modules 'Identity' } |
             Should -Throw -ExpectedMessage '*not found*'
+    }
+
+    It 'Should only request Application.ReadWrite.All when -GrantAdminConsent is not supplied' {
+        New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-scopes-default.json')
+
+        Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 1 -ParameterFilter {
+            @($Scopes) -contains 'Application.ReadWrite.All' -and
+            @($Scopes) -notcontains 'AppRoleAssignment.ReadWrite.All' -and
+            @($Scopes) -notcontains 'Directory.Read.All'
+        }
+    }
+
+    It 'Should additionally request AppRoleAssignment.ReadWrite.All when -GrantAdminConsent is supplied' {
+        New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' -GrantAdminConsent `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-scopes-consent.json')
+
+        Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 1 -ParameterFilter {
+            @($Scopes) -contains 'Application.ReadWrite.All' -and
+            @($Scopes) -contains 'AppRoleAssignment.ReadWrite.All'
+        }
+    }
+
+    It 'Should throw naming the existing AppId when an application with the same DisplayName already exists' {
+        Mock -ModuleName $script:provModuleName Get-MgApplication {
+            [pscustomobject]@{ AppId = '99999999-9999-9999-9999-999999999999'; DisplayName = 'EntraZTAssess-Assessment' }
+        }
+
+        { New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-dup.json') } |
+            Should -Throw -ExpectedMessage '*99999999-9999-9999-9999-999999999999*'
+
+        Should -Invoke -ModuleName $script:provModuleName New-MgApplication -Times 0
+    }
+
+    It 'Should create a new application when -Force is supplied despite an existing DisplayName match' {
+        Mock -ModuleName $script:provModuleName Get-MgApplication {
+            [pscustomobject]@{ AppId = '99999999-9999-9999-9999-999999999999'; DisplayName = 'EntraZTAssess-Assessment' }
+        }
+
+        $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' -Force `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-force.json')
+
+        $result.ClientId | Should -Be '11111111-1111-1111-1111-111111111111'
+        Should -Invoke -ModuleName $script:provModuleName New-MgApplication -Times 1
+    }
+
+    It 'Should not connect to Microsoft Graph under -WhatIf' {
+        New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-whatif.json') -WhatIf
+
+        Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 0
+        Should -Invoke -ModuleName $script:provModuleName New-MgApplication -Times 0
+    }
+
+    It 'Should record a failed grant in FailedGrants without throwing' {
+        Mock -ModuleName $script:provModuleName New-MgServicePrincipalAppRoleAssignment { throw 'Insufficient privileges' }
+
+        $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' -GrantAdminConsent `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-failedgrants.json')
+
+        $result.FailedGrants.Count | Should -BeGreaterThan 0
+        $result.FailedGrants[0].Error | Should -BeLike '*Insufficient privileges*'
+    }
+
+    It 'Should throw when TenantId is not a GUID or a domain name' {
+        { New-ZTAssessAppRegistration -TenantId 'not a tenant' `
+            -CertificatePath $script:cerPath -Modules 'Identity' } |
+            Should -Throw
     }
 }

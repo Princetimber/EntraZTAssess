@@ -17,9 +17,11 @@ function New-ZTAssessAppRegistration {
     in the repo-local EntraZTAssess.Provisioning module rather than in the
     read-only assessment module under source/.
 
-    The interactive sign-in for THIS function requests elevated setup scopes
-    (Application.ReadWrite.All, AppRoleAssignment.ReadWrite.All, Directory.Read.All)
-    so it can create the application and, optionally, grant consent. Those elevated
+    The interactive sign-in for THIS function requests elevated setup scopes,
+    requested only as needed: Application.ReadWrite.All is always requested to
+    create the application and service principal; AppRoleAssignment.ReadWrite.All
+    is additionally requested only when -GrantAdminConsent is supplied, since it
+    is only exercised when creating app role assignments directly. Those elevated
     scopes are used only for this provisioning step; they are NOT the scopes the
     assessment itself uses. The assessment runs exclusively with the read-only
     application permissions granted to the new app.
@@ -28,6 +30,12 @@ function New-ZTAssessAppRegistration {
     an admin-consent URL that a Global Administrator must approve. Supply
     -GrantAdminConsent to create the app role assignments directly (also requires
     a Global Administrator or Privileged Role Administrator session).
+
+    Re-running this function against a tenant that already has an application
+    registered under the same -DisplayName does not silently create a duplicate.
+    It stops with an actionable error naming the existing application's AppId
+    unless -Force is supplied, in which case a new application is created
+    alongside the existing one.
 
     .PARAMETER TenantId
     The directory (tenant) ID or domain name in which to create the application.
@@ -56,6 +64,12 @@ function New-ZTAssessAppRegistration {
     or Privileged Role Administrator session. When omitted, an admin-consent URL is
     emitted for a Global Administrator to approve instead.
 
+    .PARAMETER Force
+    Creates a new application registration even when one with the same
+    -DisplayName already exists in the tenant. Without this switch, the function
+    stops with an actionable error naming the existing application's AppId rather
+    than silently creating a duplicate.
+
     .PARAMETER ConfigOutputPath
     Path of the non-secret JSON configuration file to write for
     Connect-ZTAssessment. Defaults to ~/.ztassess/auth.json. No password or secret
@@ -76,21 +90,30 @@ function New-ZTAssessAppRegistration {
 
     .OUTPUTS
     PSCustomObject
-    A summary with ClientId, TenantId, CertificateThumbprint, ConfigPath, and
-    ConsentUrl.
+    A summary with ClientId, TenantId, CertificateThumbprint, ConfigPath,
+    ConsentUrl, and FailedGrants (an empty array unless -GrantAdminConsent
+    was supplied and one or more app role assignments failed).
 
     .NOTES
     Requires the Microsoft.Graph SDK modules (Microsoft.Graph.Authentication,
     Microsoft.Graph.Applications). All permissions granted to the created
     application are read-only Graph application permissions and require admin
     consent before the assessment can run.
+
+    Supports -WhatIf/-Confirm. The Microsoft Graph sign-in itself is gated by
+    ShouldProcess because it can create or refresh a delegated consent grant in
+    the directory; under -WhatIf the function reports what would happen and
+    returns without connecting.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'Interactive admin-run provisioning function; coloured console guidance is intentional and not pipeline output.')]
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()]
+        [ValidatePattern(
+            '^([0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}|[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9][a-zA-Z0-9-]*)+)$',
+            ErrorMessage = 'TenantId must be a directory (tenant) GUID or a verified domain name, e.g. contoso.onmicrosoft.com.'
+        )]
         [string]$TenantId,
 
         [Parameter()]
@@ -113,6 +136,9 @@ function New-ZTAssessAppRegistration {
         [switch]$GrantAdminConsent,
 
         [Parameter()]
+        [switch]$Force,
+
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [string]$ConfigOutputPath = (Join-Path -Path $HOME -ChildPath '.ztassess/auth.json')
     )
@@ -124,18 +150,20 @@ function New-ZTAssessAppRegistration {
     $graphAppId = '00000003-0000-0000-c000-000000000000'
 
     # Elevated scopes used ONLY for this one-time provisioning step, not by the
-    # assessment itself.
-    $setupScopes = @(
-        'Application.ReadWrite.All'
-        'AppRoleAssignment.ReadWrite.All'
-        'Directory.Read.All'
-    )
+    # assessment itself. Requested least-privilege: AppRoleAssignment.ReadWrite.All
+    # is only needed when -GrantAdminConsent will create app role assignments.
+    $setupScopes = [System.Collections.Generic.List[string]]::new()
+    $setupScopes.Add('Application.ReadWrite.All')
+    if ($GrantAdminConsent) {
+        $setupScopes.Add('AppRoleAssignment.ReadWrite.All')
+    }
 
     # --- Preconditions --------------------------------------------------------
 
     # Fail fast with an actionable message if the Graph SDK is not installed.
     $requiredCommands = @(
         'Connect-MgGraph'
+        'Get-MgApplication'
         'Get-MgServicePrincipal'
         'New-MgApplication'
         'New-MgServicePrincipal'
@@ -203,6 +231,14 @@ function New-ZTAssessAppRegistration {
     Write-Host 'Connecting to Microsoft Graph with elevated one-time setup scopes...' -ForegroundColor Cyan
     Write-Host ("  Setup scopes (not assessment scopes): {0}" -f ($setupScopes -join ', '))
 
+    # The sign-in itself can create or refresh a delegated consent grant in the
+    # directory, so it is a write operation and is gated by ShouldProcess. Under
+    # -WhatIf, report what would happen and stop before connecting, since every
+    # subsequent step depends on an authenticated Graph context.
+    if (-not $PSCmdlet.ShouldProcess($TenantId, 'Connect to Microsoft Graph with elevated setup scopes')) {
+        return
+    }
+
     try {
         Connect-MgGraph -TenantId $TenantId -Scopes $setupScopes -Environment $Environment -NoWelcome -ErrorAction Stop
     }
@@ -249,7 +285,17 @@ function New-ZTAssessAppRegistration {
 
     # --- Read the certificate bytes -------------------------------------------
 
-    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($CertificatePath)
+    # X509CertificateLoader (the non-obsolete replacement for the path-based
+    # X509Certificate2 constructor, SYSLIB0057) is only available on newer .NET
+    # runtimes. Prefer it when present; fall back to the constructor so this
+    # still runs on the project's PowerShell 7.0 minimum.
+    $certificateLoaderType = [type]::GetType('System.Security.Cryptography.X509Certificates.X509CertificateLoader')
+    $certificate = if ($certificateLoaderType) {
+        $certificateLoaderType::LoadCertificateFromFile($CertificatePath)
+    }
+    else {
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($CertificatePath)
+    }
     $certThumbprint = $certificate.Thumbprint
     $certRawBytes = $certificate.GetRawCertData()
     # Thumbprint and raw bytes are captured; the handle is not used again.
@@ -272,6 +318,24 @@ function New-ZTAssessAppRegistration {
         Type  = 'AsymmetricX509Cert'
         Usage = 'Verify'
         Key   = $certRawBytes
+    }
+
+    # --- Idempotency guard: refuse to silently duplicate an existing app -------
+
+    try {
+        $escapedDisplayName = $DisplayName.Replace("'", "''")
+        $existingApplication = Get-MgApplication -Filter "displayName eq '$escapedDisplayName'" -ErrorAction Stop | Select-Object -First 1
+    }
+    catch {
+        throw ("Failed to check for an existing application registration named '{0}': {1}" -f $DisplayName, $_.Exception.Message)
+    }
+
+    if ($existingApplication -and -not $Force) {
+        throw ("An application registration named '{0}' already exists (appId {1}). Re-running this function would create a duplicate and orphan the existing application's consent grants. Supply -Force to create a new application anyway, or reuse the existing appId." -f $DisplayName, $existingApplication.AppId)
+    }
+
+    if ($existingApplication -and $Force) {
+        Write-Warning ("An application registration named '{0}' already exists (appId {1}); -Force was supplied, so a new, separate application will be created." -f $DisplayName, $existingApplication.AppId)
     }
 
     # --- Create the application ------------------------------------------------
@@ -321,6 +385,7 @@ function New-ZTAssessAppRegistration {
         ('https://{0}/{1}/adminconsent?client_id=<appId>' -f $consentHost, $TenantId)
     }
 
+    $failedGrants = [System.Collections.Generic.List[pscustomobject]]::new()
     if ($GrantAdminConsent) {
         if ($servicePrincipal -and $PSCmdlet.ShouldProcess($DisplayName, 'Grant admin consent (create app role assignments)')) {
             foreach ($role in $resolvedRoles) {
@@ -334,6 +399,7 @@ function New-ZTAssessAppRegistration {
                 }
                 catch {
                     Write-Warning ("Failed to grant '{0}': {1}" -f $role.Scope, $_.Exception.Message)
+                    $failedGrants.Add([pscustomobject]@{ Scope = $role.Scope; Error = $_.Exception.Message })
                 }
             }
         }
@@ -381,6 +447,7 @@ function New-ZTAssessAppRegistration {
         CertificateThumbprint = $certThumbprint
         ConfigPath            = $ConfigOutputPath
         ConsentUrl            = $consentUrl
+        FailedGrants          = @($failedGrants)
     }
 
     Write-Host ''
@@ -390,6 +457,9 @@ function New-ZTAssessAppRegistration {
     Write-Host ("  Thumbprint : {0}" -f $summary.CertificateThumbprint)
     Write-Host ("  Config     : {0}" -f $summary.ConfigPath)
     Write-Host ("  Consent URL: {0}" -f $summary.ConsentUrl)
+    if ($summary.FailedGrants.Count -gt 0) {
+        Write-Host ("  Failed grants: {0}" -f (($summary.FailedGrants | ForEach-Object { $_.Scope }) -join ', ')) -ForegroundColor Yellow
+    }
     Write-Host ''
 
     return $summary

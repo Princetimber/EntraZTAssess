@@ -116,13 +116,14 @@ The Sentinel module uses Azure Reader via ARM and requires no Graph permissions.
 
 ### One-Time Setup Permissions (Elevated — Not Assessment Scopes)
 
-`New-ZTAssessAppRegistration` itself needs elevated permissions to create the app and grant app roles:
+`New-ZTAssessAppRegistration` itself needs elevated permissions to create the app and, optionally, grant app roles. These are requested least-privilege, only as needed:
 
-- `Application.ReadWrite.All`
-- `AppRoleAssignment.ReadWrite.All`
-- `Directory.Read.All`
+- `Application.ReadWrite.All` — always requested; creates the application and service principal.
+- `AppRoleAssignment.ReadWrite.All` — requested **only** when `-GrantAdminConsent` is supplied, since it is only exercised when creating app role assignments directly.
 
 These are **setup-only** and are used by the operator running the provisioning module. They are **not** assessment scopes and are **not** held by the assessment app. The assessment app holds only the read-only permissions in the table above.
+
+Re-running `New-ZTAssessAppRegistration` against a tenant that already has an application registered under the same `-DisplayName` does not silently create a duplicate: it stops with an actionable error naming the existing application's `AppId` unless `-Force` is supplied.
 
 ## Configuration File Schema
 

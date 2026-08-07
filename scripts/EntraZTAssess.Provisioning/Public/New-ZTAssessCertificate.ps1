@@ -21,7 +21,9 @@ function New-ZTAssessCertificate {
 
     This is a one-time, admin-run setup step. It performs no network calls and
     writes nothing sensitive to disk beyond the password-protected .pfx. The PFX
-    password is never written to disk or emitted to logs.
+    password is never written to disk or emitted to logs. On macOS and Linux the
+    output directory and .pfx file are restricted to the owner (0700/0600) after
+    they are written.
 
     .PARAMETER SubjectName
     The X.500 distinguished name (subject) of the certificate. Defaults to
@@ -101,13 +103,10 @@ function New-ZTAssessCertificate {
 
     # Prompt for the PFX password only when the caller did not supply one.
     if (-not $PfxPassword) {
-        $pfxPassword = Read-Host -AsSecureString -Prompt 'Enter a password to protect the exported .pfx private key'
-    }
-    else {
-        $pfxPassword = $PfxPassword
+        $PfxPassword = Read-Host -AsSecureString -Prompt 'Enter a password to protect the exported .pfx private key'
     }
 
-    if (-not $pfxPassword -or $pfxPassword.Length -eq 0) {
+    if (-not $PfxPassword -or $PfxPassword.Length -eq 0) {
         throw 'A non-empty PFX password is required to protect the exported private key.'
     }
 
@@ -116,6 +115,14 @@ function New-ZTAssessCertificate {
         if ($PSCmdlet.ShouldProcess($OutputPath, 'Create output directory')) {
             $null = New-Item -Path $OutputPath -ItemType Directory -Force
         }
+    }
+
+    # Restrict the output directory to the owner on macOS/Linux, since it holds
+    # a password-protected private key archive. SetUnixFileMode throws on
+    # Windows, so it is only ever attempted off-Windows.
+    if ((Test-Path -LiteralPath $OutputPath) -and -not $IsWindows) {
+        $ownerRwx = [System.IO.UnixFileMode]'UserRead, UserWrite, UserExecute'
+        [System.IO.File]::SetUnixFileMode($OutputPath, $ownerRwx)
     }
 
     $cerPath = Join-Path -Path $OutputPath -ChildPath 'EntraZTAssess.cer'
@@ -154,23 +161,44 @@ function New-ZTAssessCertificate {
         if ($PSCmdlet.ShouldProcess($pfxPath, 'Write password-protected private key (.pfx)')) {
             $pfxBytes = $certificate.Export(
                 [System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx,
-                $pfxPassword
+                $PfxPassword
             )
             [System.IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+
+            # Restrict the .pfx to the owner on macOS/Linux; it holds the private key.
+            if (-not $IsWindows) {
+                $ownerRw = [System.IO.UnixFileMode]'UserRead, UserWrite'
+                [System.IO.File]::SetUnixFileMode($pfxPath, $ownerRw)
+            }
         }
 
         # On Windows only, optionally import into the user's personal store so the
         # certificate can be referenced by thumbprint alone.
         if ($InstallToWindowsStore) {
             if ($IsWindows) {
-                if ($PSCmdlet.ShouldProcess('Cert:\CurrentUser\My', 'Install certificate to Windows store')) {
+                if (-not $pfxBytes) {
+                    Write-Warning 'InstallToWindowsStore requires the .pfx to have been exported first; it was skipped (likely due to -WhatIf). Store import was not performed.'
+                }
+                elseif ($PSCmdlet.ShouldProcess('Cert:\CurrentUser\My', 'Install certificate to Windows store')) {
+                    # $certificate's private key is ephemeral (from CreateSelfSigned) and
+                    # is not guaranteed to persist through X509Store.Add on every .NET/OS
+                    # combination. Round-trip it through the PFX bytes just exported, with
+                    # PersistKeySet + Exportable, so the store copy reliably keeps a usable
+                    # private key for certificate-based authentication by thumbprint.
+                    $persistableCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+                        $pfxBytes,
+                        $PfxPassword,
+                        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::PersistKeySet -bor
+                        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable
+                    )
                     $store = [System.Security.Cryptography.X509Certificates.X509Store]::new('My', 'CurrentUser')
                     try {
                         $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-                        $store.Add($certificate)
+                        $store.Add($persistableCertificate)
                     }
                     finally {
                         $store.Close()
+                        $persistableCertificate.Dispose()
                     }
                 }
             }

@@ -5,7 +5,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- `New-ZTAssessAppRegistration` (`EntraZTAssess.Provisioning`) no longer
+  requests `AppRoleAssignment.ReadWrite.All` or `Directory.Read.All` for the
+  provisioning sign-in unless `-GrantAdminConsent` is supplied, closing an
+  over-broad, unconditional consent-scope request that violated the project's
+  least-privilege default.
+- `New-ZTAssessAppRegistration` now refuses to silently create a duplicate
+  application registration when one with the same `-DisplayName` already
+  exists, stopping with the existing application's `AppId` unless `-Force`
+  is supplied. Previously, a rerun created a second app + service principal
+  and silently overwrote `~/.ztassess/auth.json`, orphaning the first
+  application's consent grants.
+- The interactive `Connect-MgGraph` sign-in in `New-ZTAssessAppRegistration`
+  is now gated by `ShouldProcess`, so `-WhatIf` no longer performs a sign-in
+  that could create or refresh a delegated consent grant.
+- Failed app-role grant attempts during `-GrantAdminConsent` are now surfaced
+  via a `FailedGrants` property on the returned summary object, instead of
+  only a console warning that was lost from the return value.
+- `New-ZTAssessCertificate`'s `-InstallToWindowsStore` now round-trips the
+  certificate through its exported PFX bytes with `PersistKeySet |
+  Exportable` before adding it to `CurrentUser\My`, so the store copy
+  reliably retains a usable private key instead of depending on
+  `X509Store.Add` persisting an ephemeral key on every .NET/OS combination.
+- `New-ZTAssessCertificate` now restricts its output directory (`0700`) and
+  exported `.pfx` (`0600`) to the owner on macOS/Linux after writing them.
+
 ### Fixed
+
+- `New-ZTAssessAppRegistration`'s `TenantId` parameter now validates that the
+  value is a GUID or a domain-shaped string, failing fast with an actionable
+  message instead of a less-actionable error from inside `Connect-MgGraph`.
+- `New-ZTAssessAppRegistration` now prefers the non-obsolete
+  `X509CertificateLoader.LoadCertificateFromFile` API when available on the
+  host .NET runtime, falling back to the `X509Certificate2` path constructor
+  (marked obsolete as `SYSLIB0057`) on older runtimes.
+- Simplified `New-ZTAssessCertificate`'s PFX-password handling to remove a
+  confusing self-assignment no-op (`$pfxPassword = $PfxPassword`, a no-op
+  under PowerShell's case-insensitive variable names).
 
 - Dependency restore now rejects `Microsoft.PowerShell.PSResourceGet` versions
   older than 1.2.0 before they can fail on PSGallery V2 repository metadata,
