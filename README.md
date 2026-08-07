@@ -95,7 +95,7 @@ The CBA app holds only read-only permissions, using the same identifiers as the 
 | Devices | `DeviceManagementConfiguration.Read.All`, `DeviceManagementManagedDevices.Read.All`, `DeviceManagementServiceConfig.Read.All`, `DeviceManagementApps.Read.All` |
 | Monitoring | `IdentityRiskEvent.Read.All`, `IdentityRiskyUser.Read.All`, `AuditLog.Read.All`, `SecurityIdentitiesSensors.Read.All` |
 
-The Sentinel module uses Azure Reader via ARM and needs no Graph permissions. The provisioning module itself needs elevated **one-time setup** permissions (`Application.ReadWrite.All`, `AppRoleAssignment.ReadWrite.All`, `Directory.Read.All`) — these are for setup only and are not assessment scopes. See [`docs/Authentication.md`](docs/Authentication.md) for details.
+The Sentinel module uses Azure Reader via ARM and needs no Graph permissions. The provisioning module itself needs elevated **one-time setup** permissions, requested least-privilege: `Application.ReadWrite.All` always, plus `AppRoleAssignment.ReadWrite.All` only when `-GrantAdminConsent` is used — these are for setup only and are not assessment scopes. See [`docs/Authentication.md`](docs/Authentication.md) for details.
 
 ---
 
