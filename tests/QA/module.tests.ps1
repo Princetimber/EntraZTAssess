@@ -185,7 +185,7 @@ Describe 'Quality for module' -Tags 'TestQuality' {
     It 'Should pass Script Analyzer for <Name>' -ForEach $testCases -Skip:(-not $script:scriptAnalyzerRules) {
         $functionFile = Get-ChildItem -Path $script:sourcePath -Recurse -Include "$Name.ps1"
 
-        $pssaResult = (Invoke-ScriptAnalyzer -Path $functionFile.FullName)
+        $pssaResult = (Invoke-ScriptAnalyzer -Path $functionFile.FullName -Settings (Join-Path -Path $PSScriptRoot -ChildPath '../../PSScriptAnalyzerSettings.psd1'))
         $report = $pssaResult | Format-Table -AutoSize | Out-String -Width 110
         $pssaResult | Should -BeNullOrEmpty -Because `
             "some rule triggered.`r`n`r`n $report"

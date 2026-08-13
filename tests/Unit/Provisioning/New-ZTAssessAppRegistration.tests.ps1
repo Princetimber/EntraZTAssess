@@ -68,7 +68,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
     It 'Should resolve the catalogue path and create the application' {
         $configPath = Join-Path $TestDrive 'auth.json'
         $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
-            -CertificatePath $script:cerPath -Modules 'Identity' -ConfigOutputPath $configPath
+            -CertificatePath $script:cerPath -Modules 'Identity' -ConfigOutputPath $configPath -Confirm:$false
 
         $result.PSObject.TypeNames | Should -Contain 'ZTAssess.AppRegistration'
         $result.ClientId | Should -Be '11111111-1111-1111-1111-111111111111'
@@ -78,7 +78,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
     It 'Should write a non-secret config with no password field' {
         $configPath = Join-Path $TestDrive 'auth2.json'
         New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
-            -CertificatePath $script:cerPath -Modules 'Identity' -ConfigOutputPath $configPath
+            -CertificatePath $script:cerPath -Modules 'Identity' -ConfigOutputPath $configPath -Confirm:$false
 
         $json = Get-Content -Raw -Path $configPath | ConvertFrom-Json
         $json.TenantId | Should -Be 'contoso.onmicrosoft.com'
@@ -95,7 +95,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
 
         New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-consent.json') -GrantAdminConsent
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-consent.json') -GrantAdminConsent -Confirm:$false
 
         Should -Invoke -ModuleName $script:provModuleName New-MgServicePrincipalAppRoleAssignment -Times $expected -Exactly
     }
@@ -103,7 +103,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
     It 'Should not create app-role assignments without -GrantAdminConsent' {
         New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-noconsent.json')
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-noconsent.json') -Confirm:$false
 
         Should -Invoke -ModuleName $script:provModuleName New-MgServicePrincipalAppRoleAssignment -Times 0 -Exactly
     }
@@ -111,7 +111,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
     It 'Should resolve the default module set when -Modules is omitted' {
         $configPath = Join-Path $TestDrive 'auth-default.json'
         $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
-            -CertificatePath $script:cerPath -ConfigOutputPath $configPath
+            -CertificatePath $script:cerPath -ConfigOutputPath $configPath -Confirm:$false
 
         $result.ClientId | Should -Be '11111111-1111-1111-1111-111111111111'
         Should -Invoke -ModuleName $script:provModuleName New-MgApplication -Times 1
@@ -120,7 +120,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
     It 'Should pass only read-only application (Role) resource access to New-MgApplication' {
         New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-payload.json')
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-payload.json') -Confirm:$false
 
         Should -Invoke -ModuleName $script:provModuleName New-MgApplication -Times 1 -ParameterFilter {
             $RequiredResourceAccess.Count -eq 1 -and
@@ -145,7 +145,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
     It 'Should only request Application.ReadWrite.All when -GrantAdminConsent is not supplied' {
         New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-scopes-default.json')
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-scopes-default.json') -Confirm:$false
 
         Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 1 -ParameterFilter {
             @($Scopes) -contains 'Application.ReadWrite.All' -and
@@ -157,7 +157,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
     It 'Should additionally request AppRoleAssignment.ReadWrite.All when -GrantAdminConsent is supplied' {
         New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' -GrantAdminConsent `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-scopes-consent.json')
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-scopes-consent.json') -Confirm:$false
 
         Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 1 -ParameterFilter {
             @($Scopes) -contains 'Application.ReadWrite.All' -and
@@ -172,7 +172,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
 
         { New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-dup.json') } |
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-dup.json') -Confirm:$false } |
             Should -Throw -ExpectedMessage '*99999999-9999-9999-9999-999999999999*'
 
         Should -Invoke -ModuleName $script:provModuleName New-MgApplication -Times 0
@@ -185,7 +185,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
 
         $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' -Force `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-force.json')
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-force.json') -Confirm:$false
 
         $result.ClientId | Should -Be '11111111-1111-1111-1111-111111111111'
         Should -Invoke -ModuleName $script:provModuleName New-MgApplication -Times 1
@@ -205,7 +205,7 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
 
         $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
             -CertificatePath $script:cerPath -Modules 'Identity' -GrantAdminConsent `
-            -ConfigOutputPath (Join-Path $TestDrive 'auth-failedgrants.json')
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-failedgrants.json') -Confirm:$false
 
         $result.FailedGrants.Count | Should -BeGreaterThan 0
         $result.FailedGrants[0].Error | Should -BeLike '*Insufficient privileges*'
@@ -215,5 +215,67 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
         { New-ZTAssessAppRegistration -TenantId 'not a tenant' `
             -CertificatePath $script:cerPath -Modules 'Identity' } |
             Should -Throw
+    }
+
+    It 'Should warn and skip scopes with no matching Application app role' {
+        Mock -ModuleName $script:provModuleName Get-MgServicePrincipal {
+            # Only the Core module's first scope resolves; every other requested
+            # scope is left unmatched and should be warned about, not fail the run.
+            $cat = Import-PowerShellDataFile -Path $env:ZTPROV_TEST_PERMISSIONS
+            $matchedScope = $cat.Modules['Core'].Scopes | Select-Object -First 1
+            $roles = @([pscustomobject]@{ Value = $matchedScope; Id = [guid]::NewGuid().ToString(); AllowedMemberTypes = @('Application') })
+            [pscustomobject]@{ Id = [guid]::NewGuid().ToString(); AppRoles = $roles }
+        }
+
+        $warnings = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-unmatched.json') -Confirm:$false `
+            -WarningVariable warnOutput -WarningAction SilentlyContinue
+
+        $warnOutput | Should -Not -BeNullOrEmpty
+        ($warnOutput -join ' ') | Should -BeLike '*No matching Application app role*'
+    }
+
+    It 'Should throw when no scopes resolve to an Application app role' {
+        Mock -ModuleName $script:provModuleName Get-MgServicePrincipal {
+            [pscustomobject]@{ Id = [guid]::NewGuid().ToString(); AppRoles = @() }
+        }
+
+        { New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-nomatch.json') -Confirm:$false -WarningAction SilentlyContinue } |
+            Should -Throw -ExpectedMessage '*No application app roles could be resolved*'
+    }
+
+    It 'Should prefer a sibling .pfx over the .cer for the recorded ConfigCertificatePath' {
+        $outDir = Join-Path $TestDrive 'pfx-sibling'
+        $null = New-Item -Path $outDir -ItemType Directory -Force
+        $cerPath = Join-Path $outDir 'sibling.cer'
+        $pfxPath = Join-Path $outDir 'sibling.pfx'
+        Copy-Item -LiteralPath $script:cerPath -Destination $cerPath
+        Set-Content -LiteralPath $pfxPath -Value 'placeholder-pfx-bytes'
+
+        $configPath = Join-Path $TestDrive 'auth-pfx-sibling.json'
+        New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $cerPath -Modules 'Identity' -ConfigOutputPath $configPath -Confirm:$false
+
+        $json = Get-Content -Raw -Path $configPath | ConvertFrom-Json
+        $json.CertificatePath | Should -Be $pfxPath
+    }
+
+    It 'Should emit a USGov admin-consent host when -Environment USGov is supplied' {
+        $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' -Environment 'USGov' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-usgov.json') -Confirm:$false
+
+        $result.ConsentUrl | Should -BeLike 'https://login.microsoftonline.us/*'
+    }
+
+    It 'Should emit a China admin-consent host when -Environment China is supplied' {
+        $result = New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' -Environment 'China' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-china.json') -Confirm:$false
+
+        $result.ConsentUrl | Should -BeLike 'https://login.partner.microsoftonline.cn/*'
     }
 }
