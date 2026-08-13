@@ -31,6 +31,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `X509Store.Add` persisting an ephemeral key on every .NET/OS combination.
 - `New-ZTAssessCertificate` now restricts its output directory (`0700`) and
   exported `.pfx` (`0600`) to the owner on macOS/Linux after writing them.
+- `New-ZTAssessAppRegistration` now sets `ConfirmImpact = 'High'` on its
+  `SupportsShouldProcess` binding, so `-Confirm` prompts by default under the
+  default confirmation preference for this Graph-write, app-registration
+  cmdlet. Its help now also documents that a transient Graph 429/503 during
+  provisioning should be resolved by rerunning the function, using `-Force`
+  if a partial application registration was already created.
+
+### Added
+
+- A repo-root `PSScriptAnalyzerSettings.psd1` (excluding
+  `PSUseBOMForUnicodeEncodedFile`, a Windows-legacy concern not applicable to
+  PS7+ on macOS/Linux). `tests/QA/module.tests.ps1` now passes it to
+  `Invoke-ScriptAnalyzer`, matching project convention for running the linter
+  with an explicit settings file.
+- Additional Pester coverage for `EntraZTAssess.Provisioning`: the unmatched
+  Application-app-role warning path, the zero-resolved-roles throw, the
+  `.pfx`-sibling `CertificatePath` preference, USGov/China admin-consent host
+  URLs, and `-SubjectName`/`-ValidityMonths` parameter validation.
 
 ### Fixed
 

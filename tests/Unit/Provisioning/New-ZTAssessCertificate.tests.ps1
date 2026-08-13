@@ -42,6 +42,29 @@ Describe 'New-ZTAssessCertificate' -Tag 'Unit' {
             Should -Throw -ExpectedMessage '*password*'
     }
 
+    It 'Should throw when given an empty SubjectName' {
+        $securePw = ConvertTo-SecureString 'ZtAssessPfx!123' -AsPlainText -Force
+        { New-ZTAssessCertificate -OutputPath (Join-Path $TestDrive 'c4') -PfxPassword $securePw -SubjectName '' } |
+            Should -Throw
+    }
+
+    It 'Should throw when -ValidityMonths is outside the 1-60 range' {
+        $securePw = ConvertTo-SecureString 'ZtAssessPfx!123' -AsPlainText -Force
+        { New-ZTAssessCertificate -OutputPath (Join-Path $TestDrive 'c5') -PfxPassword $securePw -ValidityMonths 61 } |
+            Should -Throw
+        { New-ZTAssessCertificate -OutputPath (Join-Path $TestDrive 'c6') -PfxPassword $securePw -ValidityMonths 0 } |
+            Should -Throw
+    }
+
+    It 'Should accept a custom SubjectName and reflect it on the created certificate' {
+        $securePw = ConvertTo-SecureString 'ZtAssessPfx!123' -AsPlainText -Force
+        $outDir = Join-Path $TestDrive 'certs-subject'
+
+        $result = New-ZTAssessCertificate -OutputPath $outDir -PfxPassword $securePw -SubjectName 'CN=Contoso ZTAssess'
+
+        $result.Subject | Should -Be 'CN=Contoso ZTAssess'
+    }
+
     It 'Should restrict the output directory and .pfx to the owner on macOS/Linux' -Skip:$IsWindows {
         $securePw = ConvertTo-SecureString 'ZtAssessPfx!123' -AsPlainText -Force
         $outDir = Join-Path $TestDrive 'certs-perms'

@@ -104,9 +104,15 @@ function New-ZTAssessAppRegistration {
     ShouldProcess because it can create or refresh a delegated consent grant in
     the directory; under -WhatIf the function reports what would happen and
     returns without connecting.
+
+    If Microsoft Graph returns a transient throttling (429) or service (5xx)
+    error while creating the application, service principal, credential, or an
+    app role assignment, rerun this function. If a partial application
+    registration was already created before the failure, supply -Force to
+    proceed rather than stopping on the idempotency guard.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'Interactive admin-run provisioning function; coloured console guidance is intentional and not pipeline output.')]
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)]
