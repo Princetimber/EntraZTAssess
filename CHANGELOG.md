@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Added `.vscode/settings.json` (project-scoped, checked in) pinning the
+  PowerShell extension's `codeFormatting.preset` to `OTBS` with
+  `openBraceOnSameLine: true`, plus `alignPropertyValuePairs`,
+  `addWhitespaceAroundPipe`, `useCorrectCasing`, `autoCorrectAliases`, and
+  `pipelineIndentationStyle` to mirror `PSScriptAnalyzerSettings.psd1`, and
+  `powershell.scriptAnalysis.settingsPath` to point live diagnostics at the
+  project ruleset instead of the extension's defaults. Without this, a
+  contributor's personal VS Code settings could disagree with
+  `PSScriptAnalyzerSettings.psd1` and "Format Document"/format-on-save would
+  silently revert the repo's own OTBS fix on save — this happened twice in
+  one session before the personal `settings.json` was corrected; this file
+  makes the correct config the per-workspace default for every contributor.
 - Raised the `RequiredModules.psd1` lower bound for `PSScriptAnalyzer` from
   `1.22` to `1.25.0`. `1.24.0` has a flaky `NullReferenceException` inside
   `Invoke-ScriptAnalyzer` when enough `Rules` entries in
