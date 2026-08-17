@@ -34,5 +34,5 @@ function Get-ZTAssessRetryDelay {
         }
     }
 
-    return 0
+    return 0.0
 }

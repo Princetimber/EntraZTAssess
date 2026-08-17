@@ -17,7 +17,7 @@
 # Confidence, OwnerType, EnrolmentType, Managed, Source.
 function Get-ZTAssessDeviceClass {
     [CmdletBinding()]
-    [OutputType([pscustomobject[]])]
+    [OutputType([object[]])]
     param(
         [Parameter()]
         [AllowNull()]
@@ -57,7 +57,7 @@ function Get-ZTAssessDeviceClass {
         return $false
     }
 
-    $results = [System.Collections.Generic.List[object]]::new()
+    $results = [System.Collections.Generic.List[pscustomobject]]::new()
     $managedByEntraId = @{}
 
     foreach ($device in @($ManagedDevices)) {

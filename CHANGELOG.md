@@ -5,6 +5,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `PSScriptAnalyzerSettings.psd1`'s `PSPlaceOpenBrace.OnSameLine` corrected
+  from `$false` to `$true`. The prior value enforced Allman-style bracing
+  (opening brace always on its own line) while the settings file's own
+  header and inline comment both documented the intent as OTBS ("One True
+  Brace Style"), which keeps the opening brace on the statement's line and
+  cuddles `else`/`catch`/`finally` with the preceding closing brace. Running
+  `Invoke-Formatter` under the old value would have reformatted the entire
+  `source/` tree into Allman style; caught before any files were reformatted.
+- `PSScriptAnalyzerSettings.psd1`'s `PSUseConsistentWhitespace.CheckOperator`
+  disabled (`$true` → `$false`). It enforces exactly one space around `=`,
+  which directly conflicts with `PSAlignAssignmentStatement`'s padded
+  alignment of hashtable/splat assignments — the two rules could never both
+  pass on an aligned hashtable, so every `Invoke-Formatter` pass over an
+  aligned splat left one of the two rules failing. Disabling `CheckOperator`
+  forgoes single-space enforcement around all binary/assignment operators
+  project-wide in favour of keeping hashtable/splat alignment enforced and
+  auto-fixable via `Invoke-Formatter`.
+- Reformatted the 10 public functions that were failing
+  `tests/QA/module.tests.ps1`'s `Should pass Script Analyzer for <Name>`
+  check (`Connect-ZTAssessment`, `Disconnect-ZTAssessment`,
+  `Export-ZTAssessReport`, `Get-ZTAssessFinding`,
+  `Get-ZTAssessModuleCatalog`, `Get-ZTAssessProvisioningStep`,
+  `Get-ZTAssessRequiredPermission`, `Get-ZTAssessScore`,
+  `Invoke-ZTAssessment`, `New-ZTAssessEngagement`) via `Invoke-Formatter`
+  under the corrected settings above — brace cuddling and hashtable
+  re-alignment only, no logic changes. Full `Invoke-Pester -Path tests` run
+  green (489 passed, 1 pre-existing skip) after the fix.
+- `Get-ZTAssessRetryDelay` now returns `0.0` instead of the integer literal
+  `0` on its no-`Retry-After`-header path, matching its declared
+  `[OutputType([double])]` instead of silently returning `System.Int32`.
+- `Get-ZTAssessSnapshot`'s `[OutputType]` widened from `[object]` to
+  `[object[]]` to match its actual `, $parsed` array-preserving return.
+- `Get-ZTAssessDeviceClass` and `Get-ZTAssessPlatformProfile` now build their
+  internal result lists as strongly-typed
+  `List[pscustomobject]`/`List[ZTAssessPlatformProfile]` instead of
+  `List[object]`; their `[OutputType]` attributes are declared as
+  `[object[]]` to match the `, $x.ToArray()` array-preserving return idiom,
+  which PSScriptAnalyzer statically types as `object[]` regardless of the
+  underlying element type.
+- `Protect-ZTAssessReportUserIdentifierString` (private helper in
+  `Protect-ZTAssessReportUserIdentifier.ps1`) now declares
+  `[OutputType([string])]`, matching its actual return type.
+
 ### Security
 
 - `New-ZTAssessAppRegistration` (`EntraZTAssess.Provisioning`) no longer

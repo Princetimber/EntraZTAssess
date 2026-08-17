@@ -31,12 +31,10 @@ function Disconnect-ZTAssessment {
     try {
         Disconnect-MgGraphWrapper
         Write-ToLog -Message 'Disconnected from Microsoft Graph.' -Level INFO -NoConsole
-    }
-    catch {
+    } catch {
         Write-Warning "No active Microsoft Graph session to disconnect, or disconnection failed: $($_.Exception.Message)"
         Write-ToLog -Message "Disconnect attempt: $($_.Exception.Message)" -Level WARN -NoConsole
-    }
-    finally {
+    } finally {
         $script:ZTAssessConnection = $null
     }
 }

@@ -54,8 +54,7 @@ function Get-ZTAssessScore {
 
     try {
         return Get-Content -LiteralPath $scoresPath -Raw -ErrorAction Stop | ConvertFrom-Json -Depth 20
-    }
-    catch {
+    } catch {
         Write-Error -Message "Failed to read scores from '$scoresPath': $($_.Exception.Message)" -Category ReadError -ErrorAction Stop
     }
 }

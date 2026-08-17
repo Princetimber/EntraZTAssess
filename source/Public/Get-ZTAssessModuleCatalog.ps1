@@ -46,8 +46,7 @@ function Get-ZTAssessModuleCatalog {
 
     try {
         $catalogue = (Get-ZTAssessConfiguration -Name Permissions).Modules
-    }
-    catch {
+    } catch {
         Write-Error -Message "Failed to load the module catalogue: $($_.Exception.Message)" -Category ResourceUnavailable -ErrorAction Stop
     }
 

@@ -86,7 +86,7 @@ function Invoke-ZTAssessment {
     $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices', 'IdentityGovernance', 'Applications', 'HybridIdentity', 'Monitoring')
     $unsupported = @($selectedModules | Where-Object { $_ -notin $supportedModules })
     if ($unsupported.Count -gt 0) {
-        Write-Warning ("The following selected modules are not yet implemented and will be skipped: {0}." -f ($unsupported -join ', '))
+        Write-Warning ('The following selected modules are not yet implemented and will be skipped: {0}.' -f ($unsupported -join ', '))
         $selectedModules = @($selectedModules | Where-Object { $_ -in $supportedModules })
     }
     if ($selectedModules.Count -eq 0) {

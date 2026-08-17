@@ -6,7 +6,7 @@
 # state; -1 means the value could not be calculated.
 function Get-ZTAssessPlatformProfile {
     [CmdletBinding()]
-    [OutputType([ZTAssessPlatformProfile[]])]
+    [OutputType([object[]])]
     param(
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
@@ -40,7 +40,7 @@ function Get-ZTAssessPlatformProfile {
             $_.state -eq 'enabled' -and @($_.grantControls.builtInControls) -contains 'approvedApplication'
         }).Count -gt 0
 
-    $profiles = [System.Collections.Generic.List[object]]::new()
+    $profiles = [System.Collections.Generic.List[ZTAssessPlatformProfile]]::new()
 
     foreach ($platform in @('Windows', 'iOS', 'macOS', 'Android')) {
         $platformClasses = @($DeviceClasses | Where-Object { $_.Platform -eq $platform })

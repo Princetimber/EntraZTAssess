@@ -6,7 +6,7 @@
 # degradation when a collector was skipped or failed.
 function Get-ZTAssessSnapshot {
     [CmdletBinding()]
-    [OutputType([object])]
+    [OutputType([object[]])]
     param(
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
