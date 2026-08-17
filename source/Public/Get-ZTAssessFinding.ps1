@@ -77,8 +77,7 @@ function Get-ZTAssessFinding {
 
     try {
         $findings = Get-Content -LiteralPath $findingsPath -Raw -ErrorAction Stop | ConvertFrom-Json -Depth 20
-    }
-    catch {
+    } catch {
         Write-Error -Message "Failed to read findings from '$findingsPath': $($_.Exception.Message)" -Category ReadError -ErrorAction Stop
     }
 

@@ -209,17 +209,14 @@ function Connect-ZTAssessment {
 
                 if ($authConfig.CertificateThumbprint) {
                     $connectSplat['CertificateThumbprint'] = $authConfig.CertificateThumbprint
-                }
-                else {
+                } else {
                     $connectSplat['Certificate'] = Get-ZTAssessCertificate -Path $authConfig.CertificatePath -Password $CertificatePassword -ErrorAction Stop
                 }
 
                 Write-ToLog -Message "Resolved app-only configuration (source: $($authConfig.Source)); attempting certificate-based authentication." -Level INFO -NoConsole
-            }
-            elseif ($NoInteractiveFallback) {
+            } elseif ($NoInteractiveFallback) {
                 Write-Error -Message 'No certificate-based authentication configuration was found (checked ZTASSESS_* environment variables and ~/.ztassess/auth.json) and interactive fallback was disabled with -NoInteractiveFallback.' -Category ObjectNotFound -ErrorAction Stop
-            }
-            else {
+            } else {
                 $authMode = 'Delegated'
                 $connectSplat = @{
                     Environment = $effectiveEnvironment
@@ -236,8 +233,7 @@ function Connect-ZTAssessment {
 
     try {
         Connect-MgGraphWrapper @connectSplat
-    }
-    catch {
+    } catch {
         Write-ToLog -ErrorRecord $_ -NoConsole
         if ($cbaConfigResolved) {
             Write-Error -Message "Failed to connect to Microsoft Graph using the resolved certificate-based configuration: $($_.Exception.Message)" -Category ConnectionError -ErrorAction Stop
@@ -255,7 +251,7 @@ function Connect-ZTAssessment {
     $missingScopes = @($requiredScopes | Where-Object { $_ -notin $grantedScopes })
 
     if ($authMode -ne 'AppOnly' -and $missingScopes.Count -gt 0) {
-        Write-Warning ("The following required scopes were not granted: {0}. Checks that depend on them will be reported as NotAssessed." -f ($missingScopes -join ', '))
+        Write-Warning ('The following required scopes were not granted: {0}. Checks that depend on them will be reported as NotAssessed.' -f ($missingScopes -join ', '))
         Write-ToLog -Message "Missing scopes: $($missingScopes -join ', ')" -Level WARN -NoConsole
     }
 

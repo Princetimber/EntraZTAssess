@@ -97,28 +97,26 @@ function Export-ZTAssessReport {
             $csvRows = @($riskRegister | ConvertTo-ZTAssessRiskRegisterCsvRow)
             if ($csvRows.Count -gt 0) {
                 $csvRows | ConvertTo-Csv -NoTypeInformation | Set-Content -LiteralPath $riskRegisterCsvPath -Encoding utf8NoBOM -ErrorAction Stop
-            }
-            else {
+            } else {
                 '"CheckId","Domain","Title","Status","Severity","SlaDays","Evidence","Rationale","Remediation","RemediationEffort","ZeroTrustPillars","References"' |
                     Set-Content -LiteralPath $riskRegisterCsvPath -Encoding utf8NoBOM -ErrorAction Stop
             }
 
             ConvertTo-Json -InputObject $roadmap -Depth 20 | Set-Content -LiteralPath $roadmapJsonPath -Encoding utf8NoBOM -ErrorAction Stop
-        }
-        catch {
+        } catch {
             Write-Error -Message "Failed to export reports for run '$resolvedRunPath': $($_.Exception.Message)" -Category WriteError -ErrorAction Stop
         }
     }
 
     return [pscustomobject]@{
-        PSTypeName                  = 'ZTAssess.ReportExportResult'
-        RunPath                     = $resolvedRunPath
-        ReportsPath                 = $reportsPath
-        GeneratedUtc                = $exportContext.GeneratedUtc
-        ExecutiveReportPath         = $executiveReportPath
-        TechnicalReportPath         = $technicalReportPath
-        RiskRegisterJsonPath        = $riskRegisterJsonPath
-        RiskRegisterCsvPath         = $riskRegisterCsvPath
-        RemediationRoadmapJsonPath  = $roadmapJsonPath
+        PSTypeName                 = 'ZTAssess.ReportExportResult'
+        RunPath                    = $resolvedRunPath
+        ReportsPath                = $reportsPath
+        GeneratedUtc               = $exportContext.GeneratedUtc
+        ExecutiveReportPath        = $executiveReportPath
+        TechnicalReportPath        = $technicalReportPath
+        RiskRegisterJsonPath       = $riskRegisterJsonPath
+        RiskRegisterCsvPath        = $riskRegisterCsvPath
+        RemediationRoadmapJsonPath = $roadmapJsonPath
     }
 }

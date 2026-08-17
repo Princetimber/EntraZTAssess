@@ -23,6 +23,7 @@ function Protect-ZTAssessReportUserIdentifier {
 
 function Protect-ZTAssessReportUserIdentifierString {
     [CmdletBinding()]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory)]
         [AllowEmptyString()]

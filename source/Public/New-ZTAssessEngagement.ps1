@@ -79,8 +79,7 @@ function New-ZTAssessEngagement {
         if ($PSCmdlet.ShouldProcess($resolvedOutputPath, 'Create output folder')) {
             try {
                 $null = New-Item -Path $resolvedOutputPath -ItemType Directory -Force -ErrorAction Stop
-            }
-            catch {
+            } catch {
                 Write-Error -Message "Failed to create output folder '$resolvedOutputPath': $($_.Exception.Message)" -Category WriteError -ErrorAction Stop
             }
         }
@@ -126,8 +125,7 @@ function New-ZTAssessEngagement {
 "@
             Set-Content -LiteralPath $settingsPath -Value $engagementContent -Encoding utf8NoBOM -ErrorAction Stop
             Write-ToLog -Message "Engagement scaffolded at $engagementPath" -Level SUCCESS -NoConsole
-        }
-        catch {
+        } catch {
             Write-Error -Message "Failed to scaffold engagement at '$engagementPath': $($_.Exception.Message)" -Category WriteError -ErrorAction Stop
         }
     }
