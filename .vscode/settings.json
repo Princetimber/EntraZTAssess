@@ -1,0 +1,35 @@
+{
+  // Keep the PowerShell extension's own formatter in sync with
+  // PSScriptAnalyzerSettings.psd1 so "Format Document" / format-on-save
+  // doesn't fight the repo's linting rules and silently revert them.
+  //
+  // Mapping to PSScriptAnalyzerSettings.psd1:
+  //   codeFormatting.preset               <-> overall OTBS convention
+  //   openBraceOnSameLine: true           <-> PSPlaceOpenBrace.OnSameLine = $true
+  //   (close brace on its own line,       <-> PSPlaceCloseBrace.NewLineAfter = $false
+  //    else/catch/finally cuddled)
+  //   alignPropertyValuePairs: true       <-> PSAlignAssignmentStatement (CheckHashtable)
+  //   addWhitespaceAroundPipe: true       <-> PSUseConsistentWhitespace.CheckPipe
+  //   pipelineIndentationStyle            <-> PSUseConsistentIndentation.PipelineIndentation
+  //   useCorrectCasing: true              <-> PSUseCorrectCasing
+  //   autoCorrectAliases: true            <-> PSAvoidUsingCmdletAliases
+  //
+  // If PSScriptAnalyzerSettings.psd1 changes any of the above, update this
+  // file in the same commit — see CHANGELOG.md for the incident that
+  // motivated this (a stale preset here repeatedly reverted an OTBS fix).
+  "powershell.codeFormatting.preset": "OTBS",
+  "powershell.codeFormatting.openBraceOnSameLine": true,
+  "powershell.codeFormatting.autoCorrectAliases": true,
+  "powershell.codeFormatting.useCorrectCasing": true,
+  "powershell.codeFormatting.addWhitespaceAroundPipe": true,
+  "powershell.codeFormatting.alignPropertyValuePairs": true,
+  "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+
+  // Point the extension's live diagnostics at the project's own ruleset
+  // instead of the extension's built-in defaults.
+  "powershell.scriptAnalysis.enable": true,
+  "powershell.scriptAnalysis.settingsPath": "${workspaceFolder}/PSScriptAnalyzerSettings.psd1",
+
+  "powershell.cwd": "${workspaceFolder}",
+  "powershell.helpCompletion": "BlockComment"
+}
