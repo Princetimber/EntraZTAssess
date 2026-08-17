@@ -37,8 +37,7 @@ function Get-ZTAssessCheckDefinition {
         foreach ($file in (Get-ChildItem -Path $checksRoot -Recurse -Filter '*.psd1')) {
             try {
                 $definition = Import-PowerShellDataFile -LiteralPath $file.FullName -ErrorAction Stop
-            }
-            catch {
+            } catch {
                 throw "Failed to parse check definition '$($file.FullName)': $($_.Exception.Message)"
             }
 

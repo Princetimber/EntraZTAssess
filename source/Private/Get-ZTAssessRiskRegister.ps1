@@ -17,7 +17,7 @@ function Get-ZTAssessRiskRegister {
 
     $riskFindings = @($Context.Findings |
             Where-Object { $_.Status -in @('Fail', 'Partial') } |
-            Sort-Object @{ Expression = { $severityRank[[string]$_.Severity] ?? 99 } }, Domain, CheckId)
+                Sort-Object @{ Expression = { $severityRank[[string]$_.Severity] ?? 99 } }, Domain, CheckId)
 
     foreach ($finding in $riskFindings) {
         $severity = [string]$finding.Severity

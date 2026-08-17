@@ -50,16 +50,14 @@ function Connect-MgGraphWrapper {
         # permissions, so -Scopes is not passed.
         $connectParameters['ClientId'] = $ClientId
         $connectParameters['Certificate'] = $Certificate
-    }
-    elseif ($ClientId -and $CertificateThumbprint) {
+    } elseif ($ClientId -and $CertificateThumbprint) {
         # App-only (certificate) authentication, Windows certificate store
         # path: Connect-MgGraph resolves the thumbprint from the store.
         # Scopes are pre-consented application permissions, so -Scopes is
         # not passed.
         $connectParameters['ClientId'] = $ClientId
         $connectParameters['CertificateThumbprint'] = $CertificateThumbprint
-    }
-    else {
+    } else {
         if ($Scopes) {
             $connectParameters['Scopes'] = $Scopes
         }

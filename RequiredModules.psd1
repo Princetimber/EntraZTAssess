@@ -15,7 +15,13 @@
     # 5.10.5+ avoids the duplicate 'ProgressAction' parameter error on PowerShell 7.4+
     # (https://github.com/nightroman/Invoke-Build/issues/183).
     InvokeBuild                 = '[5.10.5,6.0)'
-    PSScriptAnalyzer            = '[1.22,2.0)'
+    # 1.24.0 has a flaky NullReferenceException in Invoke-ScriptAnalyzer when
+    # enough custom Rules entries are active simultaneously (reproduced
+    # locally, ~1 crash in 5 runs against Export-ZTAssessReport.ps1 under our
+    # PSScriptAnalyzerSettings.psd1); fixed by 1.25.0. 1.22.0/1.23.0 were not
+    # individually verified, so the lower bound is raised straight to the
+    # confirmed-clean 1.25.0 rather than bisecting further.
+    PSScriptAnalyzer            = '[1.25.0,2.0)'
     Pester                      = '[5.6,6.0)'
     ModuleBuilder               = '[3.0,4.0)'
     ChangelogManagement         = '[3.0,4.0)'

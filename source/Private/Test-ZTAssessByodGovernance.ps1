@@ -64,16 +64,13 @@ function Test-ZTAssessByodGovernance {
     # --- BG-001: BYOD access has data controls ------------------------------
     if ($personalDevices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'BG-001' -Status Pass -Evidence 'No personally owned devices are enrolled; BYOD data-control exposure is not present.'))
-    }
-    else {
+    } else {
         $unprotected = @($platformsWithPersonal | Where-Object { -not $mamByPlatform[$_] })
         if ($unprotected.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-001' -Status Pass -Evidence "Personal devices on $($platformsWithPersonal -join ', '); every platform has app protection coverage. Compliant-device/app-protection CA in force: $compliantDeviceCa."))
-        }
-        elseif ($compliantDeviceCa) {
+        } elseif ($compliantDeviceCa) {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-001' -Status Partial -Evidence "Platforms with personal devices but no app protection policy: $($unprotected -join ', '). Conditional Access device controls provide partial mitigation." -SeverityOverride High))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-001' -Status Fail -Evidence "Platforms with personal devices and neither app protection nor device-based Conditional Access: $($unprotected -join ', '). Corporate data flows to devices with no controls."))
         }
     }
@@ -81,20 +78,16 @@ function Test-ZTAssessByodGovernance {
     # --- BG-002: app protection coverage of personal estate -----------------
     if ($null -eq $appProtectionPolicies) {
         $findings.Add((New-ZTAssessFinding -CheckId 'BG-002' -Status NotAssessed -NotAssessedReason 'appProtectionPolicies snapshot unavailable.'))
-    }
-    elseif ($platformsWithPersonal.Count -eq 0) {
+    } elseif ($platformsWithPersonal.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'BG-002' -Status Pass -Evidence 'No platforms have personally owned devices enrolled.'))
-    }
-    else {
+    } else {
         $covered = @($platformsWithPersonal | Where-Object { $mamByPlatform[$_] })
         $evidence = "Platforms with personal devices: $($platformsWithPersonal -join ', '). App protection present for: $(if ($covered) { $covered -join ', ' } else { 'none' })."
         if ($covered.Count -eq $platformsWithPersonal.Count) {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-002' -Status Pass -Evidence $evidence))
-        }
-        elseif ($covered.Count -gt 0) {
+        } elseif ($covered.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-002' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-002' -Status Fail -Evidence $evidence))
         }
     }
@@ -102,8 +95,7 @@ function Test-ZTAssessByodGovernance {
     # --- BG-003: personal enrolment deliberately governed --------------------
     if ($null -eq $enrollmentConfigs) {
         $findings.Add((New-ZTAssessFinding -CheckId 'BG-003' -Status NotAssessed -NotAssessedReason 'enrollmentConfigurations snapshot unavailable.'))
-    }
-    else {
+    } else {
         $restrictions = @($enrollmentConfigs | Where-Object { $_.'@odata.type' -match 'PlatformRestriction' })
         $personalBlocks = @($restrictions | Where-Object {
                 $_.platformRestriction.personalDeviceEnrollmentBlocked -or $_.personalDeviceEnrollmentBlocked
@@ -111,11 +103,9 @@ function Test-ZTAssessByodGovernance {
 
         if ($personalBlocks.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-003' -Status Pass -Evidence "Personal enrolment is restricted on $($personalBlocks.Count) platform restriction configuration(s); the BYOD boundary is a deliberate decision."))
-        }
-        elseif ($restrictions.Count -gt 0) {
+        } elseif ($restrictions.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-003' -Status Partial -Evidence 'Enrolment restrictions exist but none block personal enrolment; confirm BYOD is intended on every platform.'))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-003' -Status Fail -Evidence 'No enrolment restrictions are configured; personal enrolment is default-allowed on every platform.'))
         }
     }
@@ -124,15 +114,13 @@ function Test-ZTAssessByodGovernance {
     $corporateDevices = @($devices | Where-Object { $_.managedDeviceOwnerType -eq 'company' })
     if ($personalDevices.Count -eq 0 -or $corporateDevices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'BG-004' -Status NotAssessed -NotAssessedReason 'Both personal and corporate devices must be present to assess differentiation.'))
-    }
-    else {
+    } else {
         $anyMam = @($appProtectionPolicies).Count -gt 0
         $anyRestriction = @($enrollmentConfigs | Where-Object { $_.'@odata.type' -match 'PlatformRestriction' }).Count -gt 0
 
         if ($anyMam -or $anyRestriction) {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-004' -Status Pass -Evidence "Ownership models are differentiated (app protection policies=$anyMam, enrolment restrictions=$anyRestriction)."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'BG-004' -Status Fail -Evidence "Personal ($($personalDevices.Count)) and corporate ($($corporateDevices.Count)) devices receive identical treatment: no app protection policies and no enrolment restrictions distinguish the ownership models."))
         }
     }

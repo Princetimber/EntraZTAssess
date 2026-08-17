@@ -52,14 +52,13 @@ function ConvertTo-ZTAssessExecutiveHtml {
     # --- Top risks ------------------------------------------------------------------
     $topRisks = @($Context.Findings |
             Where-Object { $_.Status -in @('Fail', 'Partial') -and $_.Severity -in @('Critical', 'High') } |
-            Sort-Object { $severityRank[[string]$_.Severity] }, CheckId |
-            Select-Object -First 10)
+                Sort-Object { $severityRank[[string]$_.Severity] }, CheckId |
+                    Select-Object -First 10)
 
     $null = $body.AppendLine('<h2>Top risks requiring attention</h2>')
     if ($topRisks.Count -eq 0) {
         $null = $body.AppendLine('<p>No Critical or High severity exposures were identified. Remaining findings are improvement opportunities managed through the remediation roadmap.</p>')
-    }
-    else {
+    } else {
         $null = $body.AppendLine('<table><tr><th>Ref</th><th>Severity</th><th>Risk</th><th>Business impact</th></tr>')
         foreach ($risk in $topRisks) {
             $null = $body.AppendLine("<tr><td>$(& $encode $risk.CheckId)</td><td><span class='badge $(& $encode $risk.Severity)'>$(& $encode $risk.Severity)</span></td><td>$(& $encode $risk.Title)</td><td>$(& $encode $risk.Rationale)</td></tr>")

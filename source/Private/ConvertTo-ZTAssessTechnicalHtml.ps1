@@ -22,7 +22,7 @@ function ConvertTo-ZTAssessTechnicalHtml {
     $null = $body.AppendLine('</div>')
 
     foreach ($domainGroup in ($Context.Findings | Group-Object Domain | Sort-Object Name)) {
-        $domainScore = @($Context.Scores.Domains) | Where-Object Domain -eq $domainGroup.Name | Select-Object -First 1
+        $domainScore = @($Context.Scores.Domains) | Where-Object Domain -EQ $domainGroup.Name | Select-Object -First 1
         $scoreText = if ($null -ne $domainScore.ScorePercent) { "$($domainScore.ScorePercent)% &mdash; $(& $encode $domainScore.Level)" } else { 'Insufficient data' }
         $null = $body.AppendLine("<h2>$(& $encode $domainGroup.Name) <span class='evidence'>($scoreText)</span></h2>")
 
@@ -31,8 +31,7 @@ function ConvertTo-ZTAssessTechnicalHtml {
 
             if ($finding.Status -eq 'NotAssessed') {
                 $null = $body.AppendLine("<p class='evidence'><strong>Not assessed:</strong> $(& $encode $finding.NotAssessedReason)</p>")
-            }
-            else {
+            } else {
                 if ($finding.Evidence) {
                     $null = $body.AppendLine("<p><strong>Evidence:</strong> $(& $encode $finding.Evidence)</p>")
                 }
@@ -52,7 +51,7 @@ function ConvertTo-ZTAssessTechnicalHtml {
         }
     }
 
-    $notAssessed = @($Context.Findings | Where-Object Status -eq 'NotAssessed' | Sort-Object CheckId)
+    $notAssessed = @($Context.Findings | Where-Object Status -EQ 'NotAssessed' | Sort-Object CheckId)
     if ($notAssessed.Count -gt 0) {
         $null = $body.AppendLine('<h2>Appendix: items not assessed</h2>')
         $null = $body.AppendLine('<table><tr><th>Check</th><th>Title</th><th>Reason</th></tr>')

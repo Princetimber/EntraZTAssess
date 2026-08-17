@@ -46,8 +46,7 @@ function Get-ZTAssessConfiguration {
 
         try {
             $script:ZTAssessConfigurationCache[$Name] = Import-PowerShellDataFile -LiteralPath $filePath -ErrorAction Stop
-        }
-        catch {
+        } catch {
             throw "Failed to parse configuration file '$filePath': $($_.Exception.Message)"
         }
     }

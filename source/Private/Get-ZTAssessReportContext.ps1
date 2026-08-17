@@ -57,8 +57,7 @@ function Get-ZTAssessReportContext {
         try {
             $loaded = Import-PowerShellDataFile -LiteralPath $engagementFile
             foreach ($key in $loaded.Keys) { $engagement[$key] = $loaded[$key] }
-        }
-        catch {
+        } catch {
             Write-Warning "Failed to parse engagement settings at '$engagementFile'; using defaults. $($_.Exception.Message)"
         }
     }

@@ -30,8 +30,7 @@ function Save-ZTAssessRunManifest {
         try {
             $Manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath -Encoding utf8NoBOM -ErrorAction Stop
             Write-ToLog -Message "Run manifest written to $manifestPath" -Level DEBUG -NoConsole
-        }
-        catch {
+        } catch {
             throw "Failed to write run manifest to '$manifestPath': $($_.Exception.Message)"
         }
     }

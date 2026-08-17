@@ -62,7 +62,7 @@ function Get-ZTAssessPlatformProfile {
         # Enrolment methods in use.
         $platformProfile.EnrolmentMethodsInUse = @($platformManaged |
                 Select-Object -ExpandProperty deviceEnrollmentType -Unique |
-                Where-Object { $_ })
+                    Where-Object { $_ })
 
         # Enrolment restrictions for this platform.
         $restrictions = @($enrollmentConfigs | Where-Object {
@@ -95,8 +95,8 @@ function Get-ZTAssessPlatformProfile {
         }
 
         $platformProfile.CADependency = @{
-            CompliantDeviceRequired  = $compliantDeviceCa
-            AppProtectionRequired    = $appProtectionCa
+            CompliantDeviceRequired = $compliantDeviceCa
+            AppProtectionRequired   = $appProtectionCa
         }
 
         $profiles.Add($platformProfile)

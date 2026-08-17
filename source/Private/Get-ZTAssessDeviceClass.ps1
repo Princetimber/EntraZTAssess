@@ -71,8 +71,7 @@ function Get-ZTAssessDeviceClass {
         if ($owner -eq 'company') {
             $class = 'Corporate'
             $confidence = 'High'
-        }
-        elseif ($owner -eq 'personal') {
+        } elseif ($owner -eq 'personal') {
             $class = 'BYOD'
             $confidence = 'High'
         }
@@ -81,8 +80,7 @@ function Get-ZTAssessDeviceClass {
         if ($enrolment -match 'DedicatedDevice') {
             $class = 'Kiosk'
             $confidence = 'High'
-        }
-        elseif ($enrolment -match 'sharedDevice|sharedPC' -or $device.deviceName -like '*shared*') {
+        } elseif ($enrolment -match 'sharedDevice|sharedPC' -or $device.deviceName -like '*shared*') {
             $class = 'Shared'
             $confidence = if ($enrolment -match 'shared') { 'High' } else { 'Low' }
         }
@@ -129,12 +127,10 @@ function Get-ZTAssessDeviceClass {
             # Workplace-joined personal device, active, not Intune managed.
             $class = 'BYOD'
             $confidence = 'Medium'
-        }
-        elseif ($isActive) {
+        } elseif ($isActive) {
             $class = 'Unknown'
             $confidence = 'Medium'
-        }
-        else {
+        } else {
             $class = 'Unknown'
             $confidence = 'Low'
         }

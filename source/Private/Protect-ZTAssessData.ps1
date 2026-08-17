@@ -53,8 +53,7 @@ function Protect-ZTAssessData {
                 foreach ($dictionaryKey in $Node.Keys) {
                     if ($DenySet.Contains([string]$dictionaryKey)) {
                         $cleanTable[$dictionaryKey] = '***REDACTED***'
-                    }
-                    else {
+                    } else {
                         $cleanTable[$dictionaryKey] = Convert-Branch -Node $Node[$dictionaryKey] -DenySet $DenySet
                     }
                 }
@@ -75,8 +74,7 @@ function Protect-ZTAssessData {
             foreach ($property in $Node.PSObject.Properties) {
                 if ($DenySet.Contains($property.Name)) {
                     $cleanObject[$property.Name] = '***REDACTED***'
-                }
-                else {
+                } else {
                     $cleanObject[$property.Name] = Convert-Branch -Node $property.Value -DenySet $DenySet
                 }
             }

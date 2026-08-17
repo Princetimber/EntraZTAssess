@@ -40,10 +40,10 @@ function Test-ZTAssessEndpointManagement {
 
     if ($null -eq $managedDevices) {
         $allCheckIds = @(1..7 | ForEach-Object { 'EM-{0:d3}' -f $_ }) +
-            @(1..4 | ForEach-Object { 'AND-{0:d3}' -f $_ }) +
-            @(1..4 | ForEach-Object { 'IOS-{0:d3}' -f $_ }) +
-            @(1..3 | ForEach-Object { 'MAC-{0:d3}' -f $_ }) +
-            @(1..3 | ForEach-Object { 'WIN-{0:d3}' -f $_ })
+        @(1..4 | ForEach-Object { 'AND-{0:d3}' -f $_ }) +
+        @(1..4 | ForEach-Object { 'IOS-{0:d3}' -f $_ }) +
+        @(1..3 | ForEach-Object { 'MAC-{0:d3}' -f $_ }) +
+        @(1..3 | ForEach-Object { 'WIN-{0:d3}' -f $_ })
         foreach ($checkId in $allCheckIds) {
             $findings.Add((New-ZTAssessFinding -CheckId $checkId -Status NotAssessed -NotAssessedReason 'managedDevices snapshot unavailable (requires DeviceManagementManagedDevices.Read.All and an Intune licence).'))
         }
@@ -63,18 +63,15 @@ function Test-ZTAssessEndpointManagement {
     # =================== EM-001: Windows security baseline ===================
     if ($windowsDevices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-001' -Status NotAssessed -NotAssessedReason 'No Windows devices are enrolled.'))
-    }
-    elseif ($null -eq $intents -and $null -eq $configurationPolicies) {
+    } elseif ($null -eq $intents -and $null -eq $configurationPolicies) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-001' -Status NotAssessed -NotAssessedReason 'Baseline snapshots unavailable (beta endpoints).'))
-    }
-    else {
+    } else {
         $baselineIntents = @($assignedIntents | Where-Object { $_.displayName -match 'baseline' })
         $baselineCatalog = @($configurationPolicies | Where-Object { $_.templateReference.templateFamily -match '[Bb]aseline' })
 
         if (($baselineIntents.Count + $baselineCatalog.Count) -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-001' -Status Pass -Evidence "Security baseline deployed: $(@($baselineIntents + $baselineCatalog | ForEach-Object { $_.displayName ?? $_.name }) -join ', '). Verify assignment coverage against the corporate Windows estate."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-001' -Status Fail -Evidence "No assigned security baseline found for the $($windowsDevices.Count)-device Windows estate."))
         }
     }
@@ -83,19 +80,16 @@ function Test-ZTAssessEndpointManagement {
     $encryptables = @(& $corporate $windowsDevices) + @(& $corporate $macDevices)
     if ($encryptables.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-002' -Status NotAssessed -NotAssessedReason 'No corporate Windows or macOS devices to assess for encryption.'))
-    }
-    else {
+    } else {
         $encrypted = @($encryptables | Where-Object { $_.isEncrypted }).Count
         $pct = [math]::Round(100 * $encrypted / $encryptables.Count, 1)
         $evidence = "$encrypted of $($encryptables.Count) corporate Windows/macOS device(s) report encrypted storage ($pct%; threshold $($thresholds.EncryptionCoverageMinimumPercent)%)."
 
         if ($pct -ge $thresholds.EncryptionCoverageMinimumPercent) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-002' -Status Pass -Evidence $evidence))
-        }
-        elseif ($pct -ge 50) {
+        } elseif ($pct -ge 50) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-002' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-002' -Status Fail -Evidence $evidence))
         }
     }
@@ -103,13 +97,11 @@ function Test-ZTAssessEndpointManagement {
     # =================== EM-003: MDE connector ===============================
     if ($null -eq $mtdConnectors) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-003' -Status NotAssessed -NotAssessedReason 'mobileThreatDefenseConnectors snapshot unavailable.'))
-    }
-    else {
+    } else {
         $enabledConnectors = @($mtdConnectors | Where-Object { $_.partnerState -eq 'enabled' })
         if ($enabledConnectors.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-003' -Status Pass -Evidence "Threat defence connector(s) enabled: $($enabledConnectors.Count). Device risk can inform compliance."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-003' -Status Fail -Evidence 'No enabled Defender for Endpoint / mobile threat defence connector; device risk plays no part in compliance.'))
         }
     }
@@ -117,8 +109,7 @@ function Test-ZTAssessEndpointManagement {
     # =================== EM-004: endpoint security policy families ===========
     if ($null -eq $intents -and $null -eq $configurationPolicies) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-004' -Status NotAssessed -NotAssessedReason 'Endpoint security policy snapshots unavailable (beta endpoints).'))
-    }
-    else {
+    } else {
         $familyPatterns = @{
             Antivirus = 'antivirus|defender'
             Firewall  = 'firewall'
@@ -138,11 +129,9 @@ function Test-ZTAssessEndpointManagement {
         $evidence = "Endpoint security families detected: $(if ($present) { $present -join ', ' } else { 'none' }) of Antivirus, ASR, EDR, Firewall."
         if ($present.Count -ge 3) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-004' -Status Pass -Evidence $evidence))
-        }
-        elseif ($present.Count -ge 1) {
+        } elseif ($present.Count -ge 1) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-004' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-004' -Status Fail -Evidence $evidence))
         }
     }
@@ -151,11 +140,9 @@ function Test-ZTAssessEndpointManagement {
     $corporateWindows = & $corporate $windowsDevices
     if ($corporateWindows.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-005' -Status NotAssessed -NotAssessedReason 'No corporate Windows devices are enrolled.'))
-    }
-    elseif ($null -eq $autopilotDevices) {
+    } elseif ($null -eq $autopilotDevices) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-005' -Status NotAssessed -NotAssessedReason 'Autopilot snapshots unavailable.'))
-    }
-    else {
+    } else {
         $profileCount = @($autopilotProfiles).Count
         $registered = @($autopilotDevices).Count
         $pct = [math]::Round(100 * [math]::Min($registered, $corporateWindows.Count) / $corporateWindows.Count, 1)
@@ -163,11 +150,9 @@ function Test-ZTAssessEndpointManagement {
 
         if ($profileCount -gt 0 -and $pct -ge $thresholds.AutopilotCoverageMinimumPercent) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-005' -Status Pass -Evidence $evidence))
-        }
-        elseif ($profileCount -gt 0 -and $registered -gt 0) {
+        } elseif ($profileCount -gt 0 -and $registered -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-005' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-005' -Status Fail -Evidence $evidence))
         }
     }
@@ -175,13 +160,11 @@ function Test-ZTAssessEndpointManagement {
     # =================== EM-006: co-management cloud signal ===================
     if ($windowsDevices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-006' -Status NotAssessed -NotAssessedReason 'No Windows devices are enrolled.'))
-    }
-    else {
+    } else {
         $configMgrOnly = @($windowsDevices | Where-Object { $_.managementAgent -eq 'configurationManagerClient' })
         if ($configMgrOnly.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-006' -Status Pass -Evidence 'All Windows devices emit a cloud (Intune or co-management) signal.'))
-        }
-        else {
+        } else {
             $pct = [math]::Round(100 * $configMgrOnly.Count / $windowsDevices.Count, 1)
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-006' -Status Partial -Evidence "$($configMgrOnly.Count) Windows device(s) ($pct%) are ConfigMgr-only with no cloud compliance signal."))
         }
@@ -190,8 +173,7 @@ function Test-ZTAssessEndpointManagement {
     # =================== EM-007: check-in hygiene =============================
     if ($devices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'EM-007' -Status NotAssessed -NotAssessedReason 'No managed devices to assess.'))
-    }
-    else {
+    } else {
         $staleCutoff = [datetime]::UtcNow.AddDays(-[int]$thresholds.StaleDeviceDays)
         $stale = @($devices | Where-Object { $_.lastSyncDateTime -and [datetime]$_.lastSyncDateTime -lt $staleCutoff })
         $pct = [math]::Round(100 * $stale.Count / $devices.Count, 1)
@@ -199,11 +181,9 @@ function Test-ZTAssessEndpointManagement {
 
         if ($stale.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-007' -Status Pass -Evidence $evidence))
-        }
-        elseif ($pct -le $thresholds.StaleManagedDeviceMaxPercent) {
+        } elseif ($pct -le $thresholds.StaleManagedDeviceMaxPercent) {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-007' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'EM-007' -Status Fail -Evidence $evidence))
         }
     }
@@ -213,16 +193,13 @@ function Test-ZTAssessEndpointManagement {
         foreach ($checkId in 1..4 | ForEach-Object { 'AND-{0:d3}' -f $_ }) {
             $findings.Add((New-ZTAssessFinding -CheckId $checkId -Status NotAssessed -NotAssessedReason 'No Android devices are enrolled.'))
         }
-    }
-    else {
+    } else {
         # AND-001: Android Enterprise binding
         if ($null -eq $androidEnterprise) {
             $findings.Add((New-ZTAssessFinding -CheckId 'AND-001' -Status NotAssessed -NotAssessedReason 'androidEnterpriseSettings snapshot unavailable (beta endpoint).'))
-        }
-        elseif ($androidEnterprise.bindStatus -eq 'bound' -or $androidEnterprise.bindStatus -eq 'boundAndValidated') {
+        } elseif ($androidEnterprise.bindStatus -eq 'bound' -or $androidEnterprise.bindStatus -eq 'boundAndValidated') {
             $findings.Add((New-ZTAssessFinding -CheckId 'AND-001' -Status Pass -Evidence "Tenant bound to managed Google Play (status: $($androidEnterprise.bindStatus))."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'AND-001' -Status Fail -Evidence "Android devices are enrolled but the tenant is not bound to Android Enterprise (status: $($androidEnterprise.bindStatus ?? 'notBound'))."))
         }
 
@@ -231,8 +208,7 @@ function Test-ZTAssessEndpointManagement {
         $legacyDa = @($androidDevices | Where-Object { $_.deviceEnrollmentType -notmatch $aeTypes })
         if ($legacyDa.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'AND-002' -Status Pass -Evidence 'All Android devices use Android Enterprise enrolment types.'))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'AND-002' -Status Fail -Evidence "$($legacyDa.Count) Android device(s) appear to use legacy device administrator enrolment (types: $(@($legacyDa | Select-Object -ExpandProperty deviceEnrollmentType -Unique) -join ', '))."))
         }
 
@@ -240,13 +216,11 @@ function Test-ZTAssessEndpointManagement {
         $personalAndroid = & $personal $androidDevices
         if ($personalAndroid.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'AND-003' -Status Pass -Evidence 'No personally owned Android devices are enrolled.'))
-        }
-        else {
+        } else {
             $androidMam = @($appProtectionPolicies | Where-Object { $_.'@odata.type' -match 'androidManagedAppProtection' })
             if ($androidMam.Count -gt 0) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'AND-003' -Status Pass -Evidence "$($personalAndroid.Count) personal Android device(s); Android app protection policy present ($($androidMam.Count))."))
-            }
-            else {
+            } else {
                 $findings.Add((New-ZTAssessFinding -CheckId 'AND-003' -Status Fail -Evidence "$($personalAndroid.Count) personally owned Android device(s) with no Android app protection policy."))
             }
         }
@@ -255,14 +229,12 @@ function Test-ZTAssessEndpointManagement {
         $corporateAndroid = & $corporate $androidDevices
         if ($corporateAndroid.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'AND-004' -Status Pass -Evidence 'No corporate-owned Android devices are enrolled.'))
-        }
-        else {
+        } else {
             $corporateProfileTypes = 'FullyManaged|DedicatedDevice|CorporateWorkProfile'
             $misEnrolled = @($corporateAndroid | Where-Object { $_.deviceEnrollmentType -notmatch $corporateProfileTypes })
             if ($misEnrolled.Count -eq 0) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'AND-004' -Status Pass -Evidence "All $($corporateAndroid.Count) corporate Android device(s) use corporate-owned Android Enterprise profiles."))
-            }
-            else {
+            } else {
                 $findings.Add((New-ZTAssessFinding -CheckId 'AND-004' -Status Fail -Evidence "$($misEnrolled.Count) corporate Android device(s) are not in corporate-owned profiles (types: $(@($misEnrolled | Select-Object -ExpandProperty deviceEnrollmentType -Unique) -join ', '))."))
             }
         }
@@ -274,20 +246,16 @@ function Test-ZTAssessEndpointManagement {
     # IOS-001: APNs certificate
     if ($appleDevices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'IOS-001' -Status NotAssessed -NotAssessedReason 'No Apple devices are enrolled.'))
-    }
-    elseif ($null -eq $applePush -or -not $applePush.expirationDateTime) {
+    } elseif ($null -eq $applePush -or -not $applePush.expirationDateTime) {
         $findings.Add((New-ZTAssessFinding -CheckId 'IOS-001' -Status Fail -Evidence 'Apple devices are enrolled but no Apple MDM push certificate is configured.' -SeverityOverride Critical))
-    }
-    else {
+    } else {
         $expiry = [datetime]$applePush.expirationDateTime
         $daysRemaining = [int]($expiry - [datetime]::UtcNow).TotalDays
         if ($daysRemaining -lt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-001' -Status Fail -Evidence "The Apple MDM push certificate expired on $($expiry.ToString('yyyy-MM-dd')); Apple device management is inoperative." -SeverityOverride Critical))
-        }
-        elseif ($daysRemaining -le $thresholds.CertificateExpiryWarningDays) {
+        } elseif ($daysRemaining -le $thresholds.CertificateExpiryWarningDays) {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-001' -Status Fail -Evidence "The Apple MDM push certificate expires in $daysRemaining day(s) ($($expiry.ToString('yyyy-MM-dd'))). Renew immediately with the same Apple ID."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-001' -Status Pass -Evidence "Apple MDM push certificate valid until $($expiry.ToString('yyyy-MM-dd')) ($daysRemaining days)."))
         }
     }
@@ -296,18 +264,15 @@ function Test-ZTAssessEndpointManagement {
     $corporateApple = @(& $corporate $iosDevices) + @(& $corporate $macDevices)
     if ($corporateApple.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'IOS-002' -Status NotAssessed -NotAssessedReason 'No corporate Apple devices are enrolled.'))
-    }
-    elseif ($null -eq $depSettings -or @($depSettings).Count -eq 0) {
+    } elseif ($null -eq $depSettings -or @($depSettings).Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'IOS-002' -Status Fail -Evidence "Corporate Apple devices exist ($($corporateApple.Count)) but no Apple Business Manager ADE token is configured."))
-    }
-    else {
+    } else {
         $expiring = @($depSettings | Where-Object {
                 $_.tokenExpirationDateTime -and ([datetime]$_.tokenExpirationDateTime - [datetime]::UtcNow).TotalDays -le $thresholds.CertificateExpiryWarningDays
             })
         if ($expiring.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-002' -Status Partial -Evidence "ADE token(s) configured but $($expiring.Count) expire within $($thresholds.CertificateExpiryWarningDays) days: $(@($expiring | ForEach-Object { $_.tokenName }) -join ', ')."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-002' -Status Pass -Evidence "$(@($depSettings).Count) ADE token(s) configured and valid."))
         }
     }
@@ -316,15 +281,13 @@ function Test-ZTAssessEndpointManagement {
     $corporateIos = & $corporate $iosDevices
     if ($corporateIos.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'IOS-003' -Status NotAssessed -NotAssessedReason 'No corporate iOS devices are enrolled.'))
-    }
-    else {
+    } else {
         $supervised = @($corporateIos | Where-Object { $_.isSupervised }).Count
         $pct = [math]::Round(100 * $supervised / $corporateIos.Count, 1)
         $evidence = "$supervised of $($corporateIos.Count) corporate iOS device(s) are supervised ($pct%; threshold $($thresholds.SupervisedCorporateIosMinimumPercent)%)."
         if ($pct -ge $thresholds.SupervisedCorporateIosMinimumPercent) {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-003' -Status Pass -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-003' -Status Fail -Evidence $evidence))
         }
     }
@@ -333,13 +296,11 @@ function Test-ZTAssessEndpointManagement {
     $personalIos = & $personal $iosDevices
     if ($personalIos.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'IOS-004' -Status Pass -Evidence 'No personally owned iOS devices are enrolled.'))
-    }
-    else {
+    } else {
         $iosMam = @($appProtectionPolicies | Where-Object { $_.'@odata.type' -match 'iosManagedAppProtection' })
         if ($iosMam.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-004' -Status Pass -Evidence "$($personalIos.Count) personal iOS device(s); iOS app protection policy present ($($iosMam.Count))."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'IOS-004' -Status Fail -Evidence "$($personalIos.Count) personally owned iOS device(s) with no iOS app protection policy."))
         }
     }
@@ -350,22 +311,18 @@ function Test-ZTAssessEndpointManagement {
         foreach ($checkId in 1..3 | ForEach-Object { 'MAC-{0:d3}' -f $_ }) {
             $findings.Add((New-ZTAssessFinding -CheckId $checkId -Status NotAssessed -NotAssessedReason 'No macOS devices are enrolled.'))
         }
-    }
-    else {
+    } else {
         # MAC-001: ADE enrolment for corporate Macs
         if ($corporateMac.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'MAC-001' -Status NotAssessed -NotAssessedReason 'No corporate macOS devices are enrolled.'))
-        }
-        else {
+        } else {
             $adeEnrolled = @($corporateMac | Where-Object { $_.deviceEnrollmentType -match 'appleBulkWithUser|appleBulkWithoutUser|dep' })
             $hasDepToken = $depSettings -and @($depSettings).Count -gt 0
             if ($adeEnrolled.Count -eq $corporateMac.Count) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'MAC-001' -Status Pass -Evidence "All $($corporateMac.Count) corporate Mac(s) enrolled via Automated Device Enrolment."))
-            }
-            elseif ($hasDepToken -and $adeEnrolled.Count -gt 0) {
+            } elseif ($hasDepToken -and $adeEnrolled.Count -gt 0) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'MAC-001' -Status Partial -Evidence "$($adeEnrolled.Count) of $($corporateMac.Count) corporate Mac(s) enrolled via ADE; the remainder were enrolled manually and can be unenrolled by users."))
-            }
-            else {
+            } else {
                 $findings.Add((New-ZTAssessFinding -CheckId 'MAC-001' -Status Fail -Evidence "No corporate Mac is enrolled via Automated Device Enrolment ($($corporateMac.Count) corporate Mac(s) present)."))
             }
         }
@@ -377,8 +334,7 @@ function Test-ZTAssessEndpointManagement {
         $encEvidence = "$encryptedMacs of $($macDevices.Count) Mac(s) report encrypted storage."
         if ($fileVaultEnforced) {
             $findings.Add((New-ZTAssessFinding -CheckId 'MAC-002' -Status Pass -Evidence "FileVault required by macOS compliance policy. $encEvidence"))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'MAC-002' -Status Fail -Evidence "No macOS compliance policy requires FileVault. $encEvidence"))
         }
 
@@ -387,11 +343,9 @@ function Test-ZTAssessEndpointManagement {
         $macConfigs = @($deviceConfigurations | Where-Object { $_.'@odata.type' -match 'macOS' })
         if ($macFirewallCompliance -and $macConfigs.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'MAC-003' -Status Pass -Evidence "macOS firewall required by compliance policy and $($macConfigs.Count) macOS configuration profile(s) deployed."))
-        }
-        elseif ($macFirewallCompliance -or $macConfigs.Count -gt 0) {
+        } elseif ($macFirewallCompliance -or $macConfigs.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'MAC-003' -Status Partial -Evidence "Partial macOS security configuration: firewall-in-compliance=$macFirewallCompliance, configuration profiles=$($macConfigs.Count)."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'MAC-003' -Status Fail -Evidence 'No macOS security configuration (firewall or configuration profiles) is deployed.'))
         }
     }
@@ -401,25 +355,21 @@ function Test-ZTAssessEndpointManagement {
         foreach ($checkId in 1..3 | ForEach-Object { 'WIN-{0:d3}' -f $_ }) {
             $findings.Add((New-ZTAssessFinding -CheckId $checkId -Status NotAssessed -NotAssessedReason 'No Windows devices are present.'))
         }
-    }
-    else {
+    } else {
         # WIN-001: join-state strategy
         $entraWindows = @($entraDevices | Where-Object { $_.operatingSystem -match 'Windows' -and $_.accountEnabled })
         if ($entraWindows.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'WIN-001' -Status NotAssessed -NotAssessedReason 'No Entra device objects for Windows were found.'))
-        }
-        else {
+        } else {
             $joined = @($entraWindows | Where-Object { $_.trustType -eq 'AzureAd' }).Count
             $hybrid = @($entraWindows | Where-Object { $_.trustType -eq 'ServerAd' }).Count
             $registered = @($entraWindows | Where-Object { $_.trustType -eq 'Workplace' }).Count
             $evidence = "Windows join states: Entra joined=$joined, hybrid joined=$hybrid, registered=$registered."
             if ($joined -gt 0) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'WIN-001' -Status Pass -Evidence $evidence))
-            }
-            elseif ($hybrid -gt 0) {
+            } elseif ($hybrid -gt 0) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'WIN-001' -Status Partial -Evidence "$evidence The estate is hybrid-only; adopt Entra join for new devices."))
-            }
-            else {
+            } else {
                 $findings.Add((New-ZTAssessFinding -CheckId 'WIN-001' -Status Fail -Evidence "$evidence Windows devices are only workplace-registered; no joined management plane exists."))
             }
         }
@@ -438,11 +388,9 @@ function Test-ZTAssessEndpointManagement {
 
         if ($personalWindowsBlocked) {
             $findings.Add((New-ZTAssessFinding -CheckId 'WIN-002' -Status Pass -Evidence 'Personal Windows enrolment is blocked by enrolment restriction.'))
-        }
-        elseif ($windowsMam -or $deviceCa) {
+        } elseif ($windowsMam -or $deviceCa) {
             $findings.Add((New-ZTAssessFinding -CheckId 'WIN-002' -Status Pass -Evidence "Personal Windows enrolment is permitted but mitigated (Windows MAM=$windowsMam, compliant-device CA=$deviceCa)."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'WIN-002' -Status Fail -Evidence 'Personal Windows enrolment is permitted with neither Windows app protection nor compliant-device Conditional Access.'))
         }
 
@@ -455,8 +403,7 @@ function Test-ZTAssessEndpointManagement {
 
         if ($bitLockerInCompliance -or $encryptionIntent) {
             $findings.Add((New-ZTAssessFinding -CheckId 'WIN-003' -Status Pass -Evidence "BitLocker enforced (compliance policy=$bitLockerInCompliance, disk encryption policy=$encryptionIntent). $encEvidence"))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'WIN-003' -Status Fail -Evidence "No policy enforces BitLocker. $encEvidence"))
         }
     }
