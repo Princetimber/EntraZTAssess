@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Raised the `RequiredModules.psd1` lower bound for `PSScriptAnalyzer` from
+  `1.22` to `1.25.0`. `1.24.0` has a flaky `NullReferenceException` inside
+  `Invoke-ScriptAnalyzer` when enough `Rules` entries in
+  `PSScriptAnalyzerSettings.psd1` are active simultaneously — reproduced
+  locally (~1 crash in 5 runs against `Export-ZTAssessReport.ps1`) and seen
+  failing CI's Ubuntu/Windows test jobs while macOS passed, since CI restores
+  a fresh dependency set per run and could land on the buggy version.
+  `1.22.0`/`1.23.0` were not individually verified; the lower bound was
+  raised straight to the confirmed-clean `1.25.0` rather than bisecting
+  further.
 - Reformatted the remaining 32 `source/` files (the module root `Get-EntraZTAssess.psm1`
   plus 31 `source/Private/` functions, most notably the large domain assessors
   `Test-ZTAssessEndpointManagement.ps1`, `Test-ZTAssessIdentitySecurity.ps1`,
