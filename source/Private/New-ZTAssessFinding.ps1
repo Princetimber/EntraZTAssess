@@ -52,11 +52,9 @@ function New-ZTAssessFinding {
 
     if ($SeverityOverride) {
         $finding.Severity = $SeverityOverride
-    }
-    elseif ($Status -in @('Fail', 'Partial')) {
+    } elseif ($Status -in @('Fail', 'Partial')) {
         $finding.Severity = $definition.DefaultSeverity
-    }
-    else {
+    } else {
         $finding.Severity = 'None'
     }
 

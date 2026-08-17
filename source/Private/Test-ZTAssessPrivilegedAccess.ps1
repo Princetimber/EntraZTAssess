@@ -90,7 +90,7 @@ function Test-ZTAssessPrivilegedAccess {
     if ($eligibilitySchedules) {
         $gaEligibleIds = @($eligibilitySchedules |
                 Where-Object { $templateByDefinition[$_.roleDefinitionId] -eq $gaTemplate } |
-                Select-Object -ExpandProperty principalId -Unique)
+                    Select-Object -ExpandProperty principalId -Unique)
     }
     $gaPrincipalIds = @(@($gaAssignments | Select-Object -ExpandProperty principalId) + $gaEligibleIds | Select-Object -Unique)
     $gaCount = $gaPrincipalIds.Count
@@ -98,19 +98,16 @@ function Test-ZTAssessPrivilegedAccess {
 
     if ($gaCount -ge $thresholds.GlobalAdminMinimum -and $gaCount -le $thresholds.GlobalAdminMaximum) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-001' -Status Pass -Evidence "$gaCount Global Administrator principal(s) (active or eligible): $gaNames."))
-    }
-    elseif ($gaCount -lt $thresholds.GlobalAdminMinimum) {
+    } elseif ($gaCount -lt $thresholds.GlobalAdminMinimum) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-001' -Status Fail -Evidence "Only $gaCount Global Administrator principal(s) exist; fewer than $($thresholds.GlobalAdminMinimum) risks tenant lockout. $gaNames"))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-001' -Status Fail -Evidence "$gaCount Global Administrator principals exceed the recommended maximum of $($thresholds.GlobalAdminMaximum): $gaNames."))
     }
 
     # --- PA-002: PIM eligibility versus permanent assignment ----------------
     if ($null -eq $assignmentSchedules -and $null -eq $eligibilitySchedules) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-002' -Status NotAssessed -NotAssessedReason 'PIM schedule snapshots unavailable (requires Entra ID P2).'))
-    }
-    else {
+    } else {
         $permanentPrivileged = @(@($assignmentSchedules) | Where-Object {
                 $templateByDefinition[$_.roleDefinitionId] -in $privilegedTemplates -and
                 $_.scheduleInfo.expiration.type -eq 'noExpiration' -and
@@ -124,14 +121,11 @@ function Test-ZTAssessPrivilegedAccess {
         if ($permanentGa.Count -gt 2) {
             $names = ($permanentGa | ForEach-Object { & $describePrincipal $_.principalId }) -join ', '
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-002' -Status Fail -Evidence "$evidence Permanent GAs beyond the break-glass pair: $names."))
-        }
-        elseif ($eligiblePrivileged.Count -eq 0 -and $permanentPrivileged.Count -gt 0) {
+        } elseif ($eligiblePrivileged.Count -eq 0 -and $permanentPrivileged.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-002' -Status Fail -Evidence "$evidence PIM is licensed but not in use; all privileged access is standing."))
-        }
-        elseif ($permanentPrivileged.Count -gt $eligiblePrivileged.Count) {
+        } elseif ($permanentPrivileged.Count -gt $eligiblePrivileged.Count) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-002' -Status Partial -Evidence "$evidence The majority of privileged access remains permanent; continue converting to eligibility."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-002' -Status Pass -Evidence $evidence))
         }
     }
@@ -139,8 +133,7 @@ function Test-ZTAssessPrivilegedAccess {
     # --- PA-003: PIM activation requirements for Tier-0 ---------------------
     if ($null -eq $rolePolicies -or $null -eq $rolePolicyAssignments) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-003' -Status NotAssessed -NotAssessedReason 'Role management policy snapshots unavailable (requires Entra ID P2).'))
-    }
-    else {
+    } else {
         $policyById = @{}
         foreach ($policy in $rolePolicies) { $policyById[$policy.id] = $policy }
 
@@ -166,11 +159,9 @@ function Test-ZTAssessPrivilegedAccess {
 
         if ($assessedRoles -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-003' -Status NotAssessed -NotAssessedReason 'No role management policy assignments matched Tier-0 role templates.'))
-        }
-        elseif ($weakRoles.Count -eq 0) {
+        } elseif ($weakRoles.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-003' -Status Pass -Evidence "All $assessedRoles assessed Tier-0 role(s) require MFA and justification on PIM activation."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-003' -Status Fail -Evidence "$($weakRoles.Count) of $assessedRoles Tier-0 role(s) lack MFA and/or justification on activation (template IDs: $($weakRoles -join ', '))."))
         }
     }
@@ -178,15 +169,13 @@ function Test-ZTAssessPrivilegedAccess {
     # --- PA-004: privileged accounts cloud-only -----------------------------
     if ($null -eq $users) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-004' -Status NotAssessed -NotAssessedReason 'users snapshot unavailable.'))
-    }
-    else {
+    } else {
         $syncedPrivileged = @($privilegedAssignments | Where-Object {
                 $usersById.ContainsKey($_.principalId) -and $usersById[$_.principalId].onPremisesSyncEnabled
             })
         if ($syncedPrivileged.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-004' -Status Pass -Evidence 'All privileged user accounts are cloud-only.'))
-        }
-        else {
+        } else {
             $syncedGa = @($syncedPrivileged | Where-Object { $templateByDefinition[$_.roleDefinitionId] -eq $gaTemplate })
             $severity = if ($syncedGa.Count -gt 0) { 'Critical' } else { 'High' }
             $detail = ($syncedPrivileged | ForEach-Object { "$(& $describePrincipal $_.principalId) ($($roleNameByDefinition[$_.roleDefinitionId]))" } | Select-Object -Unique) -join ', '
@@ -197,15 +186,13 @@ function Test-ZTAssessPrivilegedAccess {
     # --- PA-005: daily-driver privileged accounts (heuristic) ---------------
     if ($null -eq $users) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-005' -Status NotAssessed -NotAssessedReason 'users snapshot unavailable.'))
-    }
-    else {
+    } else {
         $licensedPrivileged = @($privilegedAssignments | ForEach-Object { $_.principalId } | Select-Object -Unique | Where-Object {
                 $usersById.ContainsKey($_) -and @($usersById[$_].assignedLicenses).Count -gt 0
             })
         if ($licensedPrivileged.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-005' -Status Pass -Evidence 'No privileged account carries productivity licences; admin/daily-driver separation appears in place.'))
-        }
-        else {
+        } else {
             $names = ($licensedPrivileged | ForEach-Object { & $describePrincipal $_ }) -join ', '
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-005' -Status Partial -Evidence "Privileged accounts carrying licences (possible daily-driver use - consultant to confirm): $names."))
         }
@@ -218,11 +205,9 @@ function Test-ZTAssessPrivilegedAccess {
 
     if ($privilegedUserRecords.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-006' -Status NotAssessed -NotAssessedReason 'No privileged user records available for staleness analysis.'))
-    }
-    elseif ($haveSignInActivity.Count -eq 0) {
+    } elseif ($haveSignInActivity.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-006' -Status NotAssessed -NotAssessedReason 'signInActivity unavailable on the user snapshot (requires Entra ID P1 and AuditLog.Read.All).'))
-    }
-    else {
+    } else {
         $staleCutoff = [datetime]::UtcNow.AddDays(-[int]$thresholds.StaleSignInDays)
         $stale = @($haveSignInActivity | Where-Object {
                 $lastSignIn = $_.signInActivity.lastSignInDateTime
@@ -230,8 +215,7 @@ function Test-ZTAssessPrivilegedAccess {
             })
         if ($stale.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-006' -Status Pass -Evidence "All $($haveSignInActivity.Count) privileged user(s) have signed in within $($thresholds.StaleSignInDays) days."))
-        }
-        else {
+        } else {
             $names = ($stale | ForEach-Object { $_.userPrincipalName }) -join ', '
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-006' -Status Fail -Evidence "Privileged accounts with no sign-in for over $($thresholds.StaleSignInDays) days: $names."))
         }
@@ -241,13 +225,11 @@ function Test-ZTAssessPrivilegedAccess {
     $groupAssignments = @($privilegedAssignments | Where-Object { $groupsById.ContainsKey($_.principalId) })
     if ($groupAssignments.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-007' -Status Pass -Evidence 'No privileged roles are granted to groups.'))
-    }
-    else {
+    } else {
         $nonRoleAssignable = @($groupAssignments | Where-Object { -not $groupsById[$_.principalId].isAssignableToRole })
         if ($nonRoleAssignable.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-007' -Status Pass -Evidence "$($groupAssignments.Count) privileged group grant(s), all to role-assignable groups."))
-        }
-        else {
+        } else {
             $names = ($nonRoleAssignable | ForEach-Object { "$($groupsById[$_.principalId].displayName) ($($roleNameByDefinition[$_.roleDefinitionId]))" } | Select-Object -Unique) -join ', '
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-007' -Status Fail -Evidence "Privileged roles granted to standard (non-role-assignable) groups: $names. Group owners can mint administrators."))
         }
@@ -256,15 +238,13 @@ function Test-ZTAssessPrivilegedAccess {
     # --- PA-008: no guests in privileged roles ------------------------------
     if ($null -eq $users) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-008' -Status NotAssessed -NotAssessedReason 'users snapshot unavailable.'))
-    }
-    else {
+    } else {
         $guestPrivileged = @($privilegedAssignments | Where-Object {
                 $usersById.ContainsKey($_.principalId) -and $usersById[$_.principalId].userType -eq 'Guest'
             })
         if ($guestPrivileged.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-008' -Status Pass -Evidence 'No guest accounts hold privileged roles.'))
-        }
-        else {
+        } else {
             $names = ($guestPrivileged | ForEach-Object { "$(& $describePrincipal $_.principalId) ($($roleNameByDefinition[$_.roleDefinitionId]))" } | Select-Object -Unique) -join ', '
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-008' -Status Fail -Evidence "Guest accounts holding privileged roles: $names."))
         }
@@ -273,13 +253,11 @@ function Test-ZTAssessPrivilegedAccess {
     # --- PA-009: service principals with privileged roles -------------------
     if ($null -eq $servicePrincipals) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-009' -Status NotAssessed -NotAssessedReason 'servicePrincipals snapshot unavailable.'))
-    }
-    else {
+    } else {
         $spPrivileged = @($privilegedAssignments | Where-Object { $spById.ContainsKey($_.principalId) })
         if ($spPrivileged.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-009' -Status Pass -Evidence 'No service principals hold privileged directory roles. GA-equivalent application permissions are assessed by the Applications module.'))
-        }
-        else {
+        } else {
             $names = ($spPrivileged | ForEach-Object { "$($spById[$_.principalId].displayName) ($($roleNameByDefinition[$_.roleDefinitionId]))" } | Select-Object -Unique) -join ', '
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-009' -Status Fail -Evidence "Service principals holding privileged directory roles: $names. Workload identities have no MFA and require strict credential governance."))
         }
@@ -288,8 +266,7 @@ function Test-ZTAssessPrivilegedAccess {
     # --- PA-010: privileged access bound to secured workstations ------------
     if ($null -eq $caPolicies) {
         $findings.Add((New-ZTAssessFinding -CheckId 'PA-010' -Status NotAssessed -NotAssessedReason 'conditionalAccessPolicies snapshot unavailable (run the ConditionalAccess module alongside PrivilegedAccess).'))
-    }
-    else {
+    } else {
         $pawPolicies = @($caPolicies | Where-Object {
                 $_.state -eq 'enabled' -and
                 @($_.conditions.users.includeRoles).Count -gt 0 -and
@@ -297,8 +274,7 @@ function Test-ZTAssessPrivilegedAccess {
             })
         if ($pawPolicies.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-010' -Status Pass -Evidence "Privileged role usage requires a managed device via '$($pawPolicies[0].displayName)'. Confirm device filters narrow this to PAWs where required."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'PA-010' -Status Fail -Evidence 'No enabled policy binds privileged role usage to compliant or designated admin workstations.'))
         }
     }

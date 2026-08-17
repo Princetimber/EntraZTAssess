@@ -28,8 +28,7 @@ function Get-ZTAssessCertificate {
         }
 
         return [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certificateBytes)
-    }
-    catch {
+    } catch {
         throw "Failed to load certificate from '$Path': $($_.Exception.Message)"
     }
 }

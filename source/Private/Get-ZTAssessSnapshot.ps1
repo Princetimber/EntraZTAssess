@@ -34,8 +34,7 @@ function Get-ZTAssessSnapshot {
         # findings.
         $parsed = ConvertFrom-Json -InputObject $content -Depth 50 -NoEnumerate
         return , $parsed
-    }
-    catch {
+    } catch {
         throw "Failed to read snapshot '$Name' from '$snapshotPath': $($_.Exception.Message)"
     }
 }

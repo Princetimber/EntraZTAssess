@@ -30,15 +30,13 @@ function Test-ZTAssessDeviceTrust {
     # --- DT-001: unknown/unmanaged exposure ---------------------------------
     if ($null -eq $managedDevices -and $null -eq $entraDevices) {
         $findings.Add((New-ZTAssessFinding -CheckId 'DT-001' -Status NotAssessed -NotAssessedReason 'Device snapshots unavailable (requires DeviceManagementManagedDevices.Read.All and Directory.Read.All).'))
-    }
-    else {
+    } else {
         $classes = Get-ZTAssessDeviceClass -ManagedDevices @($managedDevices) -EntraDevices @($entraDevices) -Settings $Settings
         $total = @($classes).Count
 
         if ($total -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-001' -Status NotAssessed -NotAssessedReason 'No devices found in the tenant.'))
-        }
-        else {
+        } else {
             $unknown = @($classes | Where-Object { $_.Class -eq 'Unknown' }).Count
             $unknownPct = [math]::Round(100 * $unknown / $total, 1)
             $splitText = (@($classes | Group-Object Class | Sort-Object Name | ForEach-Object { "$($_.Name)=$($_.Count)" }) -join ', ')
@@ -46,11 +44,9 @@ function Test-ZTAssessDeviceTrust {
 
             if ($unknown -eq 0) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'DT-001' -Status Pass -Evidence $evidence))
-            }
-            elseif ($unknownPct -le $thresholds.UnmanagedDeviceMaxPercent) {
+            } elseif ($unknownPct -le $thresholds.UnmanagedDeviceMaxPercent) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'DT-001' -Status Partial -Evidence $evidence))
-            }
-            else {
+            } else {
                 $findings.Add((New-ZTAssessFinding -CheckId 'DT-001' -Status Fail -Evidence $evidence))
             }
         }
@@ -59,8 +55,7 @@ function Test-ZTAssessDeviceTrust {
     # --- DT-002: compliance policy per active platform ----------------------
     if ($null -eq $managedDevices -or $null -eq $compliancePolicies) {
         $findings.Add((New-ZTAssessFinding -CheckId 'DT-002' -Status NotAssessed -NotAssessedReason 'Managed device or compliance policy snapshots unavailable.'))
-    }
-    else {
+    } else {
         $platformPolicyPatterns = @{
             Windows = 'windows'
             iOS     = 'ios'
@@ -81,8 +76,7 @@ function Test-ZTAssessDeviceTrust {
 
         if ($uncovered.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-002' -Status Pass -Evidence 'Every platform with enrolled devices has at least one compliance policy.'))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-002' -Status Fail -Evidence "Platforms with enrolled devices but no compliance policy: $($uncovered -join ', ')."))
         }
     }
@@ -90,8 +84,7 @@ function Test-ZTAssessDeviceTrust {
     # --- DT-003: secure-by-default compliance setting -----------------------
     if ($null -eq $dmSettings) {
         $findings.Add((New-ZTAssessFinding -CheckId 'DT-003' -Status NotAssessed -NotAssessedReason 'deviceManagementSettings snapshot unavailable.'))
-    }
-    else {
+    } else {
         $secureByDefault = [bool]$dmSettings.secureByDefault
         $deviceCaInUse = @($caPolicies | Where-Object {
                 $_.state -eq 'enabled' -and (
@@ -102,11 +95,9 @@ function Test-ZTAssessDeviceTrust {
 
         if ($secureByDefault) {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-003' -Status Pass -Evidence 'Devices with no compliance policy assigned are treated as not compliant (secure by default).'))
-        }
-        elseif ($deviceCaInUse) {
+        } elseif ($deviceCaInUse) {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-003' -Status Fail -Evidence 'Devices with no compliance policy assigned are marked compliant while compliant-device Conditional Access is in use - unassigned devices silently satisfy the device control.' -SeverityOverride Critical))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-003' -Status Fail -Evidence 'Devices with no compliance policy assigned are marked compliant. Change this before relying on compliant-device Conditional Access.'))
         }
     }
@@ -114,11 +105,9 @@ function Test-ZTAssessDeviceTrust {
     # --- DT-004: compliance policy quality per platform ----------------------
     if ($null -eq $compliancePolicies) {
         $findings.Add((New-ZTAssessFinding -CheckId 'DT-004' -Status NotAssessed -NotAssessedReason 'Compliance policy snapshot unavailable.'))
-    }
-    elseif (@($compliancePolicies).Count -eq 0) {
+    } elseif (@($compliancePolicies).Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'DT-004' -Status Fail -Evidence 'No compliance policies exist to assess.'))
-    }
-    else {
+    } else {
         $weakPolicies = [System.Collections.Generic.List[string]]::new()
         $strongCount = 0
 
@@ -136,19 +125,16 @@ function Test-ZTAssessDeviceTrust {
 
             if ($signals -ge $expected) {
                 $strongCount++
-            }
-            else {
+            } else {
                 $weakPolicies.Add("$($policy.displayName) ($signals control signal(s))")
             }
         }
 
         if ($weakPolicies.Count -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-004' -Status Pass -Evidence "All $strongCount compliance policy/policies enforce core control signals (encryption, OS version, password, jailbreak/threat protection)."))
-        }
-        elseif ($strongCount -gt 0) {
+        } elseif ($strongCount -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-004' -Status Partial -Evidence "Compliance policies with weak control coverage: $($weakPolicies -join '; ')."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'DT-004' -Status Fail -Evidence "Every compliance policy has weak control coverage: $($weakPolicies -join '; ')."))
         }
     }

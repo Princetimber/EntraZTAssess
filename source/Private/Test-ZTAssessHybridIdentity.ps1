@@ -40,14 +40,12 @@ function Test-ZTAssessHybridIdentity {
     # --- HY-001: password hash sync enabled -----------------------------------
     if ($null -eq $onPremSync) {
         $findings.Add((New-ZTAssessFinding -CheckId 'HY-001' -Status NotAssessed -NotAssessedReason 'onPremisesSynchronization snapshot unavailable (requires OnPremDirectorySynchronization.Read.All).'))
-    }
-    else {
+    } else {
         $sync = @($onPremSync) | Select-Object -First 1
         $phsEnabled = [bool]$sync.features.passwordSyncEnabled
         if ($phsEnabled) {
             $findings.Add((New-ZTAssessFinding -CheckId 'HY-001' -Status Pass -Evidence 'Password hash synchronisation is enabled; leaked-credential detection and sign-in fallback are available.'))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'HY-001' -Status Fail -Evidence 'Password hash synchronisation is disabled; leaked-credential detection and authentication fallback are unavailable.'))
         }
     }
@@ -55,19 +53,16 @@ function Test-ZTAssessHybridIdentity {
     # --- HY-002: synchronisation freshness --------------------------------------
     if (-not $org -or -not $org.onPremisesLastSyncDateTime) {
         $findings.Add((New-ZTAssessFinding -CheckId 'HY-002' -Status NotAssessed -NotAssessedReason 'The last synchronisation timestamp is unavailable on the organisation object.'))
-    }
-    else {
+    } else {
         $lastSync = [datetime]$org.onPremisesLastSyncDateTime
         $hoursSince = [math]::Round(([datetime]::UtcNow - $lastSync).TotalHours, 1)
         $evidence = "Last directory synchronisation: $($lastSync.ToString('yyyy-MM-dd HH:mm'))Z ($hoursSince hour(s) ago; warn $($thresholds.HybridSyncStaleWarnHours)h, fail $($thresholds.HybridSyncStaleFailHours)h)."
 
         if ($hoursSince -ge $thresholds.HybridSyncStaleFailHours) {
             $findings.Add((New-ZTAssessFinding -CheckId 'HY-002' -Status Fail -Evidence $evidence))
-        }
-        elseif ($hoursSince -ge $thresholds.HybridSyncStaleWarnHours) {
+        } elseif ($hoursSince -ge $thresholds.HybridSyncStaleWarnHours) {
             $findings.Add((New-ZTAssessFinding -CheckId 'HY-002' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'HY-002' -Status Pass -Evidence $evidence))
         }
     }
@@ -75,25 +70,21 @@ function Test-ZTAssessHybridIdentity {
     # --- HY-003: provisioning errors ---------------------------------------------
     if ($null -eq $errorsSummary) {
         $findings.Add((New-ZTAssessFinding -CheckId 'HY-003' -Status NotAssessed -NotAssessedReason 'provisioningErrorsSummary snapshot unavailable.'))
-    }
-    else {
+    } else {
         $syncedCount = [int]$errorsSummary.syncedUserCount
         $errorCount = [int]$errorsSummary.usersWithErrors
 
         if ($syncedCount -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'HY-003' -Status NotAssessed -NotAssessedReason 'No synchronised users found to evaluate.'))
-        }
-        elseif ($errorCount -eq 0) {
+        } elseif ($errorCount -eq 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'HY-003' -Status Pass -Evidence "No provisioning errors across $syncedCount synchronised user(s)."))
-        }
-        else {
+        } else {
             $pct = [math]::Round(100 * $errorCount / $syncedCount, 2)
             $categories = (@($errorsSummary.errorsByCategory) | ForEach-Object { "$($_.category)=$($_.count)" }) -join ', '
             $evidence = "$errorCount of $syncedCount synchronised user(s) ($pct%) have provisioning errors ($categories); threshold $($thresholds.ProvisioningErrorMaxPercent)%."
             if ($pct -gt $thresholds.ProvisioningErrorMaxPercent) {
                 $findings.Add((New-ZTAssessFinding -CheckId 'HY-003' -Status Fail -Evidence $evidence))
-            }
-            else {
+            } else {
                 $findings.Add((New-ZTAssessFinding -CheckId 'HY-003' -Status Partial -Evidence $evidence))
             }
         }
@@ -104,8 +95,7 @@ function Test-ZTAssessHybridIdentity {
 
     if ($null -eq $onPremSync) {
         $findings.Add((New-ZTAssessFinding -CheckId 'HY-005' -Status NotAssessed -NotAssessedReason 'onPremisesSynchronization snapshot unavailable.'))
-    }
-    else {
+    } else {
         $sync = @($onPremSync) | Select-Object -First 1
         $deviceWriteback = [bool]$sync.features.deviceWritebackEnabled
         $groupWriteback = [bool]$sync.features.groupWriteBackEnabled

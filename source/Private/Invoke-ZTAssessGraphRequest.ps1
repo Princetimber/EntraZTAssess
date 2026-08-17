@@ -41,8 +41,7 @@ function Invoke-ZTAssessGraphRequest {
                 Write-ToLog -Message "Graph GET $nextUri (attempt $($attempt + 1))" -Level DEBUG -NoConsole
                 $response = Invoke-MgGraphRequestWrapper -Uri $nextUri -Method GET -OutputType PSObject
                 break
-            }
-            catch {
+            } catch {
                 $statusCode = Get-ZTAssessHttpStatusCode -ErrorRecord $_
 
                 $isRetryable = ($statusCode -eq 429) -or ($statusCode -ge 500 -and $statusCode -le 599)
@@ -70,16 +69,14 @@ function Invoke-ZTAssessGraphRequest {
             foreach ($item in $response.value) {
                 $results.Add($item)
             }
-        }
-        else {
+        } else {
             $results.Add($response)
         }
 
         $nextLink = $response.PSObject.Properties['@odata.nextLink']
         if ($All -and $nextLink -and $nextLink.Value) {
             $nextUri = [string]$nextLink.Value
-        }
-        else {
+        } else {
             $nextUri = $null
         }
     }

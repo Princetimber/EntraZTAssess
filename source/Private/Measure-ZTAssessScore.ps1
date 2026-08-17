@@ -53,7 +53,7 @@ function Measure-ZTAssessScore {
         $totalWeight = $assessedWeight + $notAssessedWeight
 
         $insufficient = ($totalWeight -eq 0) -or
-            ($totalWeight -gt 0 -and (100 * $notAssessedWeight / $totalWeight) -gt $insufficientDataPercent)
+        ($totalWeight -gt 0 -and (100 * $notAssessedWeight / $totalWeight) -gt $insufficientDataPercent)
 
         $score = $null
         if (-not $insufficient -and $assessedWeight -gt 0) {
@@ -79,12 +79,12 @@ function Measure-ZTAssessScore {
     foreach ($domainGroup in ($Findings | Group-Object -Property Domain | Sort-Object -Property Name)) {
         $result = & $scoreGroup @($domainGroup.Group)
         $domainScores += [pscustomobject]@{
-            PSTypeName        = 'ZTAssess.DomainScore'
-            Domain            = $domainGroup.Name
-            ScorePercent      = $result.ScorePercent
-            Level             = $result.Level
-            AssessedCount     = $result.AssessedCount
-            NotAssessedCount  = $result.NotAssessedCount
+            PSTypeName       = 'ZTAssess.DomainScore'
+            Domain           = $domainGroup.Name
+            ScorePercent     = $result.ScorePercent
+            Level            = $result.Level
+            AssessedCount    = $result.AssessedCount
+            NotAssessedCount = $result.NotAssessedCount
         }
     }
 

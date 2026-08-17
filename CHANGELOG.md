@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Reformatted the remaining 32 `source/` files (the module root `Get-EntraZTAssess.psm1`
+  plus 31 `source/Private/` functions, most notably the large domain assessors
+  `Test-ZTAssessEndpointManagement.ps1`, `Test-ZTAssessIdentitySecurity.ps1`,
+  `Test-ZTAssessPrivilegedAccess.ps1`, and `Test-ZTAssessConditionalAccess.ps1`)
+  via `Invoke-Formatter` under the corrected OTBS settings, resolving the
+  remaining `PSPlaceCloseBrace` (255 → 3) and `PSUseConsistentIndentation`
+  (129 → 90) findings from a full `source/ -Recurse` sweep. Brace cuddling
+  only, no logic changes. The 3 remaining `PSPlaceCloseBrace` and 90 remaining
+  `PSUseConsistentIndentation` findings are confined entirely to
+  `Get-EntraZTAssess.psd1`, whose flush-left, unindented layout is the
+  standard `New-ModuleManifest`-generated manifest convention and is left
+  as-is, consistent with the existing `PSAlignAssignmentStatement` `.psd1`
+  exemption documented above. These 32 files are all `Private/` functions
+  not covered by `tests/QA/module.tests.ps1`'s exported-function lint loop,
+  so this was a quality-debt cleanup, not a CI-gating fix.
 - `PSScriptAnalyzerSettings.psd1`'s `PSPlaceOpenBrace.OnSameLine` corrected
   from `$false` to `$true`. The prior value enforced Allman-style bracing
   (opening brace always on its own line) while the settings file's own

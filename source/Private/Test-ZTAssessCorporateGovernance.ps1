@@ -38,8 +38,7 @@ function Test-ZTAssessCorporateGovernance {
     # --- CG-001: corporate device control coverage ---------------------------
     if ($corporateDevices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CG-001' -Status NotAssessed -NotAssessedReason 'No corporate-owned managed devices are enrolled.'))
-    }
-    else {
+    } else {
         $compliant = @($corporateDevices | Where-Object { $_.complianceState -eq 'compliant' }).Count
         $encrypted = @($corporateDevices | Where-Object { $_.isEncrypted }).Count
         $compliantPct = [math]::Round(100 * $compliant / $corporateDevices.Count, 1)
@@ -49,11 +48,9 @@ function Test-ZTAssessCorporateGovernance {
 
         if ($compliantPct -ge $floor -and $encryptedPct -ge $floor) {
             $findings.Add((New-ZTAssessFinding -CheckId 'CG-001' -Status Pass -Evidence $evidence))
-        }
-        elseif ($compliantPct -ge 50 -or $encryptedPct -ge 50) {
+        } elseif ($compliantPct -ge 50 -or $encryptedPct -ge 50) {
             $findings.Add((New-ZTAssessFinding -CheckId 'CG-001' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'CG-001' -Status Fail -Evidence $evidence))
         }
     }
@@ -62,11 +59,9 @@ function Test-ZTAssessCorporateGovernance {
     $unknownOwnership = @($devices | Where-Object { $_.managedDeviceOwnerType -notin @('company', 'personal') })
     if ($devices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CG-002' -Status NotAssessed -NotAssessedReason 'No managed devices to assess.'))
-    }
-    elseif ($unknownOwnership.Count -eq 0) {
+    } elseif ($unknownOwnership.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CG-002' -Status Pass -Evidence "All $($devices.Count) managed device(s) carry an ownership tag."))
-    }
-    else {
+    } else {
         $pct = [math]::Round(100 * $unknownOwnership.Count / $devices.Count, 1)
         $status = if ($pct -gt 10) { 'Fail' } else { 'Partial' }
         $findings.Add((New-ZTAssessFinding -CheckId 'CG-002' -Status $status -Evidence "$($unknownOwnership.Count) managed device(s) ($pct%) have unknown ownership and sit outside both governance models."))
@@ -75,8 +70,7 @@ function Test-ZTAssessCorporateGovernance {
     # --- CG-003: modern corporate provisioning -------------------------------
     if ($corporateDevices.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CG-003' -Status NotAssessed -NotAssessedReason 'No corporate-owned managed devices are enrolled.'))
-    }
-    else {
+    } else {
         $modernPattern = 'appleBulkWithUser|appleBulkWithoutUser|dep|FullyManaged|DedicatedDevice|CorporateWorkProfile|windowsAutoEnrollment|azureADJoinedUsingDeviceAuth'
         $modernEnrolled = @($corporateDevices | Where-Object { $_.deviceEnrollmentType -match $modernPattern }).Count
 
@@ -93,11 +87,9 @@ function Test-ZTAssessCorporateGovernance {
 
         if ($pct -ge $floor) {
             $findings.Add((New-ZTAssessFinding -CheckId 'CG-003' -Status Pass -Evidence $evidence))
-        }
-        elseif ($modernTotal -gt 0) {
+        } elseif ($modernTotal -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'CG-003' -Status Partial -Evidence $evidence))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'CG-003' -Status Fail -Evidence $evidence))
         }
     }

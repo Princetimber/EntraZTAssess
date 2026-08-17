@@ -57,11 +57,9 @@ function Test-ZTAssessConditionalAccess {
 
     if ($allUserMfa.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-001' -Status Pass -Evidence "Enforced all-users, all-apps MFA policy: '$($allUserMfa[0].displayName)'."))
-    }
-    elseif ($allUserMfaReportOnly.Count -gt 0) {
+    } elseif ($allUserMfaReportOnly.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-001' -Status Partial -Evidence "An all-users MFA policy exists but only in report-only mode: '$($allUserMfaReportOnly[0].displayName)'. Report-only enforces nothing." -SeverityOverride High))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-001' -Status Fail -Evidence 'No enabled policy requires MFA for all users across all cloud apps.'))
     }
 
@@ -71,14 +69,11 @@ function Test-ZTAssessConditionalAccess {
 
     if ($adminPhishingResistant.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-002' -Status Pass -Evidence "Phishing-resistant authentication strength enforced for directory roles: '$($adminPhishingResistant[0].displayName)'."))
-    }
-    elseif (@($adminMfa | Where-Object { & $targetsAdminRoles $_ }).Count -gt 0) {
+    } elseif (@($adminMfa | Where-Object { & $targetsAdminRoles $_ }).Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-002' -Status Partial -Evidence 'Administrators are required to use MFA, but not a phishing-resistant authentication strength.' -SeverityOverride Medium))
-    }
-    elseif ($adminMfa.Count -gt 0) {
+    } elseif ($adminMfa.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-002' -Status Partial -Evidence 'Administrators are covered only by the general all-users MFA policy; no dedicated administrator policy with stronger requirements exists.'))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-002' -Status Fail -Evidence 'No enabled policy enforces MFA for administrator roles.'))
     }
 
@@ -92,11 +87,9 @@ function Test-ZTAssessConditionalAccess {
 
     if ($legacyBlockAllUsers.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-003' -Status Pass -Evidence "Legacy authentication blocked for all users by '$($legacyBlockAllUsers[0].displayName)'."))
-    }
-    elseif ($legacyBlock.Count -gt 0) {
+    } elseif ($legacyBlock.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-003' -Status Partial -Evidence "A legacy authentication block exists ('$($legacyBlock[0].displayName)') but does not target all users."))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-003' -Status Fail -Evidence 'No enabled policy blocks legacy authentication clients.'))
     }
 
@@ -109,20 +102,17 @@ function Test-ZTAssessConditionalAccess {
 
     if ($hasP2 -eq $false) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-004' -Status NotAssessed -NotAssessedReason 'Entra ID P2 was not detected in the tenant licence inventory; risk-based Conditional Access is unavailable.'))
-    }
-    else {
+    } else {
         $signInRisk = @($enabled | Where-Object { @($_.conditions.signInRiskLevels).Count -gt 0 })
         $userRisk = @($enabled | Where-Object { @($_.conditions.userRiskLevels).Count -gt 0 })
 
         if ($signInRisk.Count -gt 0 -and $userRisk.Count -gt 0) {
             $findings.Add((New-ZTAssessFinding -CheckId 'CA-004' -Status Pass -Evidence "Sign-in risk policy ('$($signInRisk[0].displayName)') and user risk policy ('$($userRisk[0].displayName)') are enforced."))
-        }
-        elseif ($signInRisk.Count -gt 0 -or $userRisk.Count -gt 0) {
+        } elseif ($signInRisk.Count -gt 0 -or $userRisk.Count -gt 0) {
             $present = if ($signInRisk.Count -gt 0) { 'sign-in risk' } else { 'user risk' }
             $missing = if ($signInRisk.Count -gt 0) { 'user risk' } else { 'sign-in risk' }
             $findings.Add((New-ZTAssessFinding -CheckId 'CA-004' -Status Partial -Evidence "A $present policy is enforced but no $missing policy exists."))
-        }
-        else {
+        } else {
             $findings.Add((New-ZTAssessFinding -CheckId 'CA-004' -Status Fail -Evidence 'No enabled risk-based Conditional Access policies were found despite Entra ID P2 licensing.'))
         }
     }
@@ -136,11 +126,9 @@ function Test-ZTAssessConditionalAccess {
 
     if ($deviceGrantBroad.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-005' -Status Pass -Evidence "Compliant or hybrid-joined device required for broad access by '$($deviceGrantBroad[0].displayName)'."))
-    }
-    elseif ($deviceGrant.Count -gt 0) {
+    } elseif ($deviceGrant.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-005' -Status Partial -Evidence "Device-based controls exist ('$($deviceGrant[0].displayName)') but are not applied to the broad user population."))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-005' -Status Fail -Evidence 'No enabled policy requires a compliant or hybrid-joined device; unmanaged endpoints access corporate resources unchecked.'))
     }
 
@@ -150,12 +138,10 @@ function Test-ZTAssessConditionalAccess {
 
     if ($signInFrequency.Count -gt 0 -and $persistentBrowser.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-006' -Status Pass -Evidence "Sign-in frequency ($($signInFrequency.Count) policy/policies) and persistent browser controls ($($persistentBrowser.Count)) are deployed."))
-    }
-    elseif ($signInFrequency.Count -gt 0 -or $persistentBrowser.Count -gt 0) {
+    } elseif ($signInFrequency.Count -gt 0 -or $persistentBrowser.Count -gt 0) {
         $present = if ($signInFrequency.Count -gt 0) { 'sign-in frequency' } else { 'persistent browser' }
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-006' -Status Partial -Evidence "Only $present session controls are deployed."))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-006' -Status Fail -Evidence 'No session controls (sign-in frequency, persistent browser restrictions) are deployed.'))
     }
 
@@ -168,8 +154,7 @@ function Test-ZTAssessConditionalAccess {
 
     if ($locationBypass.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-007' -Status Pass -Evidence "No MFA policy is bypassed by network location. $locationEvidence"))
-    }
-    else {
+    } else {
         $names = ($locationBypass | ForEach-Object { $_.displayName }) -join ', '
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-007' -Status Fail -Evidence "MFA policies excluding trusted locations (location-based bypass): $names. $locationEvidence"))
     }
@@ -188,11 +173,9 @@ function Test-ZTAssessConditionalAccess {
 
     if ($excludedGroups.Count -eq 0 -and $excludedUsers.Count -le 2) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-008' -Status Pass -Evidence "Exclusions are minimal: $($excludedUsers.Count) excluded user(s) (consistent with break-glass), no excluded groups."))
-    }
-    elseif ($excludedGroups.Count -gt 0) {
+    } elseif ($excludedGroups.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-008' -Status Fail -Evidence "$($excludedGroups.Count) group(s) and $($excludedUsers.Count) user(s) are excluded from enabled policies. Group exclusions are silent bypass paths; review membership and governance of each." -SeverityOverride High))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-008' -Status Partial -Evidence "$($excludedUsers.Count) user(s) are excluded from enabled policies - more than the expected break-glass pair. Review and document each exclusion."))
     }
 
@@ -205,11 +188,9 @@ function Test-ZTAssessConditionalAccess {
 
     if ($reportOnly.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-009' -Status Pass -Evidence 'No policies are in report-only mode.'))
-    }
-    elseif ($stalled.Count -eq 0) {
+    } elseif ($stalled.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-009' -Status Pass -Evidence "$($reportOnly.Count) report-only policy/policies exist, all within the $($thresholds.ReportOnlyMaxAgeDays)-day rollout window."))
-    }
-    else {
+    } else {
         $names = ($stalled | ForEach-Object { $_.displayName }) -join ', '
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-009' -Status Fail -Evidence "Report-only policies older than $($thresholds.ReportOnlyMaxAgeDays) days: $names."))
     }
@@ -222,8 +203,7 @@ function Test-ZTAssessConditionalAccess {
 
     if ($usefulDisabled.Count -eq 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-010' -Status Pass -Evidence 'No disabled policies with meaningful controls were found.'))
-    }
-    else {
+    } else {
         $names = ($usefulDisabled | ForEach-Object { $_.displayName }) -join ', '
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-010' -Status Informational -Evidence "Disabled policies containing meaningful controls (candidates for re-enablement): $names." -SeverityOverride None))
     }
@@ -239,8 +219,7 @@ function Test-ZTAssessConditionalAccess {
 
     if ($azureMgmtProtected.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-011' -Status Pass -Evidence "Azure management access requires MFA via '$($azureMgmtProtected[0].displayName)'."))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-011' -Status Fail -Evidence 'No enabled policy explicitly requires MFA for Microsoft Azure Management.'))
     }
 
@@ -252,8 +231,7 @@ function Test-ZTAssessConditionalAccess {
 
     if ($deviceCodeBlock.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-012' -Status Pass -Evidence "Device code flow is blocked by '$($deviceCodeBlock[0].displayName)'."))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-012' -Status Fail -Evidence 'Device code flow is not restricted; it remains available for token phishing.'))
     }
 
@@ -273,11 +251,9 @@ function Test-ZTAssessConditionalAccess {
 
     if ($guestSpecific.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-013' -Status Pass -Evidence "Guest access requires MFA via '$($guestSpecific[0].displayName)'."))
-    }
-    elseif ($guestMfa.Count -gt 0) {
+    } elseif ($guestMfa.Count -gt 0) {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-013' -Status Pass -Evidence 'Guests are covered by the all-users MFA policy.'))
-    }
-    else {
+    } else {
         $findings.Add((New-ZTAssessFinding -CheckId 'CA-013' -Status Fail -Evidence 'No enabled policy requires MFA for guest or external users.'))
     }
 

@@ -17,8 +17,7 @@ function Resolve-ZTAssessAuthConfig {
     # Default config location under the cross-platform home directory.
     $configFilePath = if ($ConfigPath) {
         $ConfigPath
-    }
-    else {
+    } else {
         Join-Path -Path $HOME -ChildPath '.ztassess/auth.json'
     }
 
@@ -41,8 +40,7 @@ function Resolve-ZTAssessAuthConfig {
             $fileCertPath = $parsed.CertificatePath
             $fileEnvironment = $parsed.Environment
             $fileContributed = $true
-        }
-        catch {
+        } catch {
             Write-ToLog -Message "Ignoring malformed auth config file '$configFilePath': $($_.Exception.Message)" -Level WARN -NoConsole
         }
     }

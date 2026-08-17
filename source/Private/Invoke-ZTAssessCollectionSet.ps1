@@ -49,8 +49,7 @@ function Invoke-ZTAssessCollectionSet {
             }
 
             Write-ToLog -Message "Collected '$name': $recordCount record(s) in $($status[$name].DurationSeconds)s" -Level DEBUG -NoConsole
-        }
-        catch {
+        } catch {
             $stopwatch.Stop()
             $reason = $_.Exception.Message
 

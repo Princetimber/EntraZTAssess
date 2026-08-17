@@ -38,8 +38,7 @@ function Save-ZTAssessSnapshot {
             # than producing an empty file.
             ConvertTo-Json -InputObject $cleansed -Depth 20 | Set-Content -LiteralPath $snapshotPath -Encoding utf8NoBOM -ErrorAction Stop
             Write-ToLog -Message "Snapshot '$Name' written to $snapshotPath" -Level DEBUG -NoConsole
-        }
-        catch {
+        } catch {
             throw "Failed to write snapshot '$Name' to '$snapshotPath': $($_.Exception.Message)"
         }
     }

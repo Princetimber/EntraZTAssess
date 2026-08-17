@@ -30,13 +30,13 @@ function Invoke-ZTAssessHybridCollection {
                 $withErrors = @($synced | Where-Object { @($_.onPremisesProvisioningErrors).Count -gt 0 })
                 $categories = $withErrors |
                     ForEach-Object { @($_.onPremisesProvisioningErrors) } |
-                    Group-Object -Property category |
-                    ForEach-Object { [pscustomobject]@{ category = $_.Name; count = $_.Count } }
+                        Group-Object -Property category |
+                            ForEach-Object { [pscustomobject]@{ category = $_.Name; count = $_.Count } }
 
                 [pscustomobject]@{
-                    syncedUserCount     = $synced.Count
-                    usersWithErrors     = $withErrors.Count
-                    errorsByCategory    = @($categories)
+                    syncedUserCount  = $synced.Count
+                    usersWithErrors  = $withErrors.Count
+                    errorsByCategory = @($categories)
                 }
             }
         }
