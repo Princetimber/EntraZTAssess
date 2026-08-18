@@ -19,3 +19,4 @@ package-lock.json
 .DS_Store
 .omo/
 PowerShellEditorServices.json
+graphify-out/
