@@ -27,9 +27,12 @@ function New-ZTAssessAppRegistration {
     application permissions granted to the new app.
 
     By default the function does NOT grant admin consent programmatically. It emits
-    an admin-consent URL that a Global Administrator must approve. Supply
-    -GrantAdminConsent to create the app role assignments directly (also requires
-    a Global Administrator or Privileged Role Administrator session).
+    an admin-consent URL that a Privileged Role Administrator (or Global
+    Administrator) must approve, since every permission granted is a Microsoft
+    Graph application permission and Application Administrator / Cloud
+    Application Administrator cannot consent to those. Supply -GrantAdminConsent
+    to create the app role assignments directly (also requires a Privileged Role
+    Administrator or Global Administrator session).
 
     Re-running this function against a tenant that already has an application
     registered under the same -DisplayName does not silently create a duplicate.
@@ -60,9 +63,10 @@ function New-ZTAssessAppRegistration {
 
     .PARAMETER GrantAdminConsent
     Grants the read-only application permissions programmatically by creating app
-    role assignments on the new service principal. Requires a Global Administrator
-    or Privileged Role Administrator session. When omitted, an admin-consent URL is
-    emitted for a Global Administrator to approve instead.
+    role assignments on the new service principal. Requires a Privileged Role
+    Administrator or Global Administrator session. When omitted, an admin-consent
+    URL is emitted for a Privileged Role Administrator (or Global Administrator)
+    to approve instead.
 
     .PARAMETER Force
     Creates a new application registration even when one with the same
@@ -80,7 +84,7 @@ function New-ZTAssessAppRegistration {
 
     Creates the application with the default read-only scopes, uploads the
     certificate, writes ~/.ztassess/auth.json, and prints an admin-consent URL for
-    a Global Administrator to approve.
+    a Privileged Role Administrator (or Global Administrator) to approve.
 
     .EXAMPLE
     New-ZTAssessAppRegistration -TenantId '00000000-0000-0000-0000-000000000000' -CertificatePath ./EntraZTAssess.cer -Modules Identity, ConditionalAccess, Devices -GrantAdminConsent
@@ -413,7 +417,7 @@ function New-ZTAssessAppRegistration {
     else {
         Write-Host ''
         Write-Host 'Admin consent is required before the assessment can run.' -ForegroundColor Yellow
-        Write-Host 'Ask a Global Administrator to approve this URL:' -ForegroundColor Yellow
+        Write-Host 'Ask a Privileged Role Administrator (or Global Administrator) to approve this URL:' -ForegroundColor Yellow
         Write-Host ("  {0}" -f $consentUrl)
     }
 

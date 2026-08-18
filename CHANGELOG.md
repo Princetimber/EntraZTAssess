@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected the admin-consent role guidance in `docs/PermissionsGuidance.md`,
+  `docs/Authentication.md`, `README.md`, and `scripts/README.md`, which
+  stated that granting the CBA app's Application permissions requires
+  Global Administrator. All of these permissions are Microsoft Graph
+  application permissions, and Microsoft reserves consent to those to
+  **Privileged Role Administrator** (Global Administrator also qualifies,
+  but is not the least-privileged option); Application Administrator and
+  Cloud Application Administrator — while sufficient to register the app
+  and add the requested app roles — are explicitly excluded from consenting
+  to Microsoft Graph application permissions. Tenants that will not grant
+  Global Administrator can still complete provisioning with a time-bound
+  Privileged Role Administrator assignment for the consent step only.
 - Added `.vscode/settings.json` (project-scoped, checked in) pinning the
   PowerShell extension's `codeFormatting.preset` to `OTBS` with
   `openBraceOnSameLine: true`, plus `alignPropertyValuePairs`,
