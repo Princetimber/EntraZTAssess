@@ -71,13 +71,13 @@ New-ZTAssessAppRegistration -TenantId '<tenant>' -CertificatePath ~/.ztassess/En
 
 ### 3. Grant admin consent
 
-Open the admin-consent URL emitted in step 2 as a Global Administrator, or grant consent programmatically:
+Open the admin-consent URL emitted in step 2 signed in as a **Privileged Role Administrator** (or Global Administrator), or grant consent programmatically:
 
 ```powershell
 New-ZTAssessAppRegistration -TenantId '<tenant>' -CertificatePath ~/.ztassess/EntraZTAssess.cer -GrantAdminConsent
 ```
 
-All Application permissions used by the assessment require Global Administrator consent.
+All Application permissions used by the assessment are on Microsoft Graph, so admin consent requires **Privileged Role Administrator** or Global Administrator. Application Administrator and Cloud Application Administrator can register the app and add the requested app roles in step 2, but Microsoft explicitly excludes Microsoft Graph application permissions from what those two roles can consent to — see [Cloud Application Administrator](https://learn.microsoft.com/entra/identity/role-based-access-control/permissions-reference#cloud-application-administrator). If the organization won't grant Global Administrator, request a time-bound Privileged Role Administrator assignment (ideally via PIM) for this one consent step, or have an existing Privileged Role Administrator run it.
 
 ### 4. Connect
 
@@ -98,7 +98,7 @@ The certificate store / thumbprint path is **Windows-only**. On macOS and Linux,
 
 ## Read-Only Application Permissions
 
-The CBA app registration holds only the read-only permissions below. They use the **same identifiers as the delegated scopes** but are granted as **Application** roles. All require Global Administrator consent. Request only the permissions for the modules in the engagement scope.
+The CBA app registration holds only the read-only permissions below. They use the **same identifiers as the delegated scopes** but are granted as **Application** roles. Because they are all Microsoft Graph application permissions, consent requires **Privileged Role Administrator** or Global Administrator (see [step 3](#3-grant-admin-consent)). Request only the permissions for the modules in the engagement scope.
 
 | Module | Application permissions (read-only) |
 |---|---|

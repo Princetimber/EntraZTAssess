@@ -85,13 +85,19 @@ then:
    No password or secret is ever written to this file.
 
 Add `-GrantAdminConsent` to grant the permissions programmatically instead of
-emitting the URL (requires a Global Administrator session).
+emitting the URL (requires a Global Administrator or Privileged Role
+Administrator session — see the note below).
 
-## Step 3 — Approve admin consent (Global Administrator)
+## Step 3 — Approve admin consent (Global Administrator or Privileged Role Administrator)
 
-A Global Administrator opens the consent URL printed by Step 2 and approves the
-requested read-only permissions. Until consent is granted, dependent checks are
-reported as `NotAssessed`.
+A Global Administrator or Privileged Role Administrator opens the consent URL
+printed by Step 2 and approves the requested read-only permissions. All of the
+assessment app's permissions are Microsoft Graph application permissions, so
+Application Administrator and Cloud Application Administrator — while
+sufficient for Steps 1 and 2 — cannot complete this step; Microsoft reserves
+consent to Microsoft Graph application permissions to Privileged Role
+Administrator (or Global Administrator). Until consent is granted, dependent
+checks are reported as `NotAssessed`.
 
 ## Step 4 — Run assessments (normal users)
 

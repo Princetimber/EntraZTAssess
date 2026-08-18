@@ -81,7 +81,7 @@ New `Connect-ZTAssessment` parameters: `-CertificatePath` (cross-platform PFX), 
 
 ### Read-only Application permissions
 
-The CBA app holds only read-only permissions, using the same identifiers as the delegated scopes but granted as **Application** roles requiring Global Administrator consent.
+The CBA app holds only read-only permissions, using the same identifiers as the delegated scopes but granted as **Application** roles on Microsoft Graph. Consent therefore requires **Privileged Role Administrator** (Global Administrator also qualifies, but is not required) — Application Administrator and Cloud Application Administrator cannot consent to Microsoft Graph application permissions. See [`docs/Authentication.md`](docs/Authentication.md#3-grant-admin-consent).
 
 | Module | Application permissions (read-only) |
 |---|---|
