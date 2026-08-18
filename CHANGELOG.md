@@ -5,6 +5,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Added `graphify-out/` to `.gitignore`. It holds local, disposable knowledge-graph
+  analysis output (`graph.json`, `graph.html`, `manifest.json`, `cache/`) generated
+  by the graphify tooling and must not be tracked in the repo.
+
 ### Fixed
 
 - Corrected the admin-consent role guidance in `docs/PermissionsGuidance.md`,
