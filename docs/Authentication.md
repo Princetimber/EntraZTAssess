@@ -112,7 +112,7 @@ This toolkit only reads Exchange Online / Purview configuration through a read-o
 ```powershell
 # CBA settings auto-resolve from ~/.ztassess/auth.json (or env vars / explicit params)
 Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, `
-    IdentityGovernance, Applications, HybridIdentity, Monitoring
+    IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender
 ```
 
 ## Cross-Platform Certificate Guidance
@@ -139,6 +139,7 @@ The CBA app registration holds only the read-only permissions below. They use th
 | HybridIdentity | `OnPremDirectorySynchronization.Read.All`, `Directory.Read.All` |
 | Devices | `DeviceManagementConfiguration.Read.All`, `DeviceManagementManagedDevices.Read.All`, `DeviceManagementServiceConfig.Read.All`, `DeviceManagementApps.Read.All` |
 | Monitoring | `IdentityRiskEvent.Read.All`, `IdentityRiskyUser.Read.All`, `AuditLog.Read.All`, `SecurityIdentitiesSensors.Read.All` |
+| Defender | `SecurityEvents.Read.All`, `SecurityAlert.Read.All` |
 
 The Sentinel module uses Azure Reader via ARM and requires no Graph permissions.
 

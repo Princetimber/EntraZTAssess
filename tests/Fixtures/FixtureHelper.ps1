@@ -328,6 +328,27 @@ function New-ZTAssessTestRun {
         mdiSensors = @(
             @{ id = 'sensor-1'; displayName = 'DC01'; healthStatus = 'healthy'; sensorType = 'domainControllerIntegrated' }
         )
+
+        # ----- Defender snapshots (well-configured estate) -----
+
+        secureScoreLatest = @{
+            id             = 'score-1'
+            currentScore   = 80
+            maxScore       = 100
+            createdDateTime = [datetime]::UtcNow.AddDays(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            controlScores  = @(
+                @{ controlName = 'OnboardMachinesToMDATP'; score = 10; description = 'Onboard machines to Microsoft Defender for Endpoint' }
+            )
+        }
+
+        secureScoreControlProfiles = @(
+            @{ id = 'ctrl-1'; controlName = 'OnboardMachinesToMDATP'; title = 'Onboard machines to Microsoft Defender for Endpoint'; category = 'Device'; service = 'Microsoft Defender for Endpoint'; rank = 1; tier = 'Core'; maxScore = 10 }
+            @{ id = 'ctrl-2'; controlName = 'EnableMFA'; title = 'Enable multifactor authentication'; category = 'Identity'; service = 'Microsoft Entra ID'; rank = 2; tier = 'Core'; maxScore = 10 }
+        )
+
+        unifiedAlerts = @(
+            @{ id = 'alert-1'; title = 'Suspicious sign-in'; severity = 'high'; status = 'resolved'; classification = 'truePositive'; createdDateTime = [datetime]::UtcNow.AddDays(-1).ToString('yyyy-MM-ddTHH:mm:ssZ'); serviceSource = 'microsoftDefenderForIdentity'; category = 'InitialAccess' }
+        )
     }
 
     foreach ($key in $Overrides.Keys) {

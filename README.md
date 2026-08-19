@@ -1,8 +1,8 @@
 # Get-EntraZTAssess
 
-**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph, collects tenant configuration snapshots, evaluates them against a declarative check library (92 checks across 11 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
+**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph, collects tenant configuration snapshots, evaluates them against a declarative check library (96 checks across 12 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
 
-**Build status:** Phase 5 delivery hardening present. All 8 assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring. Remaining roadmap: richer report packaging (PDF, Excel, dashboard outputs) if required.
+**Build status:** Phase 5 delivery hardening present. 9 assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender. A read-only Exchange Online / Security & Compliance (IPPS) connection surface is also in place for four additional modules (SecurityCompliance, Collaboration, DataProtection, ThreatProtection) whose checks ship in follow-up phases. Remaining roadmap: those four modules' checks, the CloudAppSecurity module, and richer report packaging (PDF, Excel, dashboard outputs) if required.
 
 ---
 
@@ -76,7 +76,7 @@ New-ZTAssessAppRegistration -TenantId '<tenant>' -CertificatePath ~/.ztassess/En
 
 # 3. Connect — CBA config auto-resolves from ~/.ztassess/auth.json
 Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, `
-    IdentityGovernance, Applications, HybridIdentity, Monitoring
+    IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender
 ```
 
 New `Connect-ZTAssessment` parameters: `-CertificatePath` (cross-platform PFX), `-CertificatePassword` (`SecureString`, never persisted), and `-NoInteractiveFallback` (force a hard failure for headless/CI when no config is found). The existing `-ClientId` / `-CertificateThumbprint` combination continues to work for the Windows certificate store.
@@ -96,6 +96,7 @@ The CBA app holds only read-only permissions, using the same identifiers as the 
 | HybridIdentity | `OnPremDirectorySynchronization.Read.All`, `Directory.Read.All` |
 | Devices | `DeviceManagementConfiguration.Read.All`, `DeviceManagementManagedDevices.Read.All`, `DeviceManagementServiceConfig.Read.All`, `DeviceManagementApps.Read.All` |
 | Monitoring | `IdentityRiskEvent.Read.All`, `IdentityRiskyUser.Read.All`, `AuditLog.Read.All`, `SecurityIdentitiesSensors.Read.All` |
+| Defender | `SecurityEvents.Read.All`, `SecurityAlert.Read.All` |
 
 The Sentinel module uses Azure Reader via ARM and needs no Graph permissions. The provisioning module itself needs elevated **one-time setup** permissions, requested least-privilege: `Application.ReadWrite.All` always, plus `AppRoleAssignment.ReadWrite.All` only when `-GrantAdminConsent` is used — these are for setup only and are not assessment scopes. See [`docs/Authentication.md`](docs/Authentication.md) for details.
 
@@ -106,7 +107,7 @@ The Sentinel module uses Azure Reader via ARM and needs no Graph permissions. Th
 ```powershell
 # 1. Connect to Microsoft Graph with required scopes
 Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, `
-    IdentityGovernance, Applications, HybridIdentity, Monitoring
+    IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender
 
 # 2. Create an engagement folder scaffold
 $eng = New-ZTAssessEngagement -CustomerName 'Contoso Ltd' `
@@ -270,7 +271,8 @@ The assessment library is data-driven. Each check is a declarative `.psd1` file 
 | Applications | ApplicationSecurity | 7 |
 | HybridIdentity | HybridIdentity | 6 |
 | Monitoring | MonitoringDetection | 6 |
-| **Total** | | **92** |
+| Defender | Defender | 4 |
+| **Total** | | **96** |
 
 `source/Settings/settings.psd1` defines thresholds, scoring weights, retry behaviour, and remediation SLA days (Critical: 7, High: 30, Medium: 90, Low: 180).
 

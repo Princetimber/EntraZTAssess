@@ -32,6 +32,22 @@
         HybridSyncStaleWarnHours            = 2     # HY-002 sync staleness warning threshold
         ProvisioningErrorMaxPercent         = 1     # HY-003 sync error ceiling (% of synced users)
         GuestCountReviewThreshold           = 10    # IG-002 guest population requiring access reviews
+        SecureScoreMinimumPercent           = 60    # DF-001 Secure Score maturity floor
+        OpenHighSeverityAlertMaxAgeDays     = 7     # DF-003 high-severity alert triage SLA
+    }
+
+    # Candidate Microsoft Secure Score control names for the Defender for
+    # Endpoint device-onboarding proxy (DF-002). Matched exactly against
+    # secureScoreLatest.controlScores[].controlName; Microsoft has renamed
+    # this control across API versions, so several known aliases are listed.
+    # A check against a control name Microsoft has changed again degrades to
+    # NotAssessed rather than failing.
+    Defender = @{
+        OnboardingControlNames = @(
+            'OnboardMachinesToMDATP'
+            'MDATPOnboarding'
+            'OnboardDevicesToMDE'
+        )
     }
 
     # Application permission risk tiers used by the application security
@@ -116,6 +132,7 @@
         EndpointManagement        = 1.0
         DeviceTrust               = 1.0
         MonitoringDetection       = 1.0
+        Defender                  = 1.0
         ApplicationSecurity       = 1.0
         ByodGovernance            = 0.75
         CorporateDeviceGovernance = 0.75
