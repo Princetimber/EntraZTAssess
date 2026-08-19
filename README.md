@@ -1,8 +1,8 @@
 # Get-EntraZTAssess
 
-**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph (and, for a subset of modules, a read-only Exchange Online / Security & Compliance connection), collects tenant configuration snapshots, evaluates them against a declarative check library (104 checks across 14 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
+**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph (and, for a subset of modules, a read-only Exchange Online / Security & Compliance connection), collects tenant configuration snapshots, evaluates them against a declarative check library (108 checks across 15 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
 
-**Build status:** Phase 5 delivery hardening present. 11 assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance. ThreatProtection and SecurityCompliance are built on the read-only Exchange Online / Security & Compliance (IPPS) connection surface; two more modules (Collaboration, DataProtection) use that same surface but their checks ship in follow-up phases. Remaining roadmap: those two modules' checks, the CloudAppSecurity module, and richer report packaging (PDF, Excel, dashboard outputs) if required.
+**Build status:** Phase 5 delivery hardening present. 12 assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection. ThreatProtection, SecurityCompliance, and DataProtection are built on the read-only Exchange Online / Security & Compliance (IPPS) connection surface; one more module (Collaboration) uses that same surface but its checks ship in a follow-up phase. Remaining roadmap: Collaboration's checks, the CloudAppSecurity module, and richer report packaging (PDF, Excel, dashboard outputs) if required.
 
 ---
 
@@ -57,7 +57,7 @@ Import-Module ./output/Get-EntraZTAssess/<version>/Get-EntraZTAssess.psd1
 
 Full setup, cross-platform certificate guidance, the read-only Application-permissions table, and CI/headless usage are documented in [`docs/Authentication.md`](docs/Authentication.md).
 
-Modules whose data does not exist in Microsoft Graph (`ThreatProtection`, `SecurityCompliance`, `Collaboration`, `DataProtection`) use a second, lazily-established, read-only Exchange Online / Security & Compliance (IPPS) connection alongside Graph, reusing the same certificate. It is app-only only and never fails the overall connection — see [Exchange Online / Security & Compliance Connection](docs/Authentication.md#exchange-online--security--compliance-connection). `ThreatProtection` and `SecurityCompliance` are implemented; checks for the remaining two modules ship in follow-up phases.
+Modules whose data does not exist in Microsoft Graph (`ThreatProtection`, `SecurityCompliance`, `DataProtection`, `Collaboration`) use a second, lazily-established, read-only Exchange Online / Security & Compliance (IPPS) connection alongside Graph, reusing the same certificate. It is app-only only and never fails the overall connection — see [Exchange Online / Security & Compliance Connection](docs/Authentication.md#exchange-online--security--compliance-connection). `ThreatProtection`, `SecurityCompliance`, and `DataProtection` are implemented; checks for `Collaboration` ship in a follow-up phase.
 
 ### Provisioning quickstart
 
@@ -274,7 +274,8 @@ The assessment library is data-driven. Each check is a declarative `.psd1` file 
 | Defender | Defender | 4 |
 | ThreatProtection | ThreatProtection | 4 |
 | SecurityCompliance | SecurityCompliance | 4 |
-| **Total** | | **104** |
+| DataProtection | DataProtection | 4 |
+| **Total** | | **108** |
 
 `source/Settings/settings.psd1` defines thresholds, scoring weights, retry behaviour, and remediation SLA days (Critical: 7, High: 30, Medium: 90, Low: 180).
 
