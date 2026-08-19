@@ -142,12 +142,12 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
     }
 
     Context 'When running every implemented module' {
-        It 'Should emit all 112 findings' {
-            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection, Collaboration
+        It 'Should emit all 115 findings' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection, Collaboration, CloudAppSecurity
 
             $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
-            @($findings).Count | Should -Be 112
-            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 16
+            @($findings).Count | Should -Be 115
+            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 17
         }
     }
 
@@ -254,6 +254,29 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
 
             $manifest = Get-Content (Join-Path $summary.RunPath 'manifest.json') -Raw | ConvertFrom-Json -Depth 20
             $manifest.Warnings | Should -Contain 'Exchange Online / IPPS connection unavailable; Collaboration checks will be reported as NotAssessed.'
+        }
+    }
+
+    Context 'When running the CloudAppSecurity module' {
+        It 'Should emit the 3 CloudAppSecurity findings and call the shared Defender collector' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules CloudAppSecurity
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 3
+            (@($findings).Domain | Sort-Object -Unique) | Should -Be 'CloudAppSecurity'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessDefenderCollection -Times 1 -Exactly
+        }
+
+        It 'Should not require the Exchange Online / IPPS connection' {
+            InModuleScope -ModuleName $script:dscModuleName {
+                $script:ZTAssessConnection.ExchangeOnlineConnected = $false
+            }
+
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules CloudAppSecurity
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 3
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessDefenderCollection -Times 1 -Exactly
         }
     }
 

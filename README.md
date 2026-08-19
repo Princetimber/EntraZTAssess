@@ -1,8 +1,8 @@
 # Get-EntraZTAssess
 
-**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph (and, for a subset of modules, a read-only Exchange Online / Security & Compliance connection), collects tenant configuration snapshots, evaluates them against a declarative check library (112 checks across 16 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
+**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph (and, for a subset of modules, a read-only Exchange Online / Security & Compliance connection), collects tenant configuration snapshots, evaluates them against a declarative check library (115 checks across 17 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
 
-**Build status:** Phase 5 delivery hardening present. All 13 assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection, Collaboration. ThreatProtection, SecurityCompliance, DataProtection, and Collaboration are built on the read-only Exchange Online / Security & Compliance (IPPS) connection surface. Remaining roadmap: the CloudAppSecurity module (Graph-only, best-effort secure-score proxy) and richer report packaging (PDF, Excel, dashboard outputs) if required.
+**Build status:** Phase 5 delivery hardening present. All 14 planned assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection, Collaboration, CloudAppSecurity. ThreatProtection, SecurityCompliance, DataProtection, and Collaboration are built on the read-only Exchange Online / Security & Compliance (IPPS) connection surface. CloudAppSecurity is Graph-only and is explicitly a best-effort Microsoft Secure Score proxy — Microsoft Graph exposes no Defender for Cloud Apps configuration API, so this domain does not assess MCAS policies, app risk scores, or OAuth app governance; a dedicated portal review is recommended alongside it. Remaining roadmap: richer report packaging (PDF, Excel, dashboard outputs) if required.
 
 ---
 
@@ -276,7 +276,8 @@ The assessment library is data-driven. Each check is a declarative `.psd1` file 
 | SecurityCompliance | SecurityCompliance | 4 |
 | DataProtection | DataProtection | 4 |
 | Collaboration | Collaboration | 4 |
-| **Total** | | **112** |
+| CloudAppSecurity | CloudAppSecurity | 3 |
+| **Total** | | **115** |
 
 `source/Settings/settings.psd1` defines thresholds, scoring weights, retry behaviour, and remediation SLA days (Critical: 7, High: 30, Medium: 90, Low: 180).
 

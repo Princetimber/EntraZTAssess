@@ -23,11 +23,14 @@ function Invoke-ZTAssessment {
     connection time. Supported: Identity, ConditionalAccess,
     PrivilegedAccess, Devices, IdentityGovernance, Applications,
     HybridIdentity, Monitoring, Defender, ThreatProtection,
-    SecurityCompliance, DataProtection, and Collaboration (the last four
-    require the Exchange Online / IPPS connection surface established by
+    SecurityCompliance, DataProtection, Collaboration, and
+    CloudAppSecurity (ThreatProtection through Collaboration require the
+    Exchange Online / IPPS connection surface established by
     Connect-ZTAssessment; their checks report NotAssessed if that
-    connection is unavailable). The optional Sentinel module, and the
-    CloudAppSecurity module catalogue entry, are not yet implemented.
+    connection is unavailable. CloudAppSecurity is a Graph-only,
+    best-effort Secure Score proxy - not a full Defender for Cloud Apps
+    assessment - and shares its collected data with Defender). The
+    optional Sentinel module is not yet implemented.
 
     .PARAMETER SignInLookbackDays
     The number of days of sign-in data to aggregate for legacy
@@ -87,7 +90,7 @@ function Invoke-ZTAssessment {
     # with a filtered (possibly empty) array.
     $selectedModules = if ($Modules) { @($Modules) } else { @($connection.Modules) }
 
-    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices', 'IdentityGovernance', 'Applications', 'HybridIdentity', 'Monitoring', 'Defender', 'ThreatProtection', 'SecurityCompliance', 'DataProtection', 'Collaboration')
+    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices', 'IdentityGovernance', 'Applications', 'HybridIdentity', 'Monitoring', 'Defender', 'ThreatProtection', 'SecurityCompliance', 'DataProtection', 'Collaboration', 'CloudAppSecurity')
     $unsupported = @($selectedModules | Where-Object { $_ -notin $supportedModules })
     if ($unsupported.Count -gt 0) {
         Write-Warning ('The following selected modules are not yet implemented and will be skipped: {0}.' -f ($unsupported -join ', '))
@@ -149,7 +152,9 @@ function Invoke-ZTAssessment {
     if ($selectedModules -contains 'Monitoring') {
         $collectionStatus += Invoke-ZTAssessMonitoringCollection -RunPath $runPath -Manifest $manifest
     }
-    if ($selectedModules -contains 'Defender') {
+    if ($selectedModules -contains 'Defender' -or $selectedModules -contains 'CloudAppSecurity') {
+        # Shared collector: CloudAppSecurity is a best-effort Secure Score
+        # proxy over the same snapshots Defender uses.
         $collectionStatus += Invoke-ZTAssessDefenderCollection -RunPath $runPath -Manifest $manifest
     }
     if ($selectedModules -contains 'ThreatProtection') {
@@ -221,6 +226,9 @@ function Invoke-ZTAssessment {
     }
     if ($selectedModules -contains 'Collaboration') {
         $findings.AddRange(@(Test-ZTAssessCollaboration -RunPath $runPath -Settings $settings))
+    }
+    if ($selectedModules -contains 'CloudAppSecurity') {
+        $findings.AddRange(@(Test-ZTAssessCloudAppSecurity -RunPath $runPath -Settings $settings))
     }
 
     $findingsFolder = Join-Path $runPath 'Findings'

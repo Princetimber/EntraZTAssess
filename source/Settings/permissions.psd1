@@ -120,6 +120,15 @@
             Optional       = $false
         }
 
+        CloudAppSecurity = @{
+            Description    = 'Best-effort Microsoft Secure Score proxy for Defender for Cloud Apps setup and control review (Graph exposes no MCAS configuration API). Shares its collected data with the Defender module.'
+            Scopes         = @(
+                'SecurityEvents.Read.All'
+            )
+            AlwaysIncluded = $false
+            Optional       = $false
+        }
+
         Sentinel = @{
             Description    = 'Microsoft Sentinel data connector assessment via Azure Resource Manager. Requires Az.Accounts and Azure Reader role; no Graph scopes.'
             Scopes         = @()

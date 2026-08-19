@@ -140,8 +140,9 @@ The CBA app registration holds only the read-only permissions below. They use th
 | Devices | `DeviceManagementConfiguration.Read.All`, `DeviceManagementManagedDevices.Read.All`, `DeviceManagementServiceConfig.Read.All`, `DeviceManagementApps.Read.All` |
 | Monitoring | `IdentityRiskEvent.Read.All`, `IdentityRiskyUser.Read.All`, `AuditLog.Read.All`, `SecurityIdentitiesSensors.Read.All` |
 | Defender | `SecurityEvents.Read.All`, `SecurityAlert.Read.All` |
+| CloudAppSecurity | `SecurityEvents.Read.All` |
 
-The Sentinel module uses Azure Reader via ARM and requires no Graph permissions.
+CloudAppSecurity shares its collected data with Defender (no separate collector) and is a Graph-only, best-effort Secure Score proxy — see the note under [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection) for why Microsoft Graph cannot provide a genuine Defender for Cloud Apps assessment. The Sentinel module uses Azure Reader via ARM and requires no Graph permissions.
 
 ### Exchange Online / Security & Compliance Role Groups
 

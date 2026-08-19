@@ -338,12 +338,14 @@ function New-ZTAssessTestRun {
             createdDateTime = [datetime]::UtcNow.AddDays(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
             controlScores  = @(
                 @{ controlName = 'OnboardMachinesToMDATP'; score = 10; description = 'Onboard machines to Microsoft Defender for Endpoint' }
+                @{ controlName = 'MCASSetup'; score = 5; description = 'Set up Microsoft Defender for Cloud Apps' }
             )
         }
 
         secureScoreControlProfiles = @(
             @{ id = 'ctrl-1'; controlName = 'OnboardMachinesToMDATP'; title = 'Onboard machines to Microsoft Defender for Endpoint'; category = 'Device'; service = 'Microsoft Defender for Endpoint'; rank = 1; tier = 'Core'; maxScore = 10 }
             @{ id = 'ctrl-2'; controlName = 'EnableMFA'; title = 'Enable multifactor authentication'; category = 'Identity'; service = 'Microsoft Entra ID'; rank = 2; tier = 'Core'; maxScore = 10 }
+            @{ id = 'ctrl-3'; controlName = 'MCASSetup'; title = 'Set up Microsoft Defender for Cloud Apps'; category = 'Apps'; service = 'Microsoft Defender for Cloud Apps'; rank = 3; tier = 'Core'; maxScore = 5; controlStateUpdates = @() }
         )
 
         unifiedAlerts = @(
