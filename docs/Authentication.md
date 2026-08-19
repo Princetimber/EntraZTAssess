@@ -48,7 +48,7 @@ The existing `-ClientId` / `-CertificateThumbprint` combination continues to wor
 
 ## Exchange Online / Security & Compliance Connection
 
-Some modules (`ThreatProtection`, `SecurityCompliance`, `Collaboration`, `DataProtection`) read data that does not exist in Microsoft Graph — Purview DLP/retention/label policies, Exchange sharing and transport rules, and Defender for Office 365 policies (Safe Links, Safe Attachments, anti-phishing) are only available through Exchange Online / Security & Compliance (IPPS) PowerShell cmdlets. `Connect-ZTAssessment` establishes this as a **second, independent, read-only connection**, alongside Microsoft Graph, only when a selected module requires it. `ThreatProtection` is fully implemented (4 checks); the other three modules currently only exercise this connection surface, with checks shipping in follow-up phases.
+Some modules (`ThreatProtection`, `SecurityCompliance`, `Collaboration`, `DataProtection`) read data that does not exist in Microsoft Graph — Purview DLP/retention/label policies, Exchange sharing and transport rules, and Defender for Office 365 policies (Safe Links, Safe Attachments, anti-phishing) are only available through Exchange Online / Security & Compliance (IPPS) PowerShell cmdlets. `Connect-ZTAssessment` establishes this as a **second, independent, read-only connection**, alongside Microsoft Graph, only when a selected module requires it. `ThreatProtection` and `SecurityCompliance` are fully implemented (4 checks each); the other two modules currently only exercise this connection surface, with checks shipping in follow-up phases.
 
 Key behaviours:
 

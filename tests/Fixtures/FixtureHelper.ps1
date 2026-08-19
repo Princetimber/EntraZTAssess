@@ -367,6 +367,20 @@ function New-ZTAssessTestRun {
         malwareFilterPolicies = @(
             @{ Name = 'Default'; EnableFileFilter = $true; Action = 'DeleteMessage' }
         )
+
+        # ----- SecurityCompliance snapshots (well-configured estate) -----
+
+        retentionCompliancePolicies = @(
+            @{ Name = 'Contoso-7Year'; Enabled = $true; ExchangeLocation = @('All'); SharePointLocation = @('All'); OneDriveLocation = @(); TeamsChannelLocation = @() }
+        )
+
+        retentionComplianceRules = @(
+            @{ Name = 'Contoso-7Year-Rule'; Policy = 'Contoso-7Year'; RetentionDuration = 2555; RetentionComplianceAction = 'Keep' }
+        )
+
+        complianceTags = @(
+            @{ Name = 'Contract-Record'; RetentionAction = 'Keep'; RetentionDuration = 2555; IsRecordLabel = $true; Regulatory = $false }
+        )
     }
 
     foreach ($key in $Overrides.Keys) {

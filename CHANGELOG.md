@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the **SecurityCompliance** assessment module/domain (4 checks,
+  SC-001 to SC-004), the second domain built on the read-only Exchange
+  Online / Security & Compliance (IPPS) connection surface, alongside
+  ThreatProtection:
+  - `Invoke-ZTAssessSecurityComplianceCollection` collects Microsoft
+    Purview retention and records-management configuration
+    (`Get-RetentionCompliancePolicy`, `Get-RetentionComplianceRule`,
+    `Get-ComplianceTag`) via `Invoke-ZTAssessExoRequestWrapper`. Only
+    invoked when `$connection.ExchangeOnlineConnected` is true; otherwise
+    a manifest warning is recorded and the module's checks degrade to
+    `NotAssessed`.
+  - `Test-ZTAssessSecurityCompliance` implements: SC-001 (retention
+    policies cover Exchange together with SharePoint or OneDrive),
+    SC-002 (retention rules retain content for at least a configurable
+    minimum duration or indefinitely), SC-003 (at least one compliance
+    tag is configured as a record label), and SC-004 (informational
+    retention/records inventory summary).
+  - New `Settings.Thresholds.RetentionRuleMinimumDurationDays` and
+    `DomainWeights.SecurityCompliance`.
+  - Wired into `Invoke-ZTAssessment`'s collection (gated on
+    `$connection.ExchangeOnlineConnected`) and assessment phases.
+
 - Added the **ThreatProtection** assessment module/domain (4 checks, TP-001
   to TP-004), the first domain to use the read-only Exchange Online /
   Security & Compliance (IPPS) connection surface added previously:
