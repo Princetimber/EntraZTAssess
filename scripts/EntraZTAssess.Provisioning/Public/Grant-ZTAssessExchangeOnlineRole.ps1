@@ -207,7 +207,7 @@ function Grant-ZTAssessExchangeOnlineRole {
     )
     $missingPreConnectCommands = @($requiredPreConnectCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
     if ($missingPreConnectCommands.Count -gt 0) {
-        throw ("The ExchangeOnlineManagement module is required but these commands were not found: {0}. Install it with: Install-Module ExchangeOnlineManagement -Scope CurrentUser" -f ($missingPreConnectCommands -join ', '))
+        throw ('The ExchangeOnlineManagement module is required but these commands were not found: {0}. Install it with: Install-Module ExchangeOnlineManagement -Scope CurrentUser' -f ($missingPreConnectCommands -join ', '))
     }
 
     # --- Resolve required entries from the same catalogue used by ----------
@@ -220,8 +220,8 @@ function Grant-ZTAssessExchangeOnlineRole {
 
     $requiredEntries = @($guidance.ExchangeOnlineRoles | Sort-Object -Unique)
 
-    Write-Host ("Required Exchange Online / Security & Compliance entries ({0}):" -f $requiredEntries.Count) -ForegroundColor Cyan
-    $requiredEntries | ForEach-Object { Write-Host ("  {0}" -f $_) }
+    Write-Host ('Required Exchange Online / Security & Compliance entries ({0}):' -f $requiredEntries.Count) -ForegroundColor Cyan
+    $requiredEntries | ForEach-Object { Write-Host ('  {0}' -f $_) }
     Write-Host ''
 
     # --- Connect to Exchange Online as the calling administrator -----------
@@ -246,9 +246,8 @@ function Grant-ZTAssessExchangeOnlineRole {
 
     try {
         Connect-ExchangeOnline @connectParams
-    }
-    catch {
-        throw ("Failed to connect to Exchange Online: {0}" -f $_.Exception.Message)
+    } catch {
+        throw ('Failed to connect to Exchange Online: {0}' -f $_.Exception.Message)
     }
 
     # Lazily established only if an entry cannot be resolved against the
@@ -270,7 +269,7 @@ function Grant-ZTAssessExchangeOnlineRole {
         )
         $missingPostConnectCommands = @($requiredPostConnectCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
         if ($missingPostConnectCommands.Count -gt 0) {
-            throw ("Connected to Exchange Online, but these commands were not available in the session: {0}. This usually means the signed-in account lacks sufficient Exchange Online / Security & Compliance administrative rights, or the ExchangeOnlineManagement module version is outdated." -f ($missingPostConnectCommands -join ', '))
+            throw ('Connected to Exchange Online, but these commands were not available in the session: {0}. This usually means the signed-in account lacks sufficient Exchange Online / Security & Compliance administrative rights, or the ExchangeOnlineManagement module version is outdated.' -f ($missingPostConnectCommands -join ', '))
         }
 
         # --- Ensure an Exchange Online service principal exists for AppId ---
@@ -288,9 +287,8 @@ function Grant-ZTAssessExchangeOnlineRole {
                     $servicePrincipal = New-ServicePrincipal -AppId $AppId -ObjectId $ServicePrincipalObjectId -DisplayName $DisplayName -ErrorAction Stop
                     $servicePrincipalCreated = $true
                     Write-Host ("Created Exchange Online service principal for AppId '{0}'." -f $AppId) -ForegroundColor Green
-                }
-                catch {
-                    throw ("Failed to create the Exchange Online service principal: {0}" -f $_.Exception.Message)
+                } catch {
+                    throw ('Failed to create the Exchange Online service principal: {0}' -f $_.Exception.Message)
                 }
             }
         }
@@ -324,16 +322,13 @@ function Grant-ZTAssessExchangeOnlineRole {
 
                 if ($isAlreadyMember) {
                     $outcome = 'AlreadyGranted'
-                }
-                elseif ($PSCmdlet.ShouldProcess($entryName, ('Add {0} as a role group member' -f $DisplayName))) {
+                } elseif ($PSCmdlet.ShouldProcess($entryName, ('Add {0} as a role group member' -f $DisplayName))) {
                     Add-RoleGroupMember -Identity $entryName -Member $spIdentity -Confirm:$false -ErrorAction Stop
                     $outcome = 'Granted'
-                }
-                else {
+                } else {
                     $outcome = 'SkippedWhatIf'
                 }
-            }
-            catch {
+            } catch {
                 # Not resolvable as a role group in this connection; fall
                 # through and try the management-role mechanism instead.
                 $lastError = $_.Exception.Message
@@ -345,16 +340,13 @@ function Grant-ZTAssessExchangeOnlineRole {
                     if ($PSCmdlet.ShouldProcess($entryName, ('Assign management role to AppId {0}' -f $AppId))) {
                         New-ManagementRoleAssignment -Role $entryName -App $AppId -ErrorAction Stop
                         $outcome = 'Granted'
-                    }
-                    else {
+                    } else {
                         $outcome = 'SkippedWhatIf'
                     }
-                }
-                catch {
+                } catch {
                     if ($_.Exception.Message -match 'already') {
                         $outcome = 'AlreadyGranted'
-                    }
-                    else {
+                    } else {
                         $lastError = $_.Exception.Message
                     }
                 }
@@ -368,9 +360,8 @@ function Grant-ZTAssessExchangeOnlineRole {
                         try {
                             Connect-IPPSSession @connectParams
                             $ippsConnected = $true
-                        }
-                        catch {
-                            $lastError = ("{0} (also failed to connect to IPPS: {1})" -f $lastError, $_.Exception.Message)
+                        } catch {
+                            $lastError = ('{0} (also failed to connect to IPPS: {1})' -f $lastError, $_.Exception.Message)
                         }
                     }
                 }
@@ -379,12 +370,10 @@ function Grant-ZTAssessExchangeOnlineRole {
                     try {
                         New-ManagementRoleAssignment -Role $entryName -App $AppId -ErrorAction Stop
                         $outcome = 'Granted'
-                    }
-                    catch {
+                    } catch {
                         if ($_.Exception.Message -match 'already') {
                             $outcome = 'AlreadyGranted'
-                        }
-                        else {
+                        } else {
                             $lastError = $_.Exception.Message
                         }
                     }
@@ -412,16 +401,13 @@ function Grant-ZTAssessExchangeOnlineRole {
 
                         if ($isAlreadyCustomMember) {
                             $outcome = 'AlreadyGranted'
-                        }
-                        elseif ($PSCmdlet.ShouldProcess($customRoleGroupName, ('Add {0} as a member' -f $DisplayName))) {
+                        } elseif ($PSCmdlet.ShouldProcess($customRoleGroupName, ('Add {0} as a member' -f $DisplayName))) {
                             Add-RoleGroupMember -Identity $customRoleGroupName -Member $spIdentity -Confirm:$false -ErrorAction Stop
                             $outcome = 'Granted'
-                        }
-                        else {
+                        } else {
                             $outcome = 'SkippedWhatIf'
                         }
-                    }
-                    elseif ($PSCmdlet.ShouldProcess($customRoleGroupName, ('Create a role group scoped to {0}' -f $entryName))) {
+                    } elseif ($PSCmdlet.ShouldProcess($customRoleGroupName, ('Create a role group scoped to {0}' -f $entryName))) {
                         # New-RoleGroup's own -Members parameter has been
                         # observed on a live tenant to reject a service
                         # principal identity with "Couldn't find object"
@@ -439,12 +425,10 @@ function Grant-ZTAssessExchangeOnlineRole {
                         New-RoleGroup -Name $customRoleGroupName -DisplayName $customRoleGroupName -Roles $entryName -ErrorAction Stop
                         Add-RoleGroupMember -Identity $customRoleGroupName -Member $spIdentity -Confirm:$false -ErrorAction Stop
                         $outcome = 'Granted'
-                    }
-                    else {
+                    } else {
                         $outcome = 'SkippedWhatIf'
                     }
-                }
-                catch {
+                } catch {
                     $lastError = $_.Exception.Message
                 }
             }
@@ -453,7 +437,7 @@ function Grant-ZTAssessExchangeOnlineRole {
                 'AlreadyGranted' { $alreadyMember.Add($entryName) }
                 'Granted' {
                     $granted.Add($entryName)
-                    Write-Host ("  Granted: {0}" -f $entryName) -ForegroundColor Green
+                    Write-Host ('  Granted: {0}' -f $entryName) -ForegroundColor Green
                 }
                 'SkippedWhatIf' { }
                 default {
@@ -475,19 +459,18 @@ function Grant-ZTAssessExchangeOnlineRole {
 
         Write-Host ''
         Write-Host 'Role grant summary:' -ForegroundColor Cyan
-        Write-Host ("  AppId               : {0}" -f $summary.AppId)
-        Write-Host ("  Organization        : {0}" -f $summary.Organization)
-        Write-Host ("  SP created          : {0}" -f $summary.ServicePrincipalCreated)
-        Write-Host ("  Granted             : {0}" -f (($summary.RoleGroupsGranted) -join ', '))
-        Write-Host ("  Already member of   : {0}" -f (($summary.RoleGroupsAlreadyMember) -join ', '))
+        Write-Host ('  AppId               : {0}' -f $summary.AppId)
+        Write-Host ('  Organization        : {0}' -f $summary.Organization)
+        Write-Host ('  SP created          : {0}' -f $summary.ServicePrincipalCreated)
+        Write-Host ('  Granted             : {0}' -f (($summary.RoleGroupsGranted) -join ', '))
+        Write-Host ('  Already member of   : {0}' -f (($summary.RoleGroupsAlreadyMember) -join ', '))
         if ($summary.FailedGrants.Count -gt 0) {
-            Write-Host ("  Failed              : {0}" -f (($summary.FailedGrants | ForEach-Object { $_.RoleGroup }) -join ', ')) -ForegroundColor Yellow
+            Write-Host ('  Failed              : {0}' -f (($summary.FailedGrants | ForEach-Object { $_.RoleGroup }) -join ', ')) -ForegroundColor Yellow
         }
         Write-Host ''
 
         return $summary
-    }
-    finally {
+    } finally {
         Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
     }
 }
