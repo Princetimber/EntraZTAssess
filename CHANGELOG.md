@@ -15,14 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `InstallToWindowsStore` warning branches are now verified on all
   platforms via module-scoped mocks.
 
-- Switched dependency resolution from ModuleFast to PSResourceGet in
-  `Resolve-Dependency.psd1` (`UseModuleFast = $false`,
-  `UsePSResourceGet = $true`) to fix `./build.ps1 -ResolveDependency`
-  failing on Windows with a TLS handshake timeout against
-  `pwsh.gallery:443`. PSResourceGet 1.2.0 (already pinned via
-  `PSResourceGetVersion`) supports the NuGet version-range syntax used in
-  `RequiredModules.psd1` and resolves directly against PSGallery without
-  the ModuleFast proxy.
+- Fixed `./build.ps1 -ResolveDependency` failing on Windows networks where
+  `pwsh.gallery:443` is blocked — `Resolve-Dependency.ps1` now catches the
+  `Install-ModuleFast -Plan` network failure and falls back to PSResourceGet
+  instead of rethrowing, so the dependency resolution succeeds on those
+  machines. ModuleFast remains the primary resolver on CI and macOS/Linux
+  where pwsh.gallery is reachable.
 
 - Fixed `Grant-ZTAssessExchangeOnlineRole`'s dedicated-role-group fallback
   failing at the `Add-RoleGroupMember` step with `DisplayName: The

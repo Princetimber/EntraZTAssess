@@ -63,7 +63,7 @@
         (it fails with 'Cannot convert value [3.0,4.0) to type System.Version').
         ModuleFast supports version ranges natively and requires PS 7.2+.
     #>
-    UseModuleFast                              = $false # Disabled: pwsh.gallery:443 times out on Windows networks
+    UseModuleFast                              = $true
     #ModuleFastVersion = '0.1.2'
     #ModuleFastBleedingEdge = $true
 
@@ -72,7 +72,7 @@
         UsePSResourceGet to the value $true. If UsePSResourceGet is not configured or
         set to $false then PowerShellGet will be used to resolve dependencies.
     #>
-    UsePSResourceGet                           = $true # PSResourceGet 1.2.0+ resolves NuGet ranges and is cross-platform
+    UsePSResourceGet                           = $false # Disabled to avoid Save-PSResource issues
     # Must be >= 1.2.0 so the PSResourceGet fallback can resolve PSGallery V2 metadata.
     # Resolve-Dependency.ps1 enforces the same minimum after bootstrap.
     PSResourceGetVersion                       = '1.2.0'
