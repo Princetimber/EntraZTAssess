@@ -35,6 +35,7 @@
         SecureScoreMinimumPercent           = 60    # DF-001 Secure Score maturity floor
         OpenHighSeverityAlertMaxAgeDays     = 7     # DF-003 high-severity alert triage SLA
         PhishThresholdMinimumLevel          = 2     # TP-003 anti-phishing threshold floor (1-4)
+        RetentionRuleMinimumDurationDays    = 365   # SC-002 minimum retention duration floor
     }
 
     # Candidate Microsoft Secure Score control names for the Defender for
@@ -135,6 +136,7 @@
         MonitoringDetection       = 1.0
         Defender                  = 1.0
         ThreatProtection          = 1.0
+        SecurityCompliance        = 1.0
         ApplicationSecurity       = 1.0
         ByodGovernance            = 0.75
         CorporateDeviceGovernance = 0.75
