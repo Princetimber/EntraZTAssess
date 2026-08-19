@@ -5,6 +5,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed a flaky `tests/QA/module.tests.ps1` failure where
+  `Invoke-ScriptAnalyzer` intermittently threw a `NullReferenceException`
+  from within its own rule engine on `ubuntu-latest` CI runners — observed
+  against a different, otherwise lint-clean source file each time
+  (confirmed pre-existing on `main`, unrelated to any particular file's
+  content), so it is an environment/tool flake rather than a real lint
+  violation. The `'Should pass Script Analyzer for <Name>'` test now
+  retries the `Invoke-ScriptAnalyzer` call up to 3 times before treating it
+  as a hard failure; a genuine lint violation is still returned as a
+  diagnostic record rather than an exception, so retrying can never mask a
+  real finding.
+
 ### Added
 
 - Added `Grant-ZTAssessExchangeOnlineRole` to the repo-local
