@@ -69,7 +69,7 @@ PowerShellVersion = '7.0'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('New-ZTAssessAppRegistration', 'New-ZTAssessCertificate', 'Get-ZTAssessExchangeOnlineRoleGuidance')
+FunctionsToExport = @('New-ZTAssessAppRegistration', 'New-ZTAssessCertificate', 'Get-ZTAssessExchangeOnlineRoleGuidance', 'Grant-ZTAssessExchangeOnlineRole')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
@@ -116,10 +116,11 @@ PrivateData = @{
         # RequireLicenseAcceptance = $false
 
         # External dependent modules of this module. Declared here (not in the
-        # module-level RequiredModules) so the Microsoft.Graph SDK is required
-        # only when New-ZTAssessAppRegistration actually runs - Import-Module,
-        # Get-Help discovery, and the unit tests work without the SDK installed.
-        ExternalModuleDependencies = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.Applications')
+        # module-level RequiredModules) so the Microsoft.Graph SDK and
+        # ExchangeOnlineManagement are required only when the functions that
+        # actually use them run - Import-Module, Get-Help discovery, and the
+        # unit tests work without either SDK installed.
+        ExternalModuleDependencies = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.Applications', 'ExchangeOnlineManagement')
 
     } # End of PSData hashtable
 

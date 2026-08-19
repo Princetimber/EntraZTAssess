@@ -14,11 +14,13 @@ function Get-ZTAssessExchangeOnlineRoleGuidance {
     DataProtection, ThreatProtection).
 
     This function performs no network calls and makes no writes: it only
-    reads the local permission catalogue and prints guidance for the
-    tenant's own Exchange administrator to action manually (for example via
-    the Microsoft 365 admin center, or by running New-RoleGroup /
-    Add-RoleGroupMember themselves). EntraZTAssess never grants Exchange
-    Online role groups itself.
+    reads the local permission catalogue and prints guidance. Granting the
+    listed role groups can be done either manually by the tenant's own
+    Exchange administrator (for example via the Microsoft 365 admin center,
+    or by running Add-RoleGroupMember themselves), or with
+    Grant-ZTAssessExchangeOnlineRole in this module, which automates the
+    same Exchange Online RBAC write. This function itself remains read-only
+    either way.
 
     .PARAMETER Modules
     Assessment modules to scope the guidance to. Use Get-ZTAssessModuleCatalog

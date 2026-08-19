@@ -184,8 +184,39 @@ Describe 'Quality for module' -Tags 'TestQuality' {
 
     It 'Should pass Script Analyzer for <Name>' -ForEach $testCases -Skip:(-not $script:scriptAnalyzerRules) {
         $functionFile = Get-ChildItem -Path $script:sourcePath -Recurse -Include "$Name.ps1"
+        $pssaSettingsPath = Join-Path -Path $PSScriptRoot -ChildPath '../../PSScriptAnalyzerSettings.psd1'
 
-        $pssaResult = (Invoke-ScriptAnalyzer -Path $functionFile.FullName -Settings (Join-Path -Path $PSScriptRoot -ChildPath '../../PSScriptAnalyzerSettings.psd1'))
+        <#
+            Invoke-ScriptAnalyzer has been observed to intermittently throw a
+            NullReferenceException from within its own rule engine on
+            ubuntu-latest CI runners -- against a different, otherwise
+            lint-clean source file each time, so it is an environment/tool
+            flake rather than a real lint failure. Retry a few times before
+            treating it as a hard failure; a genuine lint violation is
+            returned as a diagnostic record, not an exception, so retrying
+            never masks a real finding.
+        #>
+        $pssaResult = $null
+        $pssaError = $null
+        for ($attempt = 1; $attempt -le 3; $attempt++)
+        {
+            try
+            {
+                $pssaResult = Invoke-ScriptAnalyzer -Path $functionFile.FullName -Settings $pssaSettingsPath -ErrorAction Stop
+                $pssaError = $null
+                break
+            }
+            catch
+            {
+                $pssaError = $_
+            }
+        }
+
+        if ($pssaError)
+        {
+            throw $pssaError
+        }
+
         $report = $pssaResult | Format-Table -AutoSize | Out-String -Width 110
         $pssaResult | Should -BeNullOrEmpty -Because `
             "some rule triggered.`r`n`r`n $report"

@@ -79,6 +79,8 @@ Connect-ZTAssessment -Modules Identity, ConditionalAccess, PrivilegedAccess, Dev
     IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender
 ```
 
+For `ThreatProtection`, `SecurityCompliance`, `DataProtection`, or `Collaboration`, the app's service principal also needs Exchange Online / Security & Compliance role groups. `Get-ZTAssessExchangeOnlineRoleGuidance` lists them; `Grant-ZTAssessExchangeOnlineRole` can grant them (run by an account with sufficient Exchange Online rights) as an alternative to the tenant's own Exchange administrator granting them manually — see [step 3a](docs/Authentication.md#3a-grant-exchange-online--purview-role-groups-only-for-securitycompliance-collaboration-dataprotection-threatprotection).
+
 New `Connect-ZTAssessment` parameters: `-CertificatePath` (cross-platform PFX), `-CertificatePassword` (`SecureString`, never persisted), and `-NoInteractiveFallback` (force a hard failure for headless/CI when no config is found). The existing `-ClientId` / `-CertificateThumbprint` combination continues to work for the Windows certificate store.
 
 ### Read-only Application permissions
@@ -430,8 +432,10 @@ Get-EntraZTAssess/
 │       ├── EntraZTAssess.Provisioning.psd1
 │       ├── EntraZTAssess.Provisioning.psm1
 │       └── Public/
-│           ├── New-ZTAssessCertificate.ps1     # Platform-agnostic self-signed cert (EntraZTAssess.cer + .pfx)
-│           └── New-ZTAssessAppRegistration.ps1 # Read-only assessment app + admin-consent URL + ~/.ztassess/auth.json
+│           ├── New-ZTAssessCertificate.ps1           # Platform-agnostic self-signed cert (EntraZTAssess.cer + .pfx)
+│           ├── New-ZTAssessAppRegistration.ps1       # Read-only assessment app + admin-consent URL + ~/.ztassess/auth.json
+│           ├── Get-ZTAssessExchangeOnlineRoleGuidance.ps1 # Read-only: lists required EXO/IPPS role groups per module
+│           └── Grant-ZTAssessExchangeOnlineRole.ps1  # Optional: grants those EXO/IPPS role groups (Exchange Online write)
 │
 ├── .github/
 │   └── workflows/
