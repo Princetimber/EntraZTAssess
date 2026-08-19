@@ -5,6 +5,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated `CLAUDE.md` to document: the ModuleFast → PSResourceGet automatic
+  fallback in `./build.ps1 -ResolveDependency`; the `Private/` folder and
+  platform-helper pattern in `EntraZTAssess.Provisioning`; and the rule that
+  platform-conditional tests must mock private helpers with `-ModuleName`
+  rather than guarding with `-Skip:$IsWindows`.
+
 ### Fixed
 
 - Reformatted `scripts/EntraZTAssess.Provisioning`'s `Public/` and `Private/`
