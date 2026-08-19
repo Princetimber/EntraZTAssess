@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `Grant-ZTAssessExchangeOnlineRole`'s dedicated-role-group fallback
+  failing with `Couldn't find object "<servicePrincipalGuid>". Please
+  make sure that it was spelled correctly or specify a different
+  object.` even though the identical service principal identity was
+  accepted moments earlier by `Add-RoleGroupMember` for a different role
+  group — confirmed live that `New-RoleGroup`'s own `-Members` parameter
+  does not reliably accept a service principal identity. `New-RoleGroup`
+  is now called without `-Members` to create the role group, and the
+  service principal is added to it as a separate `Add-RoleGroupMember`
+  call, using the mechanism already proven to work for role groups.
+
 - Fixed `Grant-ZTAssessExchangeOnlineRole` failing to grant `View-Only
   Retention Management` and `View-Only DLP Compliance Management` with
   `The "<role>" management role can't be found. Check the role entry

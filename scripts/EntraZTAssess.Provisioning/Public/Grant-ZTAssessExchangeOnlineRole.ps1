@@ -49,9 +49,15 @@ function Grant-ZTAssessExchangeOnlineRole {
       with "management role can't be found" against both the Exchange
       Online and the IPPS connection) is instead granted through a
       dedicated role group scoped to exactly that one role, created with
-      New-RoleGroup -Roles <role> -Members <servicePrincipal> — the
-      Microsoft-documented workaround for a management role that direct
-      -App assignment does not support. The role group is named
+      New-RoleGroup -Roles <role> and then populated with
+      Add-RoleGroupMember — the Microsoft-documented workaround for a
+      management role that direct -App assignment does not support.
+      New-RoleGroup's own -Members parameter is deliberately not used:
+      confirmed live to reject a service principal identity with
+      "Couldn't find object" even though the identical identity is
+      accepted moments later by Add-RoleGroupMember for a different role
+      group, so membership is always added as a separate step using the
+      mechanism already proven to work. The role group is named
       'EntraZTAssess - <role name>' and is reused, not recreated, on
       later runs.
 
@@ -416,7 +422,16 @@ function Grant-ZTAssessExchangeOnlineRole {
                         }
                     }
                     elseif ($PSCmdlet.ShouldProcess($customRoleGroupName, ('Create a role group scoped to {0}' -f $entryName))) {
-                        New-RoleGroup -Name $customRoleGroupName -Roles $entryName -Members $spIdentity -ErrorAction Stop
+                        # New-RoleGroup's own -Members parameter has been
+                        # observed on a live tenant to reject a service
+                        # principal identity with "Couldn't find object"
+                        # even though the identical identity is accepted by
+                        # Add-RoleGroupMember moments later for a different
+                        # role group -- so the group is created without
+                        # -Members and the member is added as a separate
+                        # step using the mechanism already proven to work.
+                        New-RoleGroup -Name $customRoleGroupName -Roles $entryName -ErrorAction Stop
+                        Add-RoleGroupMember -Identity $customRoleGroupName -Member $spIdentity -Confirm:$false -ErrorAction Stop
                         $outcome = 'Granted'
                     }
                     else {
