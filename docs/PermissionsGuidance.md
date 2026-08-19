@@ -7,7 +7,7 @@
 Use the public permission command rather than copying scopes from source files:
 
 ```powershell
-Get-ZTAssessRequiredPermission -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection
+Get-ZTAssessRequiredPermission -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection, Collaboration
 ```
 
 Run a narrower query when the customer approves only selected modules:

@@ -64,6 +64,7 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessThreatProtectionCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessSecurityComplianceCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessDataProtectionCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessCollaborationCollection -MockWith { @{} }
 
         # Engagement scaffold.
         $script:engagementPath = Join-Path $TestDrive "engagement-$([guid]::NewGuid().ToString('n').Substring(0,8))"
@@ -141,12 +142,12 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
     }
 
     Context 'When running every implemented module' {
-        It 'Should emit all 108 findings' {
-            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection
+        It 'Should emit all 112 findings' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection, SecurityCompliance, DataProtection, Collaboration
 
             $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
-            @($findings).Count | Should -Be 108
-            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 15
+            @($findings).Count | Should -Be 112
+            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 16
         }
     }
 
@@ -229,6 +230,30 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
 
             $manifest = Get-Content (Join-Path $summary.RunPath 'manifest.json') -Raw | ConvertFrom-Json -Depth 20
             $manifest.Warnings | Should -Contain 'Exchange Online / IPPS connection unavailable; DataProtection checks will be reported as NotAssessed.'
+        }
+    }
+
+    Context 'When running the Collaboration module' {
+        It 'Should emit the 4 Collaboration findings and call the collector when Exchange Online is connected' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Collaboration
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 4
+            (@($findings).Domain | Sort-Object -Unique) | Should -Be 'Collaboration'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessCollaborationCollection -Times 1 -Exactly
+        }
+
+        It 'Should skip the collector and warn on the manifest when Exchange Online is not connected' {
+            InModuleScope -ModuleName $script:dscModuleName {
+                $script:ZTAssessConnection.ExchangeOnlineConnected = $false
+            }
+
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Collaboration
+
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessCollaborationCollection -Times 0 -Exactly
+
+            $manifest = Get-Content (Join-Path $summary.RunPath 'manifest.json') -Raw | ConvertFrom-Json -Depth 20
+            $manifest.Warnings | Should -Contain 'Exchange Online / IPPS connection unavailable; Collaboration checks will be reported as NotAssessed.'
         }
     }
 

@@ -138,6 +138,7 @@
         ThreatProtection          = 1.0
         SecurityCompliance        = 1.0
         DataProtection            = 1.0
+        Collaboration             = 1.0
         ApplicationSecurity       = 1.0
         ByodGovernance            = 0.75
         CorporateDeviceGovernance = 0.75
