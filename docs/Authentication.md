@@ -57,7 +57,7 @@ Key behaviours:
 - **Never fails the overall connection.** If Exchange Online / IPPS fails to connect (or was skipped because no `-Organization` could be resolved), `Connect-ZTAssessment` still succeeds for Graph-only modules. `ExchangeOnlineConnected` and `ExchangeOnlineWarning` on the returned connection summary report the outcome.
 - **Read-only, allow-listed.** All Exchange Online / IPPS calls flow through `Invoke-ZTAssessExoRequestWrapper`, which only permits the `Get-*` cmdlets returned by `Get-ZTAssessExoAllowedCmdletName`. The session itself is also scoped to that allow-list via `-CommandName`, so write cmdlets are never imported into the session. `tests/QA/ReadOnly.tests.ps1` statically enforces both.
 - **`-Organization` resolution order**: explicit `-Organization` parameter → `ZTASSESS_ORGANIZATION` environment variable → `Organization` in `~/.ztassess/auth.json` → a domain-looking `-TenantId` used as-is → derived from the connected Graph tenant's initial verified domain. This last fallback means Graph must connect successfully before Exchange Online / IPPS is attempted, which is always the case since Graph connects first.
-- **Provisioning is guidance only.** This toolkit cannot and does not grant Exchange Online / Security & Compliance role groups — that remains a manual, one-time step for the tenant's own Exchange administrator. `Get-ZTAssessExchangeOnlineRoleGuidance` (in the `EntraZTAssess.Provisioning` module) lists the role groups each module needs.
+- **Granting the role groups is a separate, optional provisioning step.** The assessment module itself (`source/`) never grants Exchange Online / Security & Compliance role groups — it only ever calls the read-only, allow-listed `Get-*` cmdlet surface described above. `Get-ZTAssessExchangeOnlineRoleGuidance` (in the `EntraZTAssess.Provisioning` module) lists the role groups each module needs; `Grant-ZTAssessExchangeOnlineRole` (also in `EntraZTAssess.Provisioning`) can optionally grant them, but only when explicitly run by an administrator with sufficient Exchange Online / Security & Compliance rights — see [step 3a](#3a-grant-exchange-online--purview-role-groups-only-for-securitycompliance-collaboration-dataprotection-threatprotection).
 
 ```powershell
 Connect-ZTAssessment -Modules ThreatProtection -Organization 'contoso.onmicrosoft.com'
@@ -99,13 +99,30 @@ All Application permissions used by the assessment are on Microsoft Graph, so ad
 
 ### 3a. Grant Exchange Online / Purview role groups (only for SecurityCompliance, Collaboration, DataProtection, ThreatProtection)
 
-If the engagement scope includes any of these four modules, ask the tenant's own Exchange administrator to grant the role groups listed by:
+If the engagement scope includes any of these four modules, the app's service principal needs the Exchange Online / Security & Compliance role groups listed by:
 
 ```powershell
 Get-ZTAssessExchangeOnlineRoleGuidance -Modules ThreatProtection
 ```
 
-This toolkit only reads Exchange Online / Purview configuration through a read-only, allow-listed cmdlet surface (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)) — it never grants these roles itself.
+The assessment module itself only reads Exchange Online / Purview configuration through a read-only, allow-listed cmdlet surface (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)) — it never grants these roles itself. Granting the roles is a separate, one-time administrative action that can be done either:
+
+- **Manually**, by the tenant's own Exchange administrator, via the Microsoft Purview / Exchange admin center or `Add-RoleGroupMember`; or
+- **With `Grant-ZTAssessExchangeOnlineRole`**, run by an account that holds sufficient Exchange Online / Security & Compliance administrative rights (for example Organization Management or a delegated Exchange Administrator):
+
+  ```powershell
+  Grant-ZTAssessExchangeOnlineRole -AppId '<clientId>' -ServicePrincipalObjectId '<spObjectId>' `
+      -Organization 'contoso.onmicrosoft.com' -UserPrincipalName 'admin@contoso.onmicrosoft.com' `
+      -Modules ThreatProtection
+  ```
+
+  `Grant-ZTAssessExchangeOnlineRole` connects to Exchange Online / IPPS as the **calling administrator** (interactive delegated sign-in — `-UserPrincipalName` just skips the account picker), never as the app being granted roles: that app may not yet be authorized to connect at all, which is exactly the gap this function closes, so authenticating as the app would be circular. Run it signed in as an account that already holds sufficient Exchange Online / Security & Compliance administrative rights.
+
+  `-ServicePrincipalObjectId` (the app's Entra ID service principal object ID, from `New-ZTAssessAppRegistration`'s output or the Entra admin center) is only required the first time — it is used to create the app's Exchange Online-side service principal with `New-ServicePrincipal`, which does **not** happen automatically just from consenting to `Exchange.ManageAsApp` or from Graph admin consent. Re-running the function afterward skips creating a duplicate service principal and skips entries the app is already granted.
+
+  Not every entry in the table below is actually a role group. Verified against a live tenant: `Security Reader` is a genuine role group; `View-Only Configuration` and `View-Only Recipients` are **management roles** visible in the Exchange Online session; `View-Only Retention Management` and `View-Only DLP Compliance Management` are management roles visible only in the Security & Compliance / IPPS session. Management roles require `New-ManagementRoleAssignment -App` instead of `Add-RoleGroupMember`. `Grant-ZTAssessExchangeOnlineRole` tries the role-group path first, falls back to the management-role path against the same connection, and as a last resort retries against a separately-established IPPS connection — which is what resolves the two Purview retention/DLP roles, since they exist only in that RBAC namespace. Each entry is granted with whichever mechanism actually matches what it is. A grant that still fails after every mechanism is recorded in the function's `FailedGrants` output rather than aborting the rest of the run.
+
+  This function performs Exchange Online RBAC **write** operations and therefore lives in `EntraZTAssess.Provisioning`, alongside `New-ZTAssessAppRegistration` — never in the read-only assessment module under `source/`.
 
 ### 4. Connect
 
@@ -146,7 +163,7 @@ CloudAppSecurity shares its collected data with Defender (no separate collector)
 
 ### Exchange Online / Security & Compliance Role Groups
 
-The four modules below hold no Graph scopes; instead they need Exchange Online / Security & Compliance (IPPS) role groups granted to the app's service principal by the tenant's own Exchange administrator (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)). **This toolkit cannot and does not grant these roles itself** — treat this table as pre-engagement guidance, not an enforced or verified permission set. Exact role-group names vary slightly by license and national cloud; confirm availability in the tenant's Purview / Exchange admin center.
+The four modules below hold no Graph scopes; instead they need Exchange Online / Security & Compliance (IPPS) role groups and management roles granted to the app's service principal (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)). **The read-only assessment module (`source/`) cannot and does not grant these roles itself** — treat this table as pre-engagement guidance, not an enforced or verified permission set. Despite the naming, only one entry is actually a role group: verified against a live tenant, `Security Reader` is a genuine role group; `View-Only Configuration` and `View-Only Recipients` are management roles visible in the Exchange Online session; `View-Only Retention Management` and `View-Only DLP Compliance Management` are management roles visible only in the Security & Compliance / IPPS session. Management roles are granted with a different cmdlet (`New-ManagementRoleAssignment -App` rather than `Add-RoleGroupMember`) — `Grant-ZTAssessExchangeOnlineRole` handles this automatically, including the IPPS fallback for the two Purview-only roles (see [step 3a](#3a-grant-exchange-online--purview-role-groups-only-for-securitycompliance-collaboration-dataprotection-threatprotection)), but a manual grant needs the right cmdlet and the right session for the right entry. Exact names may still vary by tenant license and national cloud; confirm with `Get-RoleGroup` / `Get-ManagementRole` in the tenant's Purview / Exchange admin center before assigning them. Granting them is a separate, optional step performed either manually by the tenant's own Exchange administrator, or with `Grant-ZTAssessExchangeOnlineRole` in the `EntraZTAssess.Provisioning` module.
 
 | Module | Exchange Online / IPPS role groups (read-only guidance) |
 |---|---|
@@ -206,4 +223,4 @@ With `-NoInteractiveFallback`, a missing configuration is a hard error rather th
 - The **certificate password is never persisted**. `~/.ztassess/auth.json` contains non-secret connection details only.
 - Provisioning writes (app registration, role grants, config file) live **only** in the repository `scripts/` folder, run as a one-time administrator setup. The module under `source/` remains **read-only** — it performs no directory writes and requests no write scopes.
 - Grant only the Application permissions required for the modules in scope, and record any deferred scope as an engagement limitation (see [`PermissionsGuidance.md`](PermissionsGuidance.md)).
-- The Exchange Online / Security & Compliance (IPPS) surface is equally read-only: all calls flow through an allow-listed `Get-*` cmdlet wrapper, and the session itself is scoped to that allow-list so write cmdlets are never imported. This toolkit never grants Exchange Online role groups — that remains the tenant's own Exchange administrator's responsibility.
+- The Exchange Online / Security & Compliance (IPPS) surface used by the **assessment module** is equally read-only: all calls flow through an allow-listed `Get-*` cmdlet wrapper, and the session itself is scoped to that allow-list so write cmdlets are never imported. Granting the Exchange Online role groups the app needs is a separate, optional provisioning action — either performed manually by the tenant's own Exchange administrator, or with `Grant-ZTAssessExchangeOnlineRole` in `EntraZTAssess.Provisioning`, run by an account with sufficient Exchange Online / Security & Compliance rights. That function, like `New-ZTAssessAppRegistration`, lives outside `source/` precisely because it performs writes.

@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `Grant-ZTAssessExchangeOnlineRole` to the repo-local
+  `EntraZTAssess.Provisioning` module (`scripts/`). It optionally performs
+  the Exchange Online / Security & Compliance (IPPS) role grant that
+  `Get-ZTAssessExchangeOnlineRoleGuidance` previously only documented as a
+  manual step for the tenant's own Exchange administrator — needed for
+  `SecurityCompliance`, `Collaboration`, `DataProtection`, and
+  `ThreatProtection`. It connects to Exchange Online / IPPS as the
+  **calling administrator** (interactive delegated sign-in), never as the
+  app being granted roles — authenticating as that app would be circular,
+  since it may not yet be authorized to connect at all. It creates the
+  app's Exchange Online-side service principal with `New-ServicePrincipal`
+  if one does not already exist (which admin-consenting
+  `Exchange.ManageAsApp` alone does **not** create), then grants each
+  required catalogue entry with whichever mechanism actually matches what
+  it is in the connected tenant: `Add-RoleGroupMember` for genuine role
+  groups, or `New-ManagementRoleAssignment -App` for management roles.
+  Verified against a live tenant across the full catalogue: `Security
+  Reader` is a genuine role group; `View-Only Configuration` and
+  `View-Only Recipients` are management roles visible in the Exchange
+  Online session; `View-Only Retention Management` and `View-Only DLP
+  Compliance Management` are management roles visible only in the
+  Security & Compliance / IPPS session — despite all four reading like
+  role-group names, none of them are role groups. Falls back to a
+  lazily-established IPPS connection as a last resort, which is what
+  resolves the two Purview-only roles. A grant that fails against every
+  mechanism is recorded in `FailedGrants` rather than aborting the run. Like `New-ZTAssessAppRegistration`, it is a
+  write operation and therefore lives outside the read-only `source/`
+  module; it must be run by an account with sufficient Exchange Online /
+  Security & Compliance administrative rights. Requires the
+  `ExchangeOnlineManagement` module (declared via
+  `ExternalModuleDependencies`, not a hard `RequiredModules` dependency).
+  `docs/Authentication.md`, `docs/PermissionsGuidance.md`, `CLAUDE.md`,
+  `AGENTS.md`, `.github/copilot-instructions.md`, and `README.md` are
+  updated to describe this as an optional alternative to the manual grant,
+  not a change to the assessment module's read-only guarantee.
+
 - Added the **CloudAppSecurity** assessment module/domain (3 checks,
   CAS-001 to CAS-003), the sixth and final planned domain in this
   extension. Unlike the four EXO-backed domains, this is a **Graph-only,
