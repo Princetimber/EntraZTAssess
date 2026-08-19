@@ -349,6 +349,24 @@ function New-ZTAssessTestRun {
         unifiedAlerts = @(
             @{ id = 'alert-1'; title = 'Suspicious sign-in'; severity = 'high'; status = 'resolved'; classification = 'truePositive'; createdDateTime = [datetime]::UtcNow.AddDays(-1).ToString('yyyy-MM-ddTHH:mm:ssZ'); serviceSource = 'microsoftDefenderForIdentity'; category = 'InitialAccess' }
         )
+
+        # ----- ThreatProtection snapshots (well-configured estate) -----
+
+        safeLinksPolicies = @(
+            @{ Name = 'Default'; EnableSafeLinksForEmail = $true; EnableSafeLinksForTeams = $true; EnableSafeLinksForOffice = $true; ScanUrls = $true; AllowClickThrough = $false; TrackClicks = $true }
+        )
+
+        safeAttachmentPolicies = @(
+            @{ Name = 'Default'; Enable = $true; Action = 'Block' }
+        )
+
+        antiPhishPolicies = @(
+            @{ Name = 'Default'; Enabled = $true; EnableMailboxIntelligence = $true; EnableMailboxIntelligenceProtection = $true; EnableSpoofIntelligence = $true; PhishThresholdLevel = 3 }
+        )
+
+        malwareFilterPolicies = @(
+            @{ Name = 'Default'; EnableFileFilter = $true; Action = 'DeleteMessage' }
+        )
     }
 
     foreach ($key in $Overrides.Keys) {

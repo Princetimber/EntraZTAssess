@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the **ThreatProtection** assessment module/domain (4 checks, TP-001
+  to TP-004), the first domain to use the read-only Exchange Online /
+  Security & Compliance (IPPS) connection surface added previously:
+  - `Invoke-ZTAssessThreatProtectionCollection` collects Defender for
+    Office 365 / Exchange Online Protection policy configuration
+    (`Get-SafeLinksPolicy`, `Get-SafeAttachmentPolicy`,
+    `Get-AntiPhishPolicy`, `Get-MalwareFilterPolicy`) via
+    `Invoke-ZTAssessExoRequestWrapper`. Only invoked by
+    `Invoke-ZTAssessment` when `Connect-ZTAssessment` established the
+    Exchange Online / IPPS connection; otherwise a manifest warning is
+    recorded and the module's checks report `NotAssessed`.
+  - `Test-ZTAssessThreatProtection` implements: TP-001 (Safe Links scans
+    URLs and blocks click-through), TP-002 (Safe Attachments takes a
+    blocking action rather than monitor-only), TP-003 (anti-phishing
+    mailbox/spoof intelligence enabled at or above a configurable
+    threshold level), and TP-004 (malware filtering enables the file
+    filter with a blocking action).
+  - New `Settings.Thresholds.PhishThresholdMinimumLevel` and
+    `DomainWeights.ThreatProtection`.
+  - Wired into `Invoke-ZTAssessment`'s collection (gated on
+    `$connection.ExchangeOnlineConnected`) and assessment phases.
+
 - Added the **Defender** assessment module/domain (4 checks, DF-001 to DF-004),
   Graph-only, with no dependency on the Exchange Online / IPPS surface added
   previously:

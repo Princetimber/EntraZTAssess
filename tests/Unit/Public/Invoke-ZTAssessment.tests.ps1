@@ -34,14 +34,16 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         # Fake an established connection.
         InModuleScope -ModuleName $script:dscModuleName {
             $script:ZTAssessConnection = [pscustomobject]@{
-                TenantId       = 'tenant-1'
-                Account        = 'consultant@contoso.com'
-                AuthMode       = 'Delegated'
-                Environment    = 'Global'
-                Modules        = @('Identity', 'ConditionalAccess', 'PrivilegedAccess')
-                RequiredScopes = @()
-                GrantedScopes  = @('Directory.Read.All')
-                MissingScopes  = @()
+                TenantId                = 'tenant-1'
+                Account                 = 'consultant@contoso.com'
+                AuthMode                = 'Delegated'
+                Environment             = 'Global'
+                Modules                 = @('Identity', 'ConditionalAccess', 'PrivilegedAccess')
+                RequiredScopes          = @()
+                GrantedScopes           = @('Directory.Read.All')
+                MissingScopes           = @()
+                ExchangeOnlineConnected = $true
+                ExchangeOnlineWarning   = $null
             }
         }
 
@@ -59,6 +61,7 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessHybridCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessMonitoringCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessDefenderCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessThreatProtectionCollection -MockWith { @{} }
 
         # Engagement scaffold.
         $script:engagementPath = Join-Path $TestDrive "engagement-$([guid]::NewGuid().ToString('n').Substring(0,8))"
@@ -136,12 +139,12 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
     }
 
     Context 'When running every implemented module' {
-        It 'Should emit all 96 findings' {
-            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender
+        It 'Should emit all 100 findings' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection
 
             $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
-            @($findings).Count | Should -Be 96
-            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 12
+            @($findings).Count | Should -Be 100
+            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 13
         }
     }
 
@@ -152,6 +155,30 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
             $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
             @($findings).Count | Should -Be 4
             (@($findings).Domain | Sort-Object -Unique) | Should -Be 'Defender'
+        }
+    }
+
+    Context 'When running the ThreatProtection module' {
+        It 'Should emit the 4 ThreatProtection findings and call the collector when Exchange Online is connected' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules ThreatProtection
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 4
+            (@($findings).Domain | Sort-Object -Unique) | Should -Be 'ThreatProtection'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessThreatProtectionCollection -Times 1 -Exactly
+        }
+
+        It 'Should skip the collector and warn on the manifest when Exchange Online is not connected' {
+            InModuleScope -ModuleName $script:dscModuleName {
+                $script:ZTAssessConnection.ExchangeOnlineConnected = $false
+            }
+
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules ThreatProtection
+
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessThreatProtectionCollection -Times 0 -Exactly
+
+            $manifest = Get-Content (Join-Path $summary.RunPath 'manifest.json') -Raw | ConvertFrom-Json -Depth 20
+            $manifest.Warnings | Should -Contain 'Exchange Online / IPPS connection unavailable; ThreatProtection checks will be reported as NotAssessed.'
         }
     }
 
