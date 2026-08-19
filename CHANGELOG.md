@@ -5,6 +5,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Reformatted `scripts/EntraZTAssess.Provisioning`'s `Public/` and `Private/`
+  function files with `Invoke-Formatter` against the project's
+  `PSScriptAnalyzerSettings.psd1` — resolves 77 pre-existing style warnings
+  (brace placement, indentation, single- vs double-quote usage). No
+  behavioral change; `tests/Unit/Provisioning` still passes unchanged.
+
 ### Added
 
 - Published `EntraZTAssess.Provisioning` as its own, separately versioned
