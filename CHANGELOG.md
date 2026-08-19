@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `Grant-ZTAssessExchangeOnlineRole` failing with "The
+  ExchangeOnlineManagement module is required but these commands were not
+  found: Get-ServicePrincipal, New-ServicePrincipal, Get-RoleGroupMember,
+  Add-RoleGroupMember, New-ManagementRoleAssignment" even when the module
+  was correctly installed. Those five commands are dynamic RBAC proxy
+  commands that ExchangeOnlineManagement only injects into the session
+  **after** a successful `Connect-ExchangeOnline` / `Connect-IPPSSession`
+  — they were being checked before connecting, alongside the genuinely
+  static `Connect-ExchangeOnline` / `Connect-IPPSSession` /
+  `Disconnect-ExchangeOnline` exports, so the precondition check always
+  failed for them regardless of whether the module was installed. The
+  precondition check is now split: `Connect-ExchangeOnline` /
+  `Connect-IPPSSession` / `Disconnect-ExchangeOnline` are still verified
+  before connecting, while the RBAC proxy commands are verified
+  immediately after `Connect-ExchangeOnline` succeeds, with a clear error
+  if they still aren't available (most likely insufficient Exchange
+  Online / Security & Compliance administrative rights on the signed-in
+  account). Added a regression test that reproduces the original bug by
+  never stubbing those five commands and asserting the function still
+  reaches `Connect-ExchangeOnline` rather than failing at the pre-connect
+  check.
+
 - Fixed a flaky `tests/QA/module.tests.ps1` failure where
   `Invoke-ScriptAnalyzer` intermittently threw a `NullReferenceException`
   from within its own rule engine on `ubuntu-latest` CI runners — observed

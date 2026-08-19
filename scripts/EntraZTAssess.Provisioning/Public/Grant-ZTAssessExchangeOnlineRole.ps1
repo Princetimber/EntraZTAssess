@@ -163,19 +163,23 @@ function Grant-ZTAssessExchangeOnlineRole {
 
     # --- Preconditions ----------------------------------------------------
 
-    $requiredCommands = @(
+    # Connect-ExchangeOnline / Connect-IPPSSession / Disconnect-ExchangeOnline
+    # are static, always-exported commands from the ExchangeOnlineManagement
+    # module, so they can be checked before connecting. The RBAC commands
+    # (Get-ServicePrincipal, New-ServicePrincipal, Get-RoleGroupMember,
+    # Add-RoleGroupMember, New-ManagementRoleAssignment) are dynamic proxy
+    # commands that the module only injects into the session AFTER a
+    # successful connection -- checking for them here would always report
+    # them missing even when ExchangeOnlineManagement is correctly
+    # installed, so that check happens after Connect-ExchangeOnline below.
+    $requiredPreConnectCommands = @(
         'Connect-ExchangeOnline'
         'Connect-IPPSSession'
         'Disconnect-ExchangeOnline'
-        'Get-ServicePrincipal'
-        'New-ServicePrincipal'
-        'Get-RoleGroupMember'
-        'Add-RoleGroupMember'
-        'New-ManagementRoleAssignment'
     )
-    $missingCommands = @($requiredCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
-    if ($missingCommands.Count -gt 0) {
-        throw ("The ExchangeOnlineManagement module is required but these commands were not found: {0}. Install it with: Install-Module ExchangeOnlineManagement -Scope CurrentUser" -f ($missingCommands -join ', '))
+    $missingPreConnectCommands = @($requiredPreConnectCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
+    if ($missingPreConnectCommands.Count -gt 0) {
+        throw ("The ExchangeOnlineManagement module is required but these commands were not found: {0}. Install it with: Install-Module ExchangeOnlineManagement -Scope CurrentUser" -f ($missingPreConnectCommands -join ', '))
     }
 
     # --- Resolve required entries from the same catalogue used by ----------
@@ -225,6 +229,20 @@ function Grant-ZTAssessExchangeOnlineRole {
     $ippsConnected = $false
 
     try {
+        # --- Verify the RBAC proxy commands are now available -------------
+
+        $requiredPostConnectCommands = @(
+            'Get-ServicePrincipal'
+            'New-ServicePrincipal'
+            'Get-RoleGroupMember'
+            'Add-RoleGroupMember'
+            'New-ManagementRoleAssignment'
+        )
+        $missingPostConnectCommands = @($requiredPostConnectCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
+        if ($missingPostConnectCommands.Count -gt 0) {
+            throw ("Connected to Exchange Online, but these commands were not available in the session: {0}. This usually means the signed-in account lacks sufficient Exchange Online / Security & Compliance administrative rights, or the ExchangeOnlineManagement module version is outdated." -f ($missingPostConnectCommands -join ', '))
+        }
+
         # --- Ensure an Exchange Online service principal exists for AppId ---
 
         $servicePrincipal = Get-ServicePrincipal -Identity $AppId -ErrorAction SilentlyContinue

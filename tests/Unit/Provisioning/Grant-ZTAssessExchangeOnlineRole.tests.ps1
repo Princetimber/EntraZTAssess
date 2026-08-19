@@ -196,3 +196,48 @@ Describe 'Grant-ZTAssessExchangeOnlineRole' -Tag 'Unit' {
         Should -Invoke -ModuleName $script:provModuleName Connect-ExchangeOnline -Times 0 -Exactly
     }
 }
+
+Describe 'Grant-ZTAssessExchangeOnlineRole RBAC precondition ordering' -Tag 'Unit' {
+    # Get-ServicePrincipal, New-ServicePrincipal, Get-RoleGroupMember,
+    # Add-RoleGroupMember, and New-ManagementRoleAssignment are dynamic
+    # proxy commands ExchangeOnlineManagement only injects into the session
+    # AFTER Connect-ExchangeOnline / Connect-IPPSSession succeeds -- they
+    # must not be part of the pre-connect Get-Command precondition check,
+    # or the function fails claiming the module is missing even when it is
+    # correctly installed (this reproduces a real bug found by the user
+    # running the function for real). This Describe deliberately never
+    # defines or mocks those five commands, so Get-Command genuinely
+    # cannot resolve them -- proving the pre-connect check tolerates their
+    # absence and Connect-ExchangeOnline is still reached.
+    BeforeAll {
+        # Remove the file-level global stubs for the RBAC-only commands so
+        # Get-Command genuinely cannot resolve them in this Describe.
+        Remove-Item Function:\Get-ServicePrincipal, Function:\New-ServicePrincipal, `
+            Function:\Get-RoleGroupMember, Function:\Add-RoleGroupMember, `
+            Function:\New-ManagementRoleAssignment -ErrorAction SilentlyContinue
+    }
+
+    AfterAll {
+        # Restore the stubs so later test files/re-runs in the same process
+        # are unaffected.
+        function global:Get-ServicePrincipal { [CmdletBinding()] param($Identity) }
+        function global:New-ServicePrincipal { [CmdletBinding()] param($AppId, $ObjectId, $DisplayName) }
+        function global:Get-RoleGroupMember { [CmdletBinding()] param($Identity) }
+        function global:Add-RoleGroupMember { [CmdletBinding()] param($Identity, $Member, [switch]$Confirm) }
+        function global:New-ManagementRoleAssignment { [CmdletBinding()] param($Role, $App) }
+    }
+
+    BeforeEach {
+        Mock -ModuleName $script:provModuleName Connect-ExchangeOnline { }
+        Mock -ModuleName $script:provModuleName Connect-IPPSSession { }
+        Mock -ModuleName $script:provModuleName Disconnect-ExchangeOnline { }
+    }
+
+    It 'Should reach Connect-ExchangeOnline and fail with the post-connect message, not the pre-connect module-missing message' {
+        { Grant-ZTAssessExchangeOnlineRole -AppId $script:appId -Organization 'contoso.onmicrosoft.com' `
+                -Modules 'ThreatProtection' -Confirm:$false
+        } | Should -Throw '*were not available in the session*'
+
+        Should -Invoke -ModuleName $script:provModuleName Connect-ExchangeOnline -Times 1 -Exactly
+    }
+}
