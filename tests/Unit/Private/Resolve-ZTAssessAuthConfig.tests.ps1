@@ -21,6 +21,7 @@ BeforeAll {
         'ZTASSESS_CERT_THUMBPRINT'
         'ZTASSESS_CERT_PATH'
         'ZTASSESS_ENVIRONMENT'
+        'ZTASSESS_ORGANIZATION'
     )
 
     # Preserve any pre-existing values so the developer's environment is intact.
@@ -143,6 +144,44 @@ Describe 'Resolve-ZTAssessAuthConfig' -Tag 'Unit' {
             }
 
             $result | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'When Organization is supplied' {
+        It 'Should let the environment variable override the file value' {
+            $configPath = Join-Path $TestDrive 'auth.json'
+            @{
+                TenantId              = 'file-tenant'
+                ClientId              = 'file-client'
+                CertificateThumbprint = 'FILETHUMBPRINT'
+                Organization          = 'file.onmicrosoft.com'
+            } | ConvertTo-Json | Set-Content -Path $configPath
+
+            $env:ZTASSESS_ORGANIZATION = 'env.onmicrosoft.com'
+
+            $result = InModuleScope -ModuleName $script:dscModuleName -Parameters @{ Path = $configPath } {
+                param($Path)
+                Resolve-ZTAssessAuthConfig -ConfigPath $Path
+            }
+
+            $result.Organization | Should -Be 'env.onmicrosoft.com'
+        }
+
+        It 'Should resolve Organization from the file when no environment variable is set' {
+            $configPath = Join-Path $TestDrive 'auth.json'
+            @{
+                TenantId              = 'file-tenant'
+                ClientId              = 'file-client'
+                CertificateThumbprint = 'FILETHUMBPRINT'
+                Organization          = 'file.onmicrosoft.com'
+            } | ConvertTo-Json | Set-Content -Path $configPath
+
+            $result = InModuleScope -ModuleName $script:dscModuleName -Parameters @{ Path = $configPath } {
+                param($Path)
+                Resolve-ZTAssessAuthConfig -ConfigPath $Path
+            }
+
+            $result.Organization | Should -Be 'file.onmicrosoft.com'
         }
     }
 

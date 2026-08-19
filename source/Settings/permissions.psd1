@@ -116,5 +116,53 @@
             AlwaysIncluded = $false
             Optional       = $true
         }
+
+        # ----------------------------------------------------------------------
+        # The four modules below have no Graph scopes: their data does not
+        # exist in Microsoft Graph and is read exclusively through the
+        # read-only Exchange Online / Security & Compliance (IPPS) surface
+        # (Connect-ExchangeOnlineWrapper, Invoke-ZTAssessExoRequestWrapper).
+        # ExchangeOnlineRoles are provisioning guidance only (surfaced by
+        # Get-ZTAssessExchangeOnlineRoleGuidance) - this toolkit never grants
+        # them; a tenant's own Exchange administrator must assign them.
+        # Checks/collectors/assessors for these modules ship in later phases;
+        # this catalogue entry only establishes the connection requirement.
+        # ----------------------------------------------------------------------
+
+        SecurityCompliance = @{
+            Description            = 'Retention policies/rules and compliance tags (Microsoft Purview records-management and audit governance posture).'
+            Scopes                 = @()
+            ExchangeOnlineRoles    = @('View-Only Retention Management', 'View-Only Configuration')
+            RequiresExchangeOnline = $true
+            AlwaysIncluded         = $false
+            Optional               = $false
+        }
+
+        Collaboration = @{
+            Description            = 'Exchange sharing policies and transport/mail-flow rules governing external collaboration.'
+            Scopes                 = @()
+            ExchangeOnlineRoles    = @('View-Only Recipients', 'View-Only Configuration')
+            RequiresExchangeOnline = $true
+            AlwaysIncluded         = $false
+            Optional               = $false
+        }
+
+        DataProtection = @{
+            Description            = 'DLP policies/rules and sensitivity label policies (Microsoft Purview data classification and leak-prevention posture).'
+            Scopes                 = @()
+            ExchangeOnlineRoles    = @('View-Only DLP Compliance Management', 'View-Only Configuration')
+            RequiresExchangeOnline = $true
+            AlwaysIncluded         = $false
+            Optional               = $false
+        }
+
+        ThreatProtection = @{
+            Description            = 'Safe Links, Safe Attachments, anti-phishing, and hosted content filter policies (Defender for Office 365).'
+            Scopes                 = @()
+            ExchangeOnlineRoles    = @('Security Reader', 'View-Only Configuration')
+            RequiresExchangeOnline = $true
+            AlwaysIncluded         = $false
+            Optional               = $false
+        }
     }
 }

@@ -54,6 +54,9 @@ function Get-ZTAssessProvisioningStep {
 
     $moduleSuffix = if ($Modules) { ' -Modules {0}' -f ($Modules -join ', ') } else { '' }
 
+    $catalogueForExoCheck = if ($Modules) { Get-ZTAssessModuleCatalog -Name $Modules } else { Get-ZTAssessModuleCatalog }
+    $needsExchangeOnline = [bool]($catalogueForExoCheck | Where-Object { $_.RequiresExchangeOnline })
+
     $orderedSteps = @(
         @{
             Title       = 'Import the provisioning module'
@@ -75,12 +78,21 @@ function Get-ZTAssessProvisioningStep {
             Command     = ('Get-ZTAssessRequiredPermission{0} | Format-Table' -f $moduleSuffix)
             Description = 'A Global Administrator approves the read-only permissions via the consent URL printed by the previous step. Share the required-permission list with the security team first.'
         }
-        @{
-            Title       = 'Connect and assess'
-            Command     = ('Connect-ZTAssessment{0}' -f $moduleSuffix)
-            Description = 'Once consent is granted, connect with certificate-based app-only auth using the values recorded in ~/.ztassess/auth.json.'
-        }
     )
+
+    if ($needsExchangeOnline) {
+        $orderedSteps += @{
+            Title       = 'Grant Exchange Online / Purview role groups'
+            Command     = ('Get-ZTAssessExchangeOnlineRoleGuidance{0}' -f $moduleSuffix)
+            Description = 'From a clone of the EntraZTAssess repository (scripts/EntraZTAssess.Provisioning). Lists the Exchange Online / Security & Compliance role groups the tenant''s own Exchange administrator must grant to the app''s service principal; this toolkit only reads Exchange Online/Purview configuration and cannot grant these roles itself.'
+        }
+    }
+
+    $orderedSteps += @{
+        Title       = 'Connect and assess'
+        Command     = ('Connect-ZTAssessment{0}' -f $moduleSuffix)
+        Description = 'Once consent (and, if applicable, Exchange Online role groups) is granted, connect with certificate-based app-only auth using the values recorded in ~/.ztassess/auth.json.'
+    }
 
     $stepNumber = 0
     foreach ($step in $orderedSteps) {

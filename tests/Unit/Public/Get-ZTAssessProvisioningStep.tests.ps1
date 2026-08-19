@@ -34,4 +34,17 @@ Describe 'Get-ZTAssessProvisioningStep' -Tag 'Unit' {
     It 'Should throw on an unknown module name' {
         { Get-ZTAssessProvisioningStep -Modules 'NoSuchModule' } | Should -Throw
     }
+
+    It 'Should include the Exchange Online role-guidance step for modules that require it' {
+        $steps = Get-ZTAssessProvisioningStep -Modules ThreatProtection
+
+        ($steps.Title -join "`n") | Should -Match 'Grant Exchange Online'
+        ($steps.Command -join "`n") | Should -Match 'Get-ZTAssessExchangeOnlineRoleGuidance -Modules ThreatProtection'
+    }
+
+    It 'Should omit the Exchange Online role-guidance step for modules that do not require it' {
+        $steps = Get-ZTAssessProvisioningStep -Modules Identity, Devices
+
+        ($steps.Title -join "`n") | Should -Not -Match 'Grant Exchange Online'
+    }
 }

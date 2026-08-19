@@ -25,6 +25,15 @@ function Connect-ZTAssessment {
     assessment can continue with graceful degradation (affected checks are
     marked NotAssessed).
 
+    When a selected module requires the read-only Exchange Online / Security
+    & Compliance (IPPS) surface (see Get-ZTAssessModuleCatalog), a second,
+    lazily-established, certificate-based app-only connection is attempted
+    using the same certificate after Microsoft Graph connects. This surface
+    is only available in app-only mode; it is skipped for delegated/device
+    code sign-in. A failed or skipped Exchange Online / IPPS connection never
+    fails the overall connection or affects Graph-only modules - dependent
+    checks are simply reported as NotAssessed.
+
     .PARAMETER Modules
     The assessment modules the connection must support. Scopes are computed
     as the union for these modules plus the always-included Core module. Use
@@ -58,6 +67,13 @@ function Connect-ZTAssessment {
     The optional password protecting the PFX file supplied via CertificatePath,
     provided as a SecureString. Omit it for an unprotected PFX file.
 
+    .PARAMETER Organization
+    The verified domain (for example contoso.onmicrosoft.com) Exchange Online
+    / Security & Compliance (IPPS) requires for modules that need that
+    surface. Optional: resolved from ZTASSESS_ORGANIZATION, then
+    ~/.ztassess/auth.json, then a domain-looking -TenantId, then derived from
+    the connected tenant's initial verified domain if omitted entirely.
+
     .PARAMETER NoInteractiveFallback
     Disables the interactive delegated sign-in fallback in the default (auto)
     mode. When no certificate-based configuration can be resolved, the command
@@ -89,7 +105,8 @@ function Connect-ZTAssessment {
     .OUTPUTS
     PSCustomObject
     A connection summary with TenantId, Account, AuthMode, Environment,
-    Modules, RequiredScopes, GrantedScopes, and MissingScopes.
+    Modules, RequiredScopes, GrantedScopes, MissingScopes,
+    ExchangeOnlineConnected, and ExchangeOnlineWarning.
 
     .NOTES
     Requires the Microsoft.Graph.Authentication module. The connection is
@@ -137,6 +154,12 @@ function Connect-ZTAssessment {
         [securestring]$CertificatePassword,
 
         [Parameter(ParameterSetName = 'Auto')]
+        [Parameter(ParameterSetName = 'AppOnlyThumbprint')]
+        [Parameter(ParameterSetName = 'AppOnlyCertificate')]
+        [ValidateNotNullOrEmpty()]
+        [string]$Organization,
+
+        [Parameter(ParameterSetName = 'Auto')]
         [switch]$NoInteractiveFallback,
 
         [Parameter(ParameterSetName = 'Delegated')]
@@ -144,6 +167,11 @@ function Connect-ZTAssessment {
     )
 
     $requiredScopes = Get-ZTAssessRequiredPermission -Modules $Modules -AsScopeList -ErrorAction Stop
+
+    # Module names are already validated by the call above; this second
+    # lookup only determines whether the read-only Exchange Online / IPPS
+    # surface needs to be established alongside Graph.
+    $needsExchangeOnline = [bool](Get-ZTAssessModuleCatalog -Name $Modules | Where-Object { $_.RequiresExchangeOnline })
 
     $effectiveEnvironment = $Environment
     # $connectSplat is assembled per-mode below; $authMode records the mode for
@@ -255,16 +283,63 @@ function Connect-ZTAssessment {
         Write-ToLog -Message "Missing scopes: $($missingScopes -join ', ')" -Level WARN -NoConsole
     }
 
+    # --- Exchange Online / Security & Compliance (IPPS), lazily -------------
+    # Only attempted when a selected module needs it, and only in app-only
+    # mode. A failure here never fails the overall connection: Graph-only
+    # modules must keep working, and dependent checks degrade to
+    # NotAssessed, matching the existing collector-failure pattern.
+    $exchangeOnlineConnected = $false
+    $exchangeOnlineWarning = $null
+
+    if ($needsExchangeOnline) {
+        if ($authMode -ne 'AppOnly') {
+            $exchangeOnlineWarning = 'Exchange Online / Security & Compliance requires certificate-based app-only authentication; it was skipped for Delegated/DeviceCode sign-in. Dependent checks will be reported as NotAssessed.'
+            Write-Warning $exchangeOnlineWarning
+            Write-ToLog -Message $exchangeOnlineWarning -Level WARN -NoConsole
+        } else {
+            $resolvedOrganization = Resolve-ZTAssessOrganization -Organization $Organization -AuthConfig $authConfig -TenantId $context.TenantId
+
+            if (-not $resolvedOrganization) {
+                $exchangeOnlineWarning = 'Could not resolve an Exchange Online organization (verified domain). Supply -Organization or set ZTASSESS_ORGANIZATION. Dependent checks will be reported as NotAssessed.'
+                Write-Warning $exchangeOnlineWarning
+                Write-ToLog -Message $exchangeOnlineWarning -Level WARN -NoConsole
+            } else {
+                $exoConnectParameters = @{
+                    Organization = $resolvedOrganization
+                    AppId        = $connectSplat['ClientId']
+                }
+                if ($connectSplat.ContainsKey('Certificate')) {
+                    $exoConnectParameters['Certificate'] = $connectSplat['Certificate']
+                } else {
+                    $exoConnectParameters['CertificateThumbprint'] = $connectSplat['CertificateThumbprint']
+                }
+
+                try {
+                    Connect-ExchangeOnlineWrapper -Surface ExchangeOnline @exoConnectParameters
+                    Connect-ExchangeOnlineWrapper -Surface IPPS @exoConnectParameters
+                    $exchangeOnlineConnected = $true
+                    Write-ToLog -Message "Connected to Exchange Online / Security & Compliance ($resolvedOrganization)." -Level SUCCESS -NoConsole
+                } catch {
+                    $exchangeOnlineWarning = "Failed to connect to Exchange Online / Security & Compliance: $($_.Exception.Message). Dependent checks will be reported as NotAssessed."
+                    Write-Warning $exchangeOnlineWarning
+                    Write-ToLog -ErrorRecord $_ -NoConsole
+                }
+            }
+        }
+    }
+
     $summary = [pscustomobject]@{
-        PSTypeName     = 'ZTAssess.ConnectionSummary'
-        TenantId       = $context.TenantId
-        Account        = $context.Account
-        AuthMode       = $authMode
-        Environment    = $effectiveEnvironment
-        Modules        = @($Modules)
-        RequiredScopes = @($requiredScopes)
-        GrantedScopes  = $grantedScopes
-        MissingScopes  = $missingScopes
+        PSTypeName              = 'ZTAssess.ConnectionSummary'
+        TenantId                = $context.TenantId
+        Account                 = $context.Account
+        AuthMode                = $authMode
+        Environment             = $effectiveEnvironment
+        Modules                 = @($Modules)
+        RequiredScopes          = @($requiredScopes)
+        GrantedScopes           = $grantedScopes
+        MissingScopes           = $missingScopes
+        ExchangeOnlineConnected = $exchangeOnlineConnected
+        ExchangeOnlineWarning   = $exchangeOnlineWarning
     }
 
     # Cache the summary for use by Invoke-ZTAssessment and the run manifest.
