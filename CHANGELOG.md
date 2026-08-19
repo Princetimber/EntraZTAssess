@@ -5,6 +5,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Published `EntraZTAssess.Provisioning` as its own, separately versioned
+  PSGallery package (`Install-Module EntraZTAssess.Provisioning`), so admins
+  no longer have to clone this repository to run the one-time provisioning
+  commands (`New-ZTAssessCertificate`, `New-ZTAssessAppRegistration`,
+  `Get-ZTAssessExchangeOnlineRoleGuidance`, `Grant-ZTAssessExchangeOnlineRole`).
+  It remains outside `Get-EntraZTAssess`'s `Install-Module` surface — this
+  toolkit's read-only guarantee is unaffected, since the write-capable
+  provisioning code still lives in a distinct package the assessment module
+  never depends on. Cloning `scripts/EntraZTAssess.Provisioning` from this
+  repository still works as before. Filled in the module's placeholder
+  `Author`/`CompanyName`/`Copyright` and added `LicenseUri`/`ProjectUri`;
+  moved `scripts/README.md` into `scripts/EntraZTAssess.Provisioning/README.md`
+  so it packages as the PSGallery readme.
+
 ## [0.2.1] - 2026-08-19
 
 ### Added

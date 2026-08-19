@@ -61,11 +61,12 @@ Modules whose data does not exist in Microsoft Graph (`ThreatProtection`, `Secur
 
 ### Provisioning quickstart
 
-The `EntraZTAssess.Provisioning` module lives under `scripts/` and is **repository-based, admin-run, one-time** — it is not installed by `Install-Module`. Run `Get-ZTAssessProvisioningStep` (in the installed module) for the same steps as discoverable guidance.
+The `EntraZTAssess.Provisioning` module is **admin-run, one-time** setup tooling, kept separate from `Get-EntraZTAssess` because it performs Graph/Exchange Online writes. It is published as its own PSGallery package — `Install-Module EntraZTAssess.Provisioning` — or can be imported directly from `scripts/EntraZTAssess.Provisioning` in a clone of this repository. Run `Get-ZTAssessProvisioningStep` (in the installed `Get-EntraZTAssess` module) for the same steps as discoverable guidance.
 
 ```powershell
-# 0. Import the repo-local provisioning module (exposes the two functions below)
-Import-Module ./scripts/EntraZTAssess.Provisioning
+# 0. Import the provisioning module (exposes the functions below)
+Install-Module EntraZTAssess.Provisioning -Scope CurrentUser
+Import-Module EntraZTAssess.Provisioning
 
 # 1. Generate a platform-agnostic self-signed certificate (EntraZTAssess.cer + .pfx)
 New-ZTAssessCertificate

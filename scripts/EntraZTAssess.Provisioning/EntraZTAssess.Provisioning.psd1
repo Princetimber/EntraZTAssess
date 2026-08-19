@@ -21,16 +21,16 @@ CompatiblePSEditions = 'Core'
 GUID = '52ac0c09-3aa1-4e4e-89f3-743e49cae294'
 
 # Author of this module
-Author = 'EntraZTAssess'
+Author = 'Olamide Olaleye'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'Fountview Enterprise Solutions'
 
 # Copyright statement for this module
-Copyright = '(c) EntraZTAssess. All rights reserved.'
+Copyright = '(c) 2026 Olamide Olaleye. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Admin-run, one-time provisioning commands (certificate + Entra ID app registration) for the read-only EntraZTAssess assessment toolkit. Not installed with the assessment module; imported deliberately from the repository. Performs Graph WRITE operations and therefore lives outside the read-only module surface.'
+Description = 'Admin-run, one-time provisioning commands (certificate, Entra ID app registration, Exchange Online role grants) for the read-only Get-EntraZTAssess assessment toolkit. Published separately from the assessment module because it performs Graph and Exchange Online WRITE operations, which the read-only assessment surface never does.'
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '7.0'
@@ -98,10 +98,10 @@ PrivateData = @{
         Tags = 'Entra', 'Provisioning', 'ZTAssess'
 
         # A URL to the license for this module.
-        # LicenseUri = ''
+        LicenseUri = 'https://github.com/Princetimber/EntraZTAssess/blob/main/LICENSE'
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/Princetimber/EntraZTAssess/tree/main/scripts/EntraZTAssess.Provisioning'
 
         # A URL to an icon representing this module.
         # IconUri = ''
