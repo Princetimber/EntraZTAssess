@@ -120,9 +120,9 @@ function New-ZTAssessCertificate {
     # Restrict the output directory to the owner on macOS/Linux, since it holds
     # a password-protected private key archive. SetUnixFileMode throws on
     # Windows, so it is only ever attempted off-Windows.
-    if ((Test-Path -LiteralPath $OutputPath) -and -not $IsWindows) {
+    if ((Test-Path -LiteralPath $OutputPath) -and -not (Test-ZTAssessIsWindowsPlatform)) {
         $ownerRwx = [System.IO.UnixFileMode]'UserRead, UserWrite, UserExecute'
-        [System.IO.File]::SetUnixFileMode($OutputPath, $ownerRwx)
+        Invoke-ZTAssessSetUnixFileMode -Path $OutputPath -Mode $ownerRwx
     }
 
     $cerPath = Join-Path -Path $OutputPath -ChildPath 'EntraZTAssess.cer'
@@ -166,16 +166,16 @@ function New-ZTAssessCertificate {
             [System.IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
 
             # Restrict the .pfx to the owner on macOS/Linux; it holds the private key.
-            if (-not $IsWindows) {
+            if (-not (Test-ZTAssessIsWindowsPlatform)) {
                 $ownerRw = [System.IO.UnixFileMode]'UserRead, UserWrite'
-                [System.IO.File]::SetUnixFileMode($pfxPath, $ownerRw)
+                Invoke-ZTAssessSetUnixFileMode -Path $pfxPath -Mode $ownerRw
             }
         }
 
         # On Windows only, optionally import into the user's personal store so the
         # certificate can be referenced by thumbprint alone.
         if ($InstallToWindowsStore) {
-            if ($IsWindows) {
+            if (Test-ZTAssessIsWindowsPlatform) {
                 if (-not $pfxBytes) {
                     Write-Warning 'InstallToWindowsStore requires the .pfx to have been exported first; it was skipped (likely due to -WhatIf). Store import was not performed.'
                 }
@@ -207,7 +207,7 @@ function New-ZTAssessCertificate {
             }
         }
 
-        $platformNote = if ($IsWindows) {
+        $platformNote = if (Test-ZTAssessIsWindowsPlatform) {
             'Windows: reference the certificate by thumbprint (store) or by the .pfx.'
         }
         else {

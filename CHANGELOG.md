@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Enabled `New-ZTAssessCertificate` unit tests that previously skipped on
+  Windows — extracted `Test-ZTAssessIsWindowsPlatform` and
+  `Invoke-ZTAssessSetUnixFileMode` as private provisioning-module helpers
+  so Pester can mock both instead of the tests skipping via
+  `-Skip:$IsWindows`. The macOS/Linux permission and off-Windows
+  `InstallToWindowsStore` warning branches are now verified on all
+  platforms via module-scoped mocks.
+
+- Fixed `./build.ps1 -ResolveDependency` failing on Windows networks where
+  `pwsh.gallery:443` is blocked — `Resolve-Dependency.ps1` now catches the
+  `Install-ModuleFast -Plan` network failure and falls back to PSResourceGet
+  instead of rethrowing, so the dependency resolution succeeds on those
+  machines. ModuleFast remains the primary resolver on CI and macOS/Linux
+  where pwsh.gallery is reachable.
+
 - Fixed `Grant-ZTAssessExchangeOnlineRole`'s dedicated-role-group fallback
   failing at the `Add-RoleGroupMember` step with `DisplayName: The
   property DisplayName can't be empty.` immediately after `New-RoleGroup`

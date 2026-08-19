@@ -928,7 +928,13 @@ try
 
                     $moduleFastPlanError = $_.Exception.Message
 
-                    throw ("ModuleFast could not create a dependency plan from RequiredModules.psd1. Run './Install-BuildDependency.ps1' to install required build modules through PSGallery, then retry './build.ps1 -ResolveDependency -Tasks build'. Original error: {0}" -f $moduleFastPlanError)
+                    # A network failure (e.g. pwsh.gallery:443 blocked on corporate Windows networks)
+                    # makes Install-ModuleFast unable to plan. Fall back to PSResourceGet so that
+                    # ./build.ps1 -ResolveDependency still succeeds on those machines.
+                    Write-Warning -Message ("ModuleFast could not create a dependency plan; falling back to PSResourceGet. Original error: {0}" -f $moduleFastPlanError)
+
+                    $UseModuleFast = $false
+                    $UsePSResourceGet = $true
 
                 }
 

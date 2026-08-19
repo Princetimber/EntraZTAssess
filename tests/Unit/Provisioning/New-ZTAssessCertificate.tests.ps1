@@ -65,24 +65,34 @@ Describe 'New-ZTAssessCertificate' -Tag 'Unit' {
         $result.Subject | Should -Be 'CN=Contoso ZTAssess'
     }
 
-    It 'Should restrict the output directory and .pfx to the owner on macOS/Linux' -Skip:$IsWindows {
+    It 'Should restrict the output directory and .pfx to the owner on macOS/Linux' {
         $securePw = ConvertTo-SecureString 'ZtAssessPfx!123' -AsPlainText -Force
         $outDir = Join-Path $TestDrive 'certs-perms'
 
-        $result = New-ZTAssessCertificate -OutputPath $outDir -PfxPassword $securePw
+        Mock -CommandName 'Test-ZTAssessIsWindowsPlatform' -ModuleName $script:provModuleName -MockWith { $false }
+        Mock -CommandName 'Invoke-ZTAssessSetUnixFileMode' -ModuleName $script:provModuleName -MockWith {}
 
-        $dirMode = [System.IO.File]::GetUnixFileMode($outDir)
-        $pfxMode = [System.IO.File]::GetUnixFileMode($result.PfxPath)
+        $null = New-ZTAssessCertificate -OutputPath $outDir -PfxPassword $securePw
 
-        $dirMode | Should -Be ([System.IO.UnixFileMode]'UserRead, UserWrite, UserExecute')
-        $pfxMode | Should -Be ([System.IO.UnixFileMode]'UserRead, UserWrite')
+        $expectedDirMode = [System.IO.UnixFileMode]'UserRead, UserWrite, UserExecute'
+        $expectedPfxMode = [System.IO.UnixFileMode]'UserRead, UserWrite'
+
+        Should -Invoke 'Invoke-ZTAssessSetUnixFileMode' -ModuleName $script:provModuleName -Times 1 -ParameterFilter {
+            $Path -eq $outDir -and $Mode -eq $expectedDirMode
+        }
+        Should -Invoke 'Invoke-ZTAssessSetUnixFileMode' -ModuleName $script:provModuleName -Times 1 -ParameterFilter {
+            $Mode -eq $expectedPfxMode
+        }
     }
 
-    It 'Should warn and skip store import when -InstallToWindowsStore is used off-Windows' -Skip:$IsWindows {
+    It 'Should warn and skip store import when -InstallToWindowsStore is used off-Windows' {
         $securePw = ConvertTo-SecureString 'ZtAssessPfx!123' -AsPlainText -Force
         $outDir = Join-Path $TestDrive 'certs-nonwin-store'
 
-        $warnings = New-ZTAssessCertificate -OutputPath $outDir -PfxPassword $securePw -InstallToWindowsStore -WarningVariable warnOutput -WarningAction SilentlyContinue
+        Mock -CommandName 'Test-ZTAssessIsWindowsPlatform' -ModuleName $script:provModuleName -MockWith { $false }
+        Mock -CommandName 'Invoke-ZTAssessSetUnixFileMode' -ModuleName $script:provModuleName -MockWith {}
+
+        $null = New-ZTAssessCertificate -OutputPath $outDir -PfxPassword $securePw -InstallToWindowsStore -WarningVariable warnOutput -WarningAction SilentlyContinue
 
         $warnOutput | Should -Not -BeNullOrEmpty
         $warnOutput[0] | Should -BeLike '*not Windows*'
