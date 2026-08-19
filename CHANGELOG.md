@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the **DataProtection** assessment module/domain (4 checks, DP-001
+  to DP-004), the third domain built on the read-only Exchange Online /
+  Security & Compliance (IPPS) connection surface, alongside
+  ThreatProtection and SecurityCompliance:
+  - `Invoke-ZTAssessDataProtectionCollection` collects Microsoft Purview
+    Data Loss Prevention and sensitivity label configuration
+    (`Get-DlpCompliancePolicy`, `Get-DlpComplianceRule`, `Get-Label`,
+    `Get-LabelPolicy`) via `Invoke-ZTAssessExoRequestWrapper`. Only
+    invoked when `$connection.ExchangeOnlineConnected` is true; otherwise
+    a manifest warning is recorded and the module's checks degrade to
+    `NotAssessed`.
+  - `Test-ZTAssessDataProtection` implements: DP-001 (at least one DLP
+    policy is enforcing, not test-only, across Exchange with
+    SharePoint/OneDrive), DP-002 (at least one DLP rule blocks access on
+    a sensitive-information match rather than only notifying), DP-003
+    (at least one sensitivity label exists and is published via a label
+    policy), and DP-004 (informational DLP/label inventory summary).
+  - New `DomainWeights.DataProtection`.
+  - Wired into `Invoke-ZTAssessment`'s collection (gated on
+    `$connection.ExchangeOnlineConnected`) and assessment phases.
+
 - Added the **SecurityCompliance** assessment module/domain (4 checks,
   SC-001 to SC-004), the second domain built on the read-only Exchange
   Online / Security & Compliance (IPPS) connection surface, alongside

@@ -381,6 +381,24 @@ function New-ZTAssessTestRun {
         complianceTags = @(
             @{ Name = 'Contract-Record'; RetentionAction = 'Keep'; RetentionDuration = 2555; IsRecordLabel = $true; Regulatory = $false }
         )
+
+        # ----- DataProtection snapshots (well-configured estate) -----
+
+        dlpCompliancePolicies = @(
+            @{ Name = 'Block-CreditCard-External'; Mode = 'Enable'; ExchangeLocation = @('All'); SharePointLocation = @('All'); OneDriveLocation = @() }
+        )
+
+        dlpComplianceRules = @(
+            @{ Name = 'CreditCard-Rule'; Policy = 'Block-CreditCard-External'; BlockAccess = $true; NotifyUser = @('Owner') }
+        )
+
+        sensitivityLabels = @(
+            @{ Name = 'Confidential'; ContentType = @('File', 'Email'); Priority = 1 }
+        )
+
+        labelPolicies = @(
+            @{ Name = 'Default-Label-Policy'; Labels = @('Confidential'); ExchangeLocation = @('All') }
+        )
     }
 
     foreach ($key in $Overrides.Keys) {
