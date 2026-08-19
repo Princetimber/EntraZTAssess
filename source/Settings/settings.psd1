@@ -52,6 +52,19 @@
         )
     }
 
+    # Candidate Microsoft Secure Score control names for the Defender for
+    # Cloud Apps / Cloud App Security setup proxy (CAS-001/CAS-002). This
+    # domain is explicitly a best-effort Secure Score proxy - Microsoft
+    # Graph exposes no Defender for Cloud Apps configuration API - so an
+    # unmatched control name degrades to NotAssessed rather than Fail.
+    CloudAppSecurity = @{
+        SetupControlNames = @(
+            'MCASSetup'
+            'EnableMCASIntegrationWithAzureInformationProtection'
+            'ConnectAppsToMCAS'
+        )
+    }
+
     # Application permission risk tiers used by the application security
     # assessment (AS-002/AS-003). Values are Microsoft Graph app role and
     # delegated scope names that grant tenant-takeover-equivalent or
@@ -139,6 +152,7 @@
         SecurityCompliance        = 1.0
         DataProtection            = 1.0
         Collaboration             = 1.0
+        CloudAppSecurity          = 0.5
         ApplicationSecurity       = 1.0
         ByodGovernance            = 0.75
         CorporateDeviceGovernance = 0.75

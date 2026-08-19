@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the **CloudAppSecurity** assessment module/domain (3 checks,
+  CAS-001 to CAS-003), the sixth and final planned domain in this
+  extension. Unlike the four EXO-backed domains, this is a **Graph-only,
+  best-effort Microsoft Secure Score proxy** — Microsoft Graph exposes no
+  Defender for Cloud Apps configuration API (no MCAS policies, app risk
+  scores, or OAuth app governance), so this domain is explicitly scoped
+  to partial coverage and documents that limitation in its own check
+  metadata (CAS-003) rather than overclaiming assessment depth:
+  - No separate collector: `CloudAppSecurity` shares the
+    `secureScoreLatest`/`secureScoreControlProfiles` snapshots collected
+    by `Invoke-ZTAssessDefenderCollection` (now invoked when either
+    `Defender` or `CloudAppSecurity` is selected), and needs no Exchange
+    Online / IPPS connection.
+  - `Test-ZTAssessCloudAppSecurity` implements: CAS-001 (Defender for
+    Cloud Apps setup shows a non-zero Secure Score contribution — a
+    best-effort proxy for provisioning, matched against a configurable
+    candidate control name list and degrading to `NotAssessed` if
+    unmatched, mirroring the existing DF-002 pattern), CAS-002
+    (Cloud-App-Security-relevant controls are not left in an `Ignored`
+    state without review), and CAS-003 (informational coverage summary
+    and disclaimer).
+  - New module catalogue entry in `Settings/permissions.psd1`
+    (`SecurityEvents.Read.All`), new `Settings.CloudAppSecurity.
+    SetupControlNames` candidate list, and `DomainWeights.
+    CloudAppSecurity` set lower (0.5) than fully-verified domains to
+    reflect its weaker signal quality.
+  - Wired into `Invoke-ZTAssessment`'s collection and assessment phases.
+  - This completes the module catalogue: all 6 planned domains
+    (Defender, ThreatProtection, SecurityCompliance, DataProtection,
+    Collaboration, CloudAppSecurity) are now implemented.
+
 - Added the **Collaboration** assessment module/domain (4 checks, CO-001
   to CO-004), the fourth and final Phase-1 domain built on the read-only
   Exchange Online / Security & Compliance (IPPS) connection surface,
