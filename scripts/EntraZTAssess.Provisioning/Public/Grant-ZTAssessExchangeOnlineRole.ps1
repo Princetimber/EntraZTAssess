@@ -27,37 +27,48 @@ function Grant-ZTAssessExchangeOnlineRole {
     Management).
 
     Each catalogue entry is granted with whichever mechanism actually
-    matches what it is in the connected tenant — these two are NOT
+    works for it in the connected tenant — these mechanisms are NOT
     interchangeable, and getting this wrong is a documented risk of this
-    function, not a hypothetical one. Verified against a live tenant across
-    the full permission catalogue:
+    function, not a hypothetical one. Verified against a live tenant
+    across the full permission catalogue:
 
     - A **role group** (only 'Security Reader', of the entries this
       catalogue currently uses) is granted with Add-RoleGroupMember, adding
       the app's Exchange Online service principal as a member.
-    - A **management role** — 'View-Only Configuration' and 'View-Only
-      Recipients' (visible in the Exchange Online session), and 'View-Only
-      Retention Management' and 'View-Only DLP Compliance Management'
-      (visible only in the Security & Compliance / IPPS session) — is
-      granted directly to the app with New-ManagementRoleAssignment -App,
-      which does not require the app to be a member of any role group.
-      Despite reading like role-group names, none of these four are role
-      groups in Exchange Online RBAC.
+    - A **management role** that supports direct application assignment
+      ('View-Only Configuration' and 'View-Only Recipients', visible in
+      the Exchange Online session) is granted directly to the app with
+      New-ManagementRoleAssignment -App, which does not require the app to
+      be a member of any role group. Despite reading like role-group
+      names, neither of these is a role group in Exchange Online RBAC.
+    - A **Security & Compliance-only management role that does NOT
+      support direct application assignment** ('View-Only Retention
+      Management' and 'View-Only DLP Compliance Management' — confirmed
+      live: these are visible via Get-ManagementRole only after
+      Connect-IPPSSession, and New-ManagementRoleAssignment -App fails
+      with "management role can't be found" against both the Exchange
+      Online and the IPPS connection) is instead granted through a
+      dedicated role group scoped to exactly that one role, created with
+      New-RoleGroup -Roles <role> -Members <servicePrincipal> — the
+      Microsoft-documented workaround for a management role that direct
+      -App assignment does not support. The role group is named
+      'EntraZTAssess - <role name>' and is reused, not recreated, on
+      later runs.
 
-    For each entry this function first attempts the role-group path; if
-    that fails because the name is not a role group, it falls back to the
-    management-role path against the same Exchange Online connection. If
-    both fail, it additionally attempts a lazily-established
-    Connect-IPPSSession and retries the management-role mechanism against
-    that connection before giving up on the entry — this is the path that
-    resolves the two Purview retention/DLP roles above, which exist only in
-    the Security & Compliance / IPPS RBAC namespace, not Exchange Online
-    proper.
+    For each entry this function tries, in order: the role-group path;
+    the direct management-role-assignment path against the same Exchange
+    Online connection; the same direct assignment again against a
+    lazily-established Connect-IPPSSession; and finally the dedicated
+    role-group workaround (creating it via IPPS if that connection was
+    established, otherwise via Exchange Online). It stops at the first
+    mechanism that succeeds for that entry and records a failure only if
+    every mechanism fails.
 
     Re-running this function is safe: it skips creating the service
-    principal if one already exists for the AppId, and treats an
-    "already granted" response from either mechanism as success rather
-    than a failure.
+    principal if one already exists for the AppId, skips creating a
+    dedicated role group that already exists (adding to it instead), and
+    treats an "already granted" response from any mechanism as success
+    rather than a failure.
 
     .PARAMETER AppId
     The application (client) ID of the EntraZTAssess app registration.
@@ -109,8 +120,19 @@ function Grant-ZTAssessExchangeOnlineRole {
     .NOTES
     Requires the ExchangeOnlineManagement module. Must be run by an account
     that already holds sufficient Exchange Online / Security & Compliance
-    administrative rights to grant role groups and management roles — this
-    function does not elevate or grant that right to the caller.
+    administrative rights to grant role groups, assign management roles,
+    and create role groups — this function does not elevate or grant that
+    right to the caller.
+
+    Get-ServicePrincipal, New-ServicePrincipal, Get-RoleGroup,
+    New-RoleGroup, Get-RoleGroupMember, Add-RoleGroupMember, and
+    New-ManagementRoleAssignment are dynamic RBAC proxy commands that
+    ExchangeOnlineManagement only injects into the session AFTER
+    Connect-ExchangeOnline succeeds; this function checks for
+    Connect-ExchangeOnline / Connect-IPPSSession / Disconnect-ExchangeOnline
+    before connecting and checks for the RBAC commands only after
+    connecting, so it never reports the module missing just because those
+    commands are not yet resolvable.
 
     Exact role and role-group names vary by tenant license and national
     cloud; confirm the entries in source/Settings/permissions.psd1 against
@@ -163,19 +185,23 @@ function Grant-ZTAssessExchangeOnlineRole {
 
     # --- Preconditions ----------------------------------------------------
 
-    $requiredCommands = @(
+    # Connect-ExchangeOnline / Connect-IPPSSession / Disconnect-ExchangeOnline
+    # are static, always-exported commands from the ExchangeOnlineManagement
+    # module, so they can be checked before connecting. The RBAC commands
+    # (Get-ServicePrincipal, New-ServicePrincipal, Get-RoleGroupMember,
+    # Add-RoleGroupMember, New-ManagementRoleAssignment) are dynamic proxy
+    # commands that the module only injects into the session AFTER a
+    # successful connection -- checking for them here would always report
+    # them missing even when ExchangeOnlineManagement is correctly
+    # installed, so that check happens after Connect-ExchangeOnline below.
+    $requiredPreConnectCommands = @(
         'Connect-ExchangeOnline'
         'Connect-IPPSSession'
         'Disconnect-ExchangeOnline'
-        'Get-ServicePrincipal'
-        'New-ServicePrincipal'
-        'Get-RoleGroupMember'
-        'Add-RoleGroupMember'
-        'New-ManagementRoleAssignment'
     )
-    $missingCommands = @($requiredCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
-    if ($missingCommands.Count -gt 0) {
-        throw ("The ExchangeOnlineManagement module is required but these commands were not found: {0}. Install it with: Install-Module ExchangeOnlineManagement -Scope CurrentUser" -f ($missingCommands -join ', '))
+    $missingPreConnectCommands = @($requiredPreConnectCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
+    if ($missingPreConnectCommands.Count -gt 0) {
+        throw ("The ExchangeOnlineManagement module is required but these commands were not found: {0}. Install it with: Install-Module ExchangeOnlineManagement -Scope CurrentUser" -f ($missingPreConnectCommands -join ', '))
     }
 
     # --- Resolve required entries from the same catalogue used by ----------
@@ -225,6 +251,22 @@ function Grant-ZTAssessExchangeOnlineRole {
     $ippsConnected = $false
 
     try {
+        # --- Verify the RBAC proxy commands are now available -------------
+
+        $requiredPostConnectCommands = @(
+            'Get-ServicePrincipal'
+            'New-ServicePrincipal'
+            'Get-RoleGroup'
+            'New-RoleGroup'
+            'Get-RoleGroupMember'
+            'Add-RoleGroupMember'
+            'New-ManagementRoleAssignment'
+        )
+        $missingPostConnectCommands = @($requiredPostConnectCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
+        if ($missingPostConnectCommands.Count -gt 0) {
+            throw ("Connected to Exchange Online, but these commands were not available in the session: {0}. This usually means the signed-in account lacks sufficient Exchange Online / Security & Compliance administrative rights, or the ExchangeOnlineManagement module version is outdated." -f ($missingPostConnectCommands -join ', '))
+        }
+
         # --- Ensure an Exchange Online service principal exists for AppId ---
 
         $servicePrincipal = Get-ServicePrincipal -Identity $AppId -ErrorAction SilentlyContinue
@@ -340,6 +382,49 @@ function Grant-ZTAssessExchangeOnlineRole {
                             $lastError = $_.Exception.Message
                         }
                     }
+                }
+            }
+
+            # 4. Final fallback: a direct -App role assignment is not
+            #    supported for every management role (confirmed on a live
+            #    tenant for the two Purview retention/DLP roles, which
+            #    fail identically even against the IPPS connection). The
+            #    Microsoft-documented workaround is a role group scoped to
+            #    exactly that one management role, with the service
+            #    principal as a member -- create it once, then add to it
+            #    on re-runs.
+            if (-not $outcome) {
+                $customRoleGroupName = ('EntraZTAssess - {0}' -f $entryName)
+                try {
+                    $existingCustomGroup = Get-RoleGroup -Identity $customRoleGroupName -ErrorAction SilentlyContinue
+
+                    if ($existingCustomGroup) {
+                        $existingCustomMembers = @(Get-RoleGroupMember -Identity $customRoleGroupName -ErrorAction Stop)
+                        $isAlreadyCustomMember = $existingCustomMembers | Where-Object {
+                            $_.Identity -eq $spIdentity -or $_.Guid -eq $spIdentity -or $_.DisplayName -eq $DisplayName -or $_.Name -eq $DisplayName
+                        }
+
+                        if ($isAlreadyCustomMember) {
+                            $outcome = 'AlreadyGranted'
+                        }
+                        elseif ($PSCmdlet.ShouldProcess($customRoleGroupName, ('Add {0} as a member' -f $DisplayName))) {
+                            Add-RoleGroupMember -Identity $customRoleGroupName -Member $spIdentity -Confirm:$false -ErrorAction Stop
+                            $outcome = 'Granted'
+                        }
+                        else {
+                            $outcome = 'SkippedWhatIf'
+                        }
+                    }
+                    elseif ($PSCmdlet.ShouldProcess($customRoleGroupName, ('Create a role group scoped to {0}' -f $entryName))) {
+                        New-RoleGroup -Name $customRoleGroupName -Roles $entryName -Members $spIdentity -ErrorAction Stop
+                        $outcome = 'Granted'
+                    }
+                    else {
+                        $outcome = 'SkippedWhatIf'
+                    }
+                }
+                catch {
+                    $lastError = $_.Exception.Message
                 }
             }
 

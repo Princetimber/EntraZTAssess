@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `Grant-ZTAssessExchangeOnlineRole` failing to grant `View-Only
+  Retention Management` and `View-Only DLP Compliance Management` with
+  `The "<role>" management role can't be found. Check the role entry
+  name, and try again.` — confirmed live against a real tenant that this
+  error recurs identically even after the IPPS-connection retry added
+  previously, meaning direct `New-ManagementRoleAssignment -App`
+  assignment is simply not supported for these two management roles,
+  regardless of connection. Added a fourth, final fallback mechanism
+  matching Microsoft's documented workaround for this case: create (or
+  reuse, on re-runs) a dedicated role group scoped to exactly that one
+  management role (`New-RoleGroup -Name 'EntraZTAssess - <role>' -Roles
+  '<role>' -Members <servicePrincipal>`) and add the app's service
+  principal to it. `Grant-ZTAssessExchangeOnlineRole` now tries, per
+  entry and in order: role-group membership, direct management-role
+  assignment, the same direct assignment again via IPPS, and finally this
+  dedicated-role-group workaround, stopping at the first that succeeds.
+
+- Fixed `Grant-ZTAssessExchangeOnlineRole` failing with "The
+  ExchangeOnlineManagement module is required but these commands were not
+  found: Get-ServicePrincipal, New-ServicePrincipal, Get-RoleGroupMember,
+  Add-RoleGroupMember, New-ManagementRoleAssignment" even when the module
+  was correctly installed. Those five commands are dynamic RBAC proxy
+  commands that ExchangeOnlineManagement only injects into the session
+  **after** a successful `Connect-ExchangeOnline` / `Connect-IPPSSession`
+  — they were being checked before connecting, alongside the genuinely
+  static `Connect-ExchangeOnline` / `Connect-IPPSSession` /
+  `Disconnect-ExchangeOnline` exports, so the precondition check always
+  failed for them regardless of whether the module was installed. The
+  precondition check is now split: `Connect-ExchangeOnline` /
+  `Connect-IPPSSession` / `Disconnect-ExchangeOnline` are still verified
+  before connecting, while the RBAC proxy commands are verified
+  immediately after `Connect-ExchangeOnline` succeeds, with a clear error
+  if they still aren't available (most likely insufficient Exchange
+  Online / Security & Compliance administrative rights on the signed-in
+  account). Added a regression test that reproduces the original bug by
+  never stubbing those five commands and asserting the function still
+  reaches `Connect-ExchangeOnline` rather than failing at the pre-connect
+  check.
+
 - Fixed a flaky `tests/QA/module.tests.ps1` failure where
   `Invoke-ScriptAnalyzer` intermittently threw a `NullReferenceException`
   from within its own rule engine on `ubuntu-latest` CI runners — observed
