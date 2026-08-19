@@ -399,6 +399,16 @@ function New-ZTAssessTestRun {
         labelPolicies = @(
             @{ Name = 'Default-Label-Policy'; Labels = @('Confidential'); ExchangeLocation = @('All') }
         )
+
+        # ----- Collaboration snapshots (well-configured estate) -----
+
+        sharingPolicies = @(
+            @{ Name = 'Default Sharing Policy'; Enabled = $true; Domains = @('Anonymous:CalendarSharingFreeBusySimple', 'contoso-partner.com:CalendarSharingFreeBusyDetail') }
+        )
+
+        transportRules = @(
+            @{ Name = 'Block executable attachments'; State = 'Enabled'; RedirectMessageTo = @(); BlindCopyTo = @() }
+        )
     }
 
     foreach ($key in $Overrides.Keys) {

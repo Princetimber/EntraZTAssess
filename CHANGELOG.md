@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the **Collaboration** assessment module/domain (4 checks, CO-001
+  to CO-004), the fourth and final Phase-1 domain built on the read-only
+  Exchange Online / Security & Compliance (IPPS) connection surface,
+  alongside ThreatProtection, SecurityCompliance, and DataProtection:
+  - `Invoke-ZTAssessCollaborationCollection` collects Exchange external
+    sharing and mail-flow configuration (`Get-SharingPolicy`,
+    `Get-TransportRule`) via `Invoke-ZTAssessExoRequestWrapper`. Only
+    invoked when `$connection.ExchangeOnlineConnected` is true; otherwise
+    a manifest warning is recorded and the module's checks degrade to
+    `NotAssessed`. SharePoint tenant sharing settings (`Get-SPOTenant`)
+    are deliberately out of scope for v1 — they require a third
+    connection surface (`Connect-SPOService`) this module does not
+    establish.
+  - `Test-ZTAssessCollaboration` implements: CO-001 (no enabled sharing
+    policy grants anonymous users calendar detail or full details),
+    CO-002 (no enabled transport rule silently redirects or blind-copies
+    messages — a common post-compromise exfiltration technique), CO-003
+    (no enabled sharing policy grants full calendar details to all
+    external domains via a wildcard entry), and CO-004 (informational
+    external-collaboration inventory summary).
+  - New `DomainWeights.Collaboration`.
+  - Wired into `Invoke-ZTAssessment`'s collection (gated on
+    `$connection.ExchangeOnlineConnected`) and assessment phases.
+
 - Added the **DataProtection** assessment module/domain (4 checks, DP-001
   to DP-004), the third domain built on the read-only Exchange Online /
   Security & Compliance (IPPS) connection surface, alongside
