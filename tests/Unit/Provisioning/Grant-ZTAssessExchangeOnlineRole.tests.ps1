@@ -199,10 +199,16 @@ Describe 'Grant-ZTAssessExchangeOnlineRole' -Tag 'Unit' {
 
         $result.RoleGroupsGranted | Should -Contain 'View-Only Retention Management'
         $result.RoleGroupsGranted | Should -Contain 'View-Only Configuration'
+        # New-RoleGroup's own -Members parameter is deliberately not used
+        # (confirmed live to reject a service principal identity) --
+        # the group is created without members, then Add-RoleGroupMember
+        # is called separately using the mechanism already proven to work.
         Should -Invoke -ModuleName $script:provModuleName New-RoleGroup -Times 1 -Exactly -ParameterFilter {
             $Name -eq 'EntraZTAssess - View-Only Retention Management' -and
-            $Roles -eq 'View-Only Retention Management' -and
-            $Members -eq $script:spIdentity
+            $Roles -eq 'View-Only Retention Management'
+        }
+        Should -Invoke -ModuleName $script:provModuleName Add-RoleGroupMember -Times 1 -Exactly -ParameterFilter {
+            $Identity -eq 'EntraZTAssess - View-Only Retention Management' -and $Member -eq $script:spIdentity
         }
     }
 
