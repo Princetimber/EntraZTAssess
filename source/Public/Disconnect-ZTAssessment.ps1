@@ -6,10 +6,11 @@ function Disconnect-ZTAssessment {
     Disconnects the current Microsoft Graph assessment session.
 
     .DESCRIPTION
-    Ends the Microsoft Graph session established by Connect-ZTAssessment and
-    clears the cached connection summary held by the module. Run this at the
-    end of every engagement so no authenticated context remains on the
-    consultant workstation.
+    Ends the Microsoft Graph session established by Connect-ZTAssessment,
+    along with the Exchange Online / Security & Compliance (IPPS) session if
+    one was established, and clears the cached connection summary held by the
+    module. Run this at the end of every engagement so no authenticated
+    context remains on the consultant workstation.
 
     .EXAMPLE
     Disconnect-ZTAssessment
@@ -34,6 +35,16 @@ function Disconnect-ZTAssessment {
     } catch {
         Write-Warning "No active Microsoft Graph session to disconnect, or disconnection failed: $($_.Exception.Message)"
         Write-ToLog -Message "Disconnect attempt: $($_.Exception.Message)" -Level WARN -NoConsole
+    }
+
+    try {
+        # No console warning here: most engagements never open the Exchange
+        # Online / IPPS surface, so "no active session" is the common case,
+        # not a failure worth surfacing to the console every run.
+        Disconnect-ExchangeOnlineWrapper
+        Write-ToLog -Message 'Disconnected from Exchange Online / Security & Compliance.' -Level INFO -NoConsole
+    } catch {
+        Write-ToLog -Message "Exchange Online / IPPS disconnect attempt: $($_.Exception.Message)" -Level WARN -NoConsole
     } finally {
         $script:ZTAssessConnection = $null
     }

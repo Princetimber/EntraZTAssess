@@ -8,9 +8,11 @@ function Get-ZTAssessModuleCatalog {
     .DESCRIPTION
     Returns the catalogue of assessment modules defined in permissions.psd1,
     including each module's description, the least-privilege Microsoft Graph
-    scopes it requires, and whether it is always included or optional. Use
-    this to decide which modules to enable for an engagement and to brief
-    the customer on the permissions each module needs.
+    scopes it requires, whether it is always included or optional, and
+    whether it also requires the read-only Exchange Online / Security &
+    Compliance (IPPS) connection surface. Use this to decide which modules to
+    enable for an engagement and to brief the customer on the permissions
+    each module needs.
 
     .PARAMETER Name
     One or more module names to filter the catalogue by. Wildcards are not
@@ -30,7 +32,7 @@ function Get-ZTAssessModuleCatalog {
     .OUTPUTS
     PSCustomObject
     One object per module with properties: Name, Description, Scopes,
-    AlwaysIncluded, Optional.
+    AlwaysIncluded, Optional, ExchangeOnlineRoles, RequiresExchangeOnline.
 
     .NOTES
     The catalogue is loaded from Settings/permissions.psd1 and cached for
@@ -63,12 +65,14 @@ function Get-ZTAssessModuleCatalog {
     foreach ($moduleKey in $selectedKeys) {
         $entry = $catalogue[$moduleKey]
         [pscustomobject]@{
-            PSTypeName     = 'ZTAssess.ModuleCatalogEntry'
-            Name           = $moduleKey
-            Description    = $entry.Description
-            Scopes         = @($entry.Scopes)
-            AlwaysIncluded = [bool]$entry.AlwaysIncluded
-            Optional       = [bool]$entry.Optional
+            PSTypeName             = 'ZTAssess.ModuleCatalogEntry'
+            Name                   = $moduleKey
+            Description            = $entry.Description
+            Scopes                 = @($entry.Scopes)
+            AlwaysIncluded         = [bool]$entry.AlwaysIncluded
+            Optional               = [bool]$entry.Optional
+            ExchangeOnlineRoles    = @($entry.ExchangeOnlineRoles)
+            RequiresExchangeOnline = [bool]$entry.RequiresExchangeOnline
         }
     }
 }

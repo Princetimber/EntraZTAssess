@@ -27,6 +27,7 @@ function Resolve-ZTAssessAuthConfig {
     $fileThumbprint = $null
     $fileCertPath = $null
     $fileEnvironment = $null
+    $fileOrganization = $null
     $fileContributed = $false
 
     if (Test-Path -LiteralPath $configFilePath -PathType Leaf) {
@@ -39,6 +40,7 @@ function Resolve-ZTAssessAuthConfig {
             $fileThumbprint = $parsed.CertificateThumbprint
             $fileCertPath = $parsed.CertificatePath
             $fileEnvironment = $parsed.Environment
+            $fileOrganization = $parsed.Organization
             $fileContributed = $true
         } catch {
             Write-ToLog -Message "Ignoring malformed auth config file '$configFilePath': $($_.Exception.Message)" -Level WARN -NoConsole
@@ -52,6 +54,7 @@ function Resolve-ZTAssessAuthConfig {
         $env:ZTASSESS_CERT_THUMBPRINT
         $env:ZTASSESS_CERT_PATH
         $env:ZTASSESS_ENVIRONMENT
+        $env:ZTASSESS_ORGANIZATION
     )
     $envContributed = [bool]($envValues | Where-Object { $_ })
 
@@ -60,6 +63,11 @@ function Resolve-ZTAssessAuthConfig {
     $thumbprint = if ($env:ZTASSESS_CERT_THUMBPRINT) { $env:ZTASSESS_CERT_THUMBPRINT } else { $fileThumbprint }
     $certificatePath = if ($env:ZTASSESS_CERT_PATH) { $env:ZTASSESS_CERT_PATH } else { $fileCertPath }
     $environment = if ($env:ZTASSESS_ENVIRONMENT) { $env:ZTASSESS_ENVIRONMENT } else { $fileEnvironment }
+    # Organization (Exchange Online / IPPS verified domain) is optional: a
+    # missing value does not block CBA resolution, it is resolved later by
+    # Resolve-ZTAssessOrganization with additional fallbacks (including
+    # deriving it from the connected Graph tenant).
+    $organization = if ($env:ZTASSESS_ORGANIZATION) { $env:ZTASSESS_ORGANIZATION } else { $fileOrganization }
 
     # A configuration only counts as resolved with an app id, a tenant, and a
     # certificate reference (store thumbprint or on-disk PFX path).
@@ -80,6 +88,7 @@ function Resolve-ZTAssessAuthConfig {
         CertificateThumbprint = $thumbprint
         CertificatePath       = $certificatePath
         Environment           = $environment
+        Organization          = $organization
         Source                = $source
     }
 }

@@ -24,15 +24,24 @@ Describe 'Disconnect-ZTAssessment' -Tag 'Unit' {
 
     BeforeEach {
         Mock -ModuleName $script:dscModuleName -CommandName Write-ToLog -MockWith { }
+        Mock -ModuleName $script:dscModuleName -CommandName Disconnect-ExchangeOnlineWrapper -MockWith { }
     }
 
     Context 'When a session exists' {
-        It 'Should call the disconnect wrapper exactly once' {
+        It 'Should call the Graph disconnect wrapper exactly once' {
             Mock -ModuleName $script:dscModuleName -CommandName Disconnect-MgGraphWrapper -MockWith { }
 
             Disconnect-ZTAssessment
 
             Should -Invoke -ModuleName $script:dscModuleName -CommandName Disconnect-MgGraphWrapper -Times 1 -Exactly
+        }
+
+        It 'Should call the Exchange Online / IPPS disconnect wrapper exactly once' {
+            Mock -ModuleName $script:dscModuleName -CommandName Disconnect-MgGraphWrapper -MockWith { }
+
+            Disconnect-ZTAssessment
+
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Disconnect-ExchangeOnlineWrapper -Times 1 -Exactly
         }
 
         It 'Should clear the cached connection summary' {
@@ -74,6 +83,17 @@ Describe 'Disconnect-ZTAssessment' -Tag 'Unit' {
             InModuleScope -ModuleName $script:dscModuleName {
                 $script:ZTAssessConnection | Should -BeNullOrEmpty
             }
+        }
+
+        It 'Should not warn to the console when no Exchange Online / IPPS session was ever opened' {
+            Mock -ModuleName $script:dscModuleName -CommandName Disconnect-MgGraphWrapper -MockWith { }
+            Mock -ModuleName $script:dscModuleName -CommandName Disconnect-ExchangeOnlineWrapper -MockWith {
+                throw 'The ExchangeOnlineManagement module is required.'
+            }
+
+            { Disconnect-ZTAssessment -WarningVariable disconnectWarnings -WarningAction SilentlyContinue } |
+                Should -Not -Throw
+            $disconnectWarnings | Should -BeNullOrEmpty
         }
     }
 }

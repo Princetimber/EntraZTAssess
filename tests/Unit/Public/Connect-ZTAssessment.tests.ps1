@@ -287,6 +287,80 @@ Describe 'Connect-ZTAssessment' -Tag 'Unit' {
         }
     }
 
+    Context 'When a selected module requires Exchange Online / IPPS' {
+        BeforeEach {
+            Mock -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -MockWith { }
+            Mock -ModuleName $script:dscModuleName -CommandName Get-MgContextWrapper -MockWith {
+                [pscustomobject]@{
+                    TenantId = '11111111-1111-1111-1111-111111111111'
+                    Account  = 'app-only'
+                    Scopes   = @()
+                }
+            }
+        }
+
+        It 'Should connect both surfaces in app-only mode using the same certificate' {
+            $result = Connect-ZTAssessment -Modules ThreatProtection -TenantId 'contoso.onmicrosoft.com' `
+                -ClientId '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' `
+                -CertificateThumbprint 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0' `
+                -Organization 'contoso.onmicrosoft.com'
+
+            $result.ExchangeOnlineConnected | Should -BeTrue
+            $result.ExchangeOnlineWarning | Should -BeNullOrEmpty
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -Times 2 -Exactly -ParameterFilter {
+                $Organization -eq 'contoso.onmicrosoft.com' -and $AppId -eq '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' -and
+                $CertificateThumbprint -eq 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0'
+            }
+        }
+
+        It 'Should skip Exchange Online / IPPS and warn for delegated sign-in' {
+            $result = Connect-ZTAssessment -Modules ThreatProtection -WarningAction SilentlyContinue
+
+            $result.ExchangeOnlineConnected | Should -BeFalse
+            $result.ExchangeOnlineWarning | Should -Match 'app-only authentication'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -Times 0 -Exactly
+        }
+
+        It 'Should warn and leave ExchangeOnlineConnected false when no organization can be resolved' {
+            Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessGraphRequest -MockWith {
+                throw 'Graph unavailable.'
+            }
+
+            $result = Connect-ZTAssessment -Modules ThreatProtection -TenantId '11111111-1111-1111-1111-111111111111' `
+                -ClientId '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' `
+                -CertificateThumbprint 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0' `
+                -WarningAction SilentlyContinue
+
+            $result.ExchangeOnlineConnected | Should -BeFalse
+            $result.ExchangeOnlineWarning | Should -Match 'Could not resolve an Exchange Online organization'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -Times 0 -Exactly
+        }
+
+        It 'Should warn but not fail the overall connection when Exchange Online / IPPS fails to connect' {
+            Mock -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -MockWith {
+                throw 'Certificate not trusted by Exchange Online.'
+            }
+
+            $result = Connect-ZTAssessment -Modules ThreatProtection -TenantId 'contoso.onmicrosoft.com' `
+                -ClientId '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' `
+                -CertificateThumbprint 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0' `
+                -Organization 'contoso.onmicrosoft.com' `
+                -WarningAction SilentlyContinue
+
+            $result.AuthMode | Should -Be 'AppOnly'
+            $result.ExchangeOnlineConnected | Should -BeFalse
+            $result.ExchangeOnlineWarning | Should -Match 'Failed to connect to Exchange Online'
+        }
+
+        It 'Should not attempt Exchange Online / IPPS for modules that do not require it' {
+            $null = Connect-ZTAssessment -Modules Identity -TenantId 'contoso.onmicrosoft.com' `
+                -ClientId '0bb09f73-1f0f-43e2-bebd-9b675a4e2ab3' `
+                -CertificateThumbprint 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0'
+
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -Times 0 -Exactly
+        }
+    }
+
     Context 'When a resolved certificate configuration fails to connect' {
         It 'Should surface a terminating error rather than falling back silently' {
             Mock -ModuleName $script:dscModuleName -CommandName Resolve-ZTAssessAuthConfig -MockWith {

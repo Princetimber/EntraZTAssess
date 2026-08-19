@@ -69,6 +69,59 @@ Describe 'Read-only enforcement' -Tag 'QA', 'ReadOnly' {
 
         $offenders | Should -BeNullOrEmpty -Because 'Graph write operations must live in scripts/EntraZTAssess.Provisioning, never under source/'
     }
+
+    It 'Should restrict the Exchange Online/IPPS allow-list to Get-* cmdlets' {
+        $allowListFile = $script:sourceFiles | Where-Object Name -eq 'Get-ZTAssessExoAllowedCmdletName.ps1'
+        $allowListFile | Should -Not -BeNullOrEmpty
+
+        $content = Get-Content -LiteralPath $allowListFile.FullName -Raw
+        $cmdletNames = [regex]::Matches($content, "'([A-Za-z]+-[A-Za-z]+)'") | ForEach-Object { $_.Groups[1].Value }
+
+        $cmdletNames | Should -Not -BeNullOrEmpty
+        foreach ($cmdletName in $cmdletNames) {
+            $cmdletName | Should -Match '^Get-' -Because 'the Exchange Online/IPPS allow-list must contain only read-only cmdlets'
+        }
+    }
+
+    It 'Should not use write-verb Exchange Online/Purview cmdlets anywhere under source/' {
+        $writeExoPattern = '\b(New|Set|Remove|Add|Enable|Disable|Start|Stop|Import|Export)-(DlpCompliance\w*|Label\w*|AntiPhish\w*|SafeLinks\w*|SafeAttachment\w*|TransportRule\w*|SharingPolicy\w*|RetentionCompliance\w*|ComplianceTag\w*|RoleGroup\w*|OrganizationConfig|HostedContentFilterPolicy\w*|MalwareFilterPolicy\w*)\b'
+
+        $offenders = foreach ($file in $script:sourceFiles) {
+            $content = Get-Content -LiteralPath $file.FullName -Raw
+            if ($content -match $writeExoPattern) {
+                $file.FullName
+            }
+        }
+
+        $offenders | Should -BeNullOrEmpty -Because 'Exchange Online/Purview write operations must never appear under source/'
+    }
+
+    It 'Should only call Connect-ExchangeOnline/Connect-IPPSSession/Disconnect-ExchangeOnline from their guarded wrappers' {
+        $allowedFiles = @('Connect-ExchangeOnlineWrapper.ps1', 'Disconnect-ExchangeOnlineWrapper.ps1')
+
+        $offenders = foreach ($file in $script:sourceFiles) {
+            if ($file.Name -in $allowedFiles) { continue }
+
+            $content = Get-Content -LiteralPath $file.FullName -Raw
+            if ($content -match '\b(Connect-ExchangeOnline|Connect-IPPSSession|Disconnect-ExchangeOnline)\b') {
+                $file.FullName
+            }
+        }
+
+        $offenders | Should -BeNullOrEmpty -Because 'Exchange Online/IPPS session lifecycle must flow only through the guarded wrapper functions'
+    }
+
+    It 'Should document Exchange Online/IPPS role guidance for every module that requires it' {
+        $projectPath = "$($PSScriptRoot)/../.." | Convert-Path
+        $permissions = Import-PowerShellDataFile -LiteralPath (Join-Path $projectPath 'source/Settings/permissions.psd1')
+
+        foreach ($moduleName in $permissions.Modules.Keys) {
+            $module = $permissions.Modules[$moduleName]
+            if ($module.RequiresExchangeOnline) {
+                @($module.ExchangeOnlineRoles) | Should -Not -BeNullOrEmpty -Because "module '$moduleName' requires Exchange Online/IPPS but documents no role-group guidance"
+            }
+        }
+    }
 }
 
 Describe 'Secure execution' -Tag 'QA', 'Security' {
@@ -82,6 +135,17 @@ Describe 'Secure execution' -Tag 'QA', 'Security' {
         }
 
         $offenders | Should -BeNullOrEmpty -Because 'unsafe string execution is prohibited'
+    }
+
+    It 'Should not use remote PSSession invocation outside the ExchangeOnlineManagement session helpers' {
+        $offenders = foreach ($file in $script:sourceFiles) {
+            $content = Get-Content -LiteralPath $file.FullName -Raw
+            if ($content -match 'Invoke-Command\s+-Session') {
+                $file.FullName
+            }
+        }
+
+        $offenders | Should -BeNullOrEmpty -Because 'this module never manages PSSessions directly; ExchangeOnlineManagement owns the remote session'
     }
 
     It 'Should not contain hard-coded secret-like assignments' {

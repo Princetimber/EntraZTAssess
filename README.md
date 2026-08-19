@@ -57,6 +57,8 @@ Import-Module ./output/Get-EntraZTAssess/<version>/Get-EntraZTAssess.psd1
 
 Full setup, cross-platform certificate guidance, the read-only Application-permissions table, and CI/headless usage are documented in [`docs/Authentication.md`](docs/Authentication.md).
 
+Modules whose data does not exist in Microsoft Graph (`SecurityCompliance`, `Collaboration`, `DataProtection`, `ThreatProtection`) use a second, lazily-established, read-only Exchange Online / Security & Compliance (IPPS) connection alongside Graph, reusing the same certificate. It is app-only only and never fails the overall connection — see [Exchange Online / Security & Compliance Connection](docs/Authentication.md#exchange-online--security--compliance-connection). Checks for these four modules ship in follow-up phases.
+
 ### Provisioning quickstart
 
 The `EntraZTAssess.Provisioning` module lives under `scripts/` and is **repository-based, admin-run, one-time** — it is not installed by `Install-Module`. Run `Get-ZTAssessProvisioningStep` (in the installed module) for the same steps as discoverable guidance.

@@ -5,6 +5,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a second, read-only connection surface for Exchange Online / Security
+  & Compliance (IPPS), established lazily by `Connect-ZTAssessment` alongside
+  Microsoft Graph, for assessment modules whose data does not exist in Graph.
+  All calls flow through the new `Invoke-ZTAssessExoRequestWrapper`, which
+  only permits an explicit allow-list of `Get-*` cmdlets
+  (`Get-ZTAssessExoAllowedCmdletName`); the Exchange Online / IPPS session
+  itself is scoped to that same allow-list via `-CommandName`. This surface
+  reuses the same certificate as the existing app-only Graph connection, is
+  skipped for delegated/device-code sign-in, and never fails the overall
+  connection — a failure or skip degrades dependent checks to `NotAssessed`
+  the same way a Graph collector failure already does.
+  - `Connect-ZTAssessment` gains an optional `-Organization` parameter and an
+    `ZTASSESS_ORGANIZATION` environment variable / `auth.json` `Organization`
+    key, resolved (in order) from the explicit parameter, the environment
+    variable, `auth.json`, a domain-looking `-TenantId`, or derived from the
+    connected Graph tenant's initial verified domain.
+  - The connection summary returned by `Connect-ZTAssessment` gains
+    `ExchangeOnlineConnected` and `ExchangeOnlineWarning`.
+  - `Disconnect-ZTAssessment` also tears down the Exchange Online / IPPS
+    session when one was established.
+  - Four new module catalogue entries — `SecurityCompliance`, `Collaboration`,
+    `DataProtection`, `ThreatProtection` — are added to
+    `Settings/permissions.psd1` with a `RequiresExchangeOnline` flag and
+    `ExchangeOnlineRoles` provisioning guidance (`Get-ZTAssessModuleCatalog`
+    surfaces both). These modules are not yet implemented in
+    `Invoke-ZTAssessment` (checks/collectors/assessors ship in follow-up
+    phases); selecting them today only exercises the new connection surface.
+  - New provisioning-only, no-network function
+    `Get-ZTAssessExchangeOnlineRoleGuidance` (in the repo-local
+    `EntraZTAssess.Provisioning` module) lists the Exchange Online / IPPS role
+    groups a tenant's own Exchange administrator must grant; this toolkit
+    never grants them itself. `Get-ZTAssessProvisioningStep` surfaces this as
+    an additional step when relevant.
+  - `tests/QA/ReadOnly.tests.ps1` gains four new static gates mirroring the
+    existing Microsoft Graph read-only enforcement for this surface. See
+    `docs/Authentication.md` for full details.
+
 ### Changed
 
 - Added `graphify-out/` to `.gitignore`. It holds local, disposable knowledge-graph

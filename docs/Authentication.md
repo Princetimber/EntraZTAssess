@@ -41,9 +41,27 @@ CBA settings are resolved from the first source that supplies them, in this orde
 | `-CertificatePath` | Path to a password-protected PFX (cross-platform; macOS/Linux and Windows). |
 | `-CertificatePassword` | `SecureString` protecting the PFX. Never persisted. |
 | `-Environment` | Graph national cloud environment (for example `Global`, `USGov`). |
+| `-Organization` | The verified domain Exchange Online / Security & Compliance (IPPS) requires, for modules that need that surface (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)). |
 | `-NoInteractiveFallback` | Forces a hard failure when no CBA configuration is found instead of falling back to interactive sign-in. Intended for headless / CI. |
 
 The existing `-ClientId` / `-CertificateThumbprint` combination continues to work for the Windows certificate-store path.
+
+## Exchange Online / Security & Compliance Connection
+
+Some modules (`SecurityCompliance`, `Collaboration`, `DataProtection`, `ThreatProtection`) read data that does not exist in Microsoft Graph — Purview DLP/retention/label policies, Exchange sharing and transport rules, and Defender for Office 365 policies (Safe Links, Safe Attachments, anti-phishing) are only available through Exchange Online / Security & Compliance (IPPS) PowerShell cmdlets. `Connect-ZTAssessment` establishes this as a **second, independent, read-only connection**, alongside Microsoft Graph, only when a selected module requires it.
+
+Key behaviours:
+
+- **Lazy.** The connection is attempted only when `Get-ZTAssessModuleCatalog` reports `RequiresExchangeOnline` for a selected module. Engagements that only use Graph-only modules never touch this surface.
+- **App-only only.** This surface reuses the same certificate as the Microsoft Graph app-only connection. It is **not available** for delegated/device-code sign-in; affected checks are reported as `NotAssessed` in that case.
+- **Never fails the overall connection.** If Exchange Online / IPPS fails to connect (or was skipped because no `-Organization` could be resolved), `Connect-ZTAssessment` still succeeds for Graph-only modules. `ExchangeOnlineConnected` and `ExchangeOnlineWarning` on the returned connection summary report the outcome.
+- **Read-only, allow-listed.** All Exchange Online / IPPS calls flow through `Invoke-ZTAssessExoRequestWrapper`, which only permits the `Get-*` cmdlets returned by `Get-ZTAssessExoAllowedCmdletName`. The session itself is also scoped to that allow-list via `-CommandName`, so write cmdlets are never imported into the session. `tests/QA/ReadOnly.tests.ps1` statically enforces both.
+- **`-Organization` resolution order**: explicit `-Organization` parameter → `ZTASSESS_ORGANIZATION` environment variable → `Organization` in `~/.ztassess/auth.json` → a domain-looking `-TenantId` used as-is → derived from the connected Graph tenant's initial verified domain. This last fallback means Graph must connect successfully before Exchange Online / IPPS is attempted, which is always the case since Graph connects first.
+- **Provisioning is guidance only.** This toolkit cannot and does not grant Exchange Online / Security & Compliance role groups — that remains a manual, one-time step for the tenant's own Exchange administrator. `Get-ZTAssessExchangeOnlineRoleGuidance` (in the `EntraZTAssess.Provisioning` module) lists the role groups each module needs.
+
+```powershell
+Connect-ZTAssessment -Modules ThreatProtection -Organization 'contoso.onmicrosoft.com'
+```
 
 ## CBA Setup — Four Steps
 
@@ -78,6 +96,16 @@ New-ZTAssessAppRegistration -TenantId '<tenant>' -CertificatePath ~/.ztassess/En
 ```
 
 All Application permissions used by the assessment are on Microsoft Graph, so admin consent requires **Privileged Role Administrator** or Global Administrator. Application Administrator and Cloud Application Administrator can register the app and add the requested app roles in step 2, but Microsoft explicitly excludes Microsoft Graph application permissions from what those two roles can consent to — see [Cloud Application Administrator](https://learn.microsoft.com/entra/identity/role-based-access-control/permissions-reference#cloud-application-administrator). If the organization won't grant Global Administrator, request a time-bound Privileged Role Administrator assignment (ideally via PIM) for this one consent step, or have an existing Privileged Role Administrator run it.
+
+### 3a. Grant Exchange Online / Purview role groups (only for SecurityCompliance, Collaboration, DataProtection, ThreatProtection)
+
+If the engagement scope includes any of these four modules, ask the tenant's own Exchange administrator to grant the role groups listed by:
+
+```powershell
+Get-ZTAssessExchangeOnlineRoleGuidance -Modules ThreatProtection
+```
+
+This toolkit only reads Exchange Online / Purview configuration through a read-only, allow-listed cmdlet surface (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)) — it never grants these roles itself.
 
 ### 4. Connect
 
@@ -114,6 +142,17 @@ The CBA app registration holds only the read-only permissions below. They use th
 
 The Sentinel module uses Azure Reader via ARM and requires no Graph permissions.
 
+### Exchange Online / Security & Compliance Role Groups
+
+The four modules below hold no Graph scopes; instead they need Exchange Online / Security & Compliance (IPPS) role groups granted to the app's service principal by the tenant's own Exchange administrator (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)). **This toolkit cannot and does not grant these roles itself** — treat this table as pre-engagement guidance, not an enforced or verified permission set. Exact role-group names vary slightly by license and national cloud; confirm availability in the tenant's Purview / Exchange admin center.
+
+| Module | Exchange Online / IPPS role groups (read-only guidance) |
+|---|---|
+| SecurityCompliance | `View-Only Retention Management`, `View-Only Configuration` |
+| Collaboration | `View-Only Recipients`, `View-Only Configuration` |
+| DataProtection | `View-Only DLP Compliance Management`, `View-Only Configuration` |
+| ThreatProtection | `Security Reader`, `View-Only Configuration` |
+
 ### One-Time Setup Permissions (Elevated — Not Assessment Scopes)
 
 `New-ZTAssessAppRegistration` itself needs elevated permissions to create the app and, optionally, grant app roles. These are requested least-privilege, only as needed:
@@ -135,11 +174,12 @@ Re-running `New-ZTAssessAppRegistration` against a tenant that already has an ap
   "ClientId": "11111111-1111-1111-1111-111111111111",
   "CertificateThumbprint": "ABCDEF0123456789ABCDEF0123456789ABCDEF01",
   "CertificatePath": "~/.ztassess/EntraZTAssess.pfx",
-  "Environment": "Global"
+  "Environment": "Global",
+  "Organization": "contoso.onmicrosoft.com"
 }
 ```
 
-Provide the certificate password (for a PFX) at connection time via `-CertificatePassword` or an equivalent secure mechanism — it is never written to `auth.json`.
+Provide the certificate password (for a PFX) at connection time via `-CertificatePassword` or an equivalent secure mechanism — it is never written to `auth.json`. `Organization` is optional and only used when a selected module requires Exchange Online / Security & Compliance (IPPS); omit it to rely on the other resolution fallbacks (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)).
 
 ## CI And Headless Usage
 
@@ -150,6 +190,7 @@ $env:ZTASSESS_TENANTID        = '00000000-0000-0000-0000-000000000000'
 $env:ZTASSESS_CLIENTID        = '11111111-1111-1111-1111-111111111111'
 $env:ZTASSESS_CERT_PATH       = '/secure/EntraZTAssess.pfx'
 $env:ZTASSESS_ENVIRONMENT     = 'Global'
+$env:ZTASSESS_ORGANIZATION    = 'contoso.onmicrosoft.com'   # only needed for SecurityCompliance/Collaboration/DataProtection/ThreatProtection
 # Certificate password supplied securely at connection time.
 
 Connect-ZTAssessment -Modules Identity, ConditionalAccess -NoInteractiveFallback
@@ -163,3 +204,4 @@ With `-NoInteractiveFallback`, a missing configuration is a hard error rather th
 - The **certificate password is never persisted**. `~/.ztassess/auth.json` contains non-secret connection details only.
 - Provisioning writes (app registration, role grants, config file) live **only** in the repository `scripts/` folder, run as a one-time administrator setup. The module under `source/` remains **read-only** — it performs no directory writes and requests no write scopes.
 - Grant only the Application permissions required for the modules in scope, and record any deferred scope as an engagement limitation (see [`PermissionsGuidance.md`](PermissionsGuidance.md)).
+- The Exchange Online / Security & Compliance (IPPS) surface is equally read-only: all calls flow through an allow-listed `Get-*` cmdlet wrapper, and the session itself is scoped to that allow-list so write cmdlets are never imported. This toolkit never grants Exchange Online role groups — that remains the tenant's own Exchange administrator's responsibility.
