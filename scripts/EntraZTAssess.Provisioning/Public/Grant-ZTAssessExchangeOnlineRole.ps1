@@ -430,7 +430,13 @@ function Grant-ZTAssessExchangeOnlineRole {
                         # role group -- so the group is created without
                         # -Members and the member is added as a separate
                         # step using the mechanism already proven to work.
-                        New-RoleGroup -Name $customRoleGroupName -Roles $entryName -ErrorAction Stop
+                        # -DisplayName is passed explicitly: New-RoleGroup
+                        # has been observed to leave DisplayName empty when
+                        # it is not supplied, and the subsequent
+                        # Add-RoleGroupMember write then fails validation
+                        # with "DisplayName: The property DisplayName can't
+                        # be empty."
+                        New-RoleGroup -Name $customRoleGroupName -DisplayName $customRoleGroupName -Roles $entryName -ErrorAction Stop
                         Add-RoleGroupMember -Identity $customRoleGroupName -Member $spIdentity -Confirm:$false -ErrorAction Stop
                         $outcome = 'Granted'
                     }

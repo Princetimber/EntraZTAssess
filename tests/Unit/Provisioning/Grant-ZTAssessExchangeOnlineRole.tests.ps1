@@ -15,7 +15,7 @@ BeforeAll {
     function global:Get-ServicePrincipal { [CmdletBinding()] param($Identity) }
     function global:New-ServicePrincipal { [CmdletBinding()] param($AppId, $ObjectId, $DisplayName) }
     function global:Get-RoleGroup { [CmdletBinding()] param($Identity) }
-    function global:New-RoleGroup { [CmdletBinding()] param($Name, $Roles, $Members) }
+    function global:New-RoleGroup { [CmdletBinding()] param($Name, $DisplayName, $Roles, $Members) }
     function global:Get-RoleGroupMember { [CmdletBinding()] param($Identity) }
     function global:Add-RoleGroupMember { [CmdletBinding()] param($Identity, $Member, [switch]$Confirm) }
     function global:New-ManagementRoleAssignment { [CmdletBinding()] param($Role, $App) }
@@ -203,8 +203,13 @@ Describe 'Grant-ZTAssessExchangeOnlineRole' -Tag 'Unit' {
         # (confirmed live to reject a service principal identity) --
         # the group is created without members, then Add-RoleGroupMember
         # is called separately using the mechanism already proven to work.
+        # -DisplayName is asserted explicitly: New-RoleGroup has been
+        # observed to leave DisplayName empty when it is not supplied,
+        # which then fails the subsequent Add-RoleGroupMember write with a
+        # DisplayName validation error.
         Should -Invoke -ModuleName $script:provModuleName New-RoleGroup -Times 1 -Exactly -ParameterFilter {
             $Name -eq 'EntraZTAssess - View-Only Retention Management' -and
+            $DisplayName -eq 'EntraZTAssess - View-Only Retention Management' -and
             $Roles -eq 'View-Only Retention Management'
         }
         Should -Invoke -ModuleName $script:provModuleName Add-RoleGroupMember -Times 1 -Exactly -ParameterFilter {

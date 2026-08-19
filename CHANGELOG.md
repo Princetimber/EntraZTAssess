@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed `Grant-ZTAssessExchangeOnlineRole`'s dedicated-role-group fallback
+  failing at the `Add-RoleGroupMember` step with `DisplayName: The
+  property DisplayName can't be empty.` immediately after `New-RoleGroup`
+  had just succeeded — confirmed live that `New-RoleGroup` leaves
+  `DisplayName` empty when it is not supplied explicitly, and that empty
+  value then fails validation on the very next write to the same object.
+  `New-RoleGroup` now passes `-DisplayName` explicitly (matching `-Name`),
+  which resolved the grant end-to-end on a live tenant.
+
+- Fixed `Grant-ZTAssessExchangeOnlineRole`'s dedicated-role-group fallback
   failing with `Couldn't find object "<servicePrincipalGuid>". Please
   make sure that it was spelled correctly or specify a different
   object.` even though the identical service principal identity was
