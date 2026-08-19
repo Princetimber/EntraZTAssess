@@ -144,8 +144,7 @@ function New-ZTAssessCertificate {
         $notAfter = [System.DateTimeOffset]::UtcNow.AddMonths($ValidityMonths)
 
         $certificate = $certRequest.CreateSelfSigned($notBefore, $notAfter)
-    }
-    finally {
+    } finally {
         $rsa.Dispose()
     }
 
@@ -178,8 +177,7 @@ function New-ZTAssessCertificate {
             if (Test-ZTAssessIsWindowsPlatform) {
                 if (-not $pfxBytes) {
                     Write-Warning 'InstallToWindowsStore requires the .pfx to have been exported first; it was skipped (likely due to -WhatIf). Store import was not performed.'
-                }
-                elseif ($PSCmdlet.ShouldProcess('Cert:\CurrentUser\My', 'Install certificate to Windows store')) {
+                } elseif ($PSCmdlet.ShouldProcess('Cert:\CurrentUser\My', 'Install certificate to Windows store')) {
                     # $certificate's private key is ephemeral (from CreateSelfSigned) and
                     # is not guaranteed to persist through X509Store.Add on every .NET/OS
                     # combination. Round-trip it through the PFX bytes just exported, with
@@ -195,22 +193,19 @@ function New-ZTAssessCertificate {
                     try {
                         $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
                         $store.Add($persistableCertificate)
-                    }
-                    finally {
+                    } finally {
                         $store.Close()
                         $persistableCertificate.Dispose()
                     }
                 }
-            }
-            else {
+            } else {
                 Write-Warning 'InstallToWindowsStore was requested but this is not Windows. Skipping store import; use the .pfx for certificate-based authentication instead.'
             }
         }
 
         $platformNote = if (Test-ZTAssessIsWindowsPlatform) {
             'Windows: reference the certificate by thumbprint (store) or by the .pfx.'
-        }
-        else {
+        } else {
             'macOS/Linux: use the .pfx with its password for certificate-based authentication.'
         }
 
@@ -226,19 +221,18 @@ function New-ZTAssessCertificate {
 
         Write-Host ''
         Write-Host 'Certificate created.' -ForegroundColor Green
-        Write-Host ("  Thumbprint : {0}" -f $result.Thumbprint)
-        Write-Host ("  Subject    : {0}" -f $result.Subject)
-        Write-Host ("  Expires    : {0:yyyy-MM-dd}" -f $result.NotAfter)
-        Write-Host ("  Public cer : {0}" -f $result.CerPath)
-        Write-Host ("  Private pfx: {0}" -f $result.PfxPath)
+        Write-Host ('  Thumbprint : {0}' -f $result.Thumbprint)
+        Write-Host ('  Subject    : {0}' -f $result.Subject)
+        Write-Host ('  Expires    : {0:yyyy-MM-dd}' -f $result.NotAfter)
+        Write-Host ('  Public cer : {0}' -f $result.CerPath)
+        Write-Host ('  Private pfx: {0}' -f $result.PfxPath)
         Write-Host ''
         Write-Host 'Next step: register the application and upload the public certificate:' -ForegroundColor Cyan
         Write-Host ("  New-ZTAssessAppRegistration -TenantId <tenant> -CertificatePath '{0}'" -f $result.CerPath)
         Write-Host ''
 
         return $result
-    }
-    finally {
+    } finally {
         $certificate.Dispose()
     }
 }

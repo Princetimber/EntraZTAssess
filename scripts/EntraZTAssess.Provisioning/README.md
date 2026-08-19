@@ -17,11 +17,19 @@ objects and grants permissions), so this module is kept here in `scripts/` to
 preserve that guarantee. It is a deliberate, documented, one-time
 administrative step.
 
-**Distribution note:** `scripts/` is repository-based tooling. The
-`EntraZTAssess.Provisioning` module is *not* shipped as part of the assessment
-module when installed via `Install-Module`. Clone or download the repository to
-import and run it. From inside the installed module, `Get-ZTAssessProvisioningStep`
-lists these steps as discoverable guidance.
+**Distribution note:** `EntraZTAssess.Provisioning` is *not* shipped as part of
+the `Get-EntraZTAssess` assessment module — installing that module via
+`Install-Module` never pulls in write-capable code. This module is published
+as its own, separately versioned PSGallery package instead:
+
+```powershell
+Install-Module EntraZTAssess.Provisioning -Scope CurrentUser
+```
+
+Cloning the repository and importing from `scripts/EntraZTAssess.Provisioning`
+still works and remains supported for anyone auditing the source before
+running it. From inside the installed `Get-EntraZTAssess` module,
+`Get-ZTAssessProvisioningStep` lists these steps as discoverable guidance.
 
 ## Prerequisites
 
@@ -34,7 +42,7 @@ lists these steps as discoverable guidance.
 ## Step 1 — Create the certificate (any OS)
 
 ```powershell
-Import-Module ./scripts/EntraZTAssess.Provisioning
+Import-Module EntraZTAssess.Provisioning
 New-ZTAssessCertificate
 ```
 

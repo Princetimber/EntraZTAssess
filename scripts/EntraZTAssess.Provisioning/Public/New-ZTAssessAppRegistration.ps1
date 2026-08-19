@@ -181,18 +181,18 @@ function New-ZTAssessAppRegistration {
     )
     $missingCommands = @($requiredCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
     if ($missingCommands.Count -gt 0) {
-        throw ("The Microsoft Graph SDK is required but these commands were not found: {0}. Install it with: Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Applications -Scope CurrentUser" -f ($missingCommands -join ', '))
+        throw ('The Microsoft Graph SDK is required but these commands were not found: {0}. Install it with: Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Applications -Scope CurrentUser' -f ($missingCommands -join ', '))
     }
 
     if (-not (Test-Path -LiteralPath $CertificatePath)) {
-        throw ("Certificate file not found: {0}. Run New-ZTAssessCertificate first." -f $CertificatePath)
+        throw ('Certificate file not found: {0}. Run New-ZTAssessCertificate first.' -f $CertificatePath)
     }
 
     # --- Compute the read-only scope union ------------------------------------
 
     $permissionsPath = Join-Path -Path $PSScriptRoot -ChildPath '../../../source/Settings/permissions.psd1'
     if (-not (Test-Path -LiteralPath $permissionsPath)) {
-        throw ("Permission catalogue not found at {0}." -f $permissionsPath)
+        throw ('Permission catalogue not found at {0}.' -f $permissionsPath)
     }
 
     $catalogue = Import-PowerShellDataFile -Path $permissionsPath
@@ -203,21 +203,21 @@ function New-ZTAssessAppRegistration {
         $Modules = @(
             $moduleCatalogue.GetEnumerator() |
                 Where-Object { -not $_.Value.Optional -and -not $_.Value.AlwaysIncluded } |
-                Select-Object -ExpandProperty Key
+                    Select-Object -ExpandProperty Key
         )
     }
 
     # Validate the requested module names against the catalogue.
     $unknownModules = @($Modules | Where-Object { -not $moduleCatalogue.ContainsKey($_) })
     if ($unknownModules.Count -gt 0) {
-        throw ("Unknown module(s): {0}. Valid modules: {1}." -f ($unknownModules -join ', '), (($moduleCatalogue.Keys | Sort-Object) -join ', '))
+        throw ('Unknown module(s): {0}. Valid modules: {1}.' -f ($unknownModules -join ', '), (($moduleCatalogue.Keys | Sort-Object) -join ', '))
     }
 
     # Always include the AlwaysIncluded (Core) modules, then union the selected.
     $alwaysIncluded = @(
         $moduleCatalogue.GetEnumerator() |
             Where-Object { $_.Value.AlwaysIncluded } |
-            Select-Object -ExpandProperty Key
+                Select-Object -ExpandProperty Key
     )
 
     $scopeSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -232,14 +232,14 @@ function New-ZTAssessAppRegistration {
         throw 'No read-only Graph scopes were resolved for the selected modules.'
     }
 
-    Write-Host ("Required read-only Graph application permissions ({0}):" -f $requiredScopes.Count) -ForegroundColor Cyan
-    $requiredScopes | ForEach-Object { Write-Host ("  {0}" -f $_) }
+    Write-Host ('Required read-only Graph application permissions ({0}):' -f $requiredScopes.Count) -ForegroundColor Cyan
+    $requiredScopes | ForEach-Object { Write-Host ('  {0}' -f $_) }
     Write-Host ''
 
     # --- Connect with elevated setup scopes -----------------------------------
 
     Write-Host 'Connecting to Microsoft Graph with elevated one-time setup scopes...' -ForegroundColor Cyan
-    Write-Host ("  Setup scopes (not assessment scopes): {0}" -f ($setupScopes -join ', '))
+    Write-Host ('  Setup scopes (not assessment scopes): {0}' -f ($setupScopes -join ', '))
 
     # The sign-in itself can create or refresh a delegated consent grant in the
     # directory, so it is a write operation and is gated by ShouldProcess. Under
@@ -251,18 +251,16 @@ function New-ZTAssessAppRegistration {
 
     try {
         Connect-MgGraph -TenantId $TenantId -Scopes $setupScopes -Environment $Environment -NoWelcome -ErrorAction Stop
-    }
-    catch {
-        throw ("Failed to connect to Microsoft Graph: {0}" -f $_.Exception.Message)
+    } catch {
+        throw ('Failed to connect to Microsoft Graph: {0}' -f $_.Exception.Message)
     }
 
     # --- Resolve Graph app role GUIDs at runtime ------------------------------
 
     try {
         $graphServicePrincipal = Get-MgServicePrincipal -Filter "appId eq '$graphAppId'" -ErrorAction Stop
-    }
-    catch {
-        throw ("Failed to resolve the Microsoft Graph service principal: {0}" -f $_.Exception.Message)
+    } catch {
+        throw ('Failed to resolve the Microsoft Graph service principal: {0}' -f $_.Exception.Message)
     }
 
     if (-not $graphServicePrincipal) {
@@ -275,18 +273,17 @@ function New-ZTAssessAppRegistration {
     foreach ($scope in $requiredScopes) {
         $appRole = $graphServicePrincipal.AppRoles |
             Where-Object { $_.Value -eq $scope -and $_.AllowedMemberTypes -contains 'Application' } |
-            Select-Object -First 1
+                Select-Object -First 1
 
         if ($appRole) {
             $resolvedRoles.Add([pscustomobject]@{ Scope = $scope; Id = $appRole.Id })
-        }
-        else {
+        } else {
             $unmatchedScopes.Add($scope)
         }
     }
 
     if ($unmatchedScopes.Count -gt 0) {
-        Write-Warning ("No matching Application app role was found for the following scope(s); they will be skipped: {0}" -f ($unmatchedScopes -join ', '))
+        Write-Warning ('No matching Application app role was found for the following scope(s); they will be skipped: {0}' -f ($unmatchedScopes -join ', '))
     }
 
     if ($resolvedRoles.Count -eq 0) {
@@ -302,8 +299,7 @@ function New-ZTAssessAppRegistration {
     $certificateLoaderType = [type]::GetType('System.Security.Cryptography.X509Certificates.X509CertificateLoader')
     $certificate = if ($certificateLoaderType) {
         $certificateLoaderType::LoadCertificateFromFile($CertificatePath)
-    }
-    else {
+    } else {
         [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($CertificatePath)
     }
     $certThumbprint = $certificate.Thumbprint
@@ -335,8 +331,7 @@ function New-ZTAssessAppRegistration {
     try {
         $escapedDisplayName = $DisplayName.Replace("'", "''")
         $existingApplication = Get-MgApplication -Filter "displayName eq '$escapedDisplayName'" -ErrorAction Stop | Select-Object -First 1
-    }
-    catch {
+    } catch {
         throw ("Failed to check for an existing application registration named '{0}': {1}" -f $DisplayName, $_.Exception.Message)
     }
 
@@ -358,9 +353,8 @@ function New-ZTAssessAppRegistration {
                 -RequiredResourceAccess $requiredResourceAccess `
                 -KeyCredentials @($keyCredential) `
                 -ErrorAction Stop
-        }
-        catch {
-            throw ("Failed to create the application registration: {0}" -f $_.Exception.Message)
+        } catch {
+            throw ('Failed to create the application registration: {0}' -f $_.Exception.Message)
         }
 
         Write-Host ("Created application '{0}' (appId {1})." -f $application.DisplayName, $application.AppId) -ForegroundColor Green
@@ -372,12 +366,11 @@ function New-ZTAssessAppRegistration {
     if ($application -and $PSCmdlet.ShouldProcess($application.AppId, 'Create service principal')) {
         try {
             $servicePrincipal = New-MgServicePrincipal -AppId $application.AppId -ErrorAction Stop
-        }
-        catch {
-            throw ("Failed to create the service principal: {0}" -f $_.Exception.Message)
+        } catch {
+            throw ('Failed to create the service principal: {0}' -f $_.Exception.Message)
         }
 
-        Write-Host ("Created service principal (objectId {0})." -f $servicePrincipal.Id) -ForegroundColor Green
+        Write-Host ('Created service principal (objectId {0}).' -f $servicePrincipal.Id) -ForegroundColor Green
     }
 
     # --- Admin consent ---------------------------------------------------------
@@ -390,8 +383,7 @@ function New-ZTAssessAppRegistration {
     }
     $consentUrl = if ($application) {
         ('https://{0}/{1}/adminconsent?client_id={2}' -f $consentHost, $TenantId, $application.AppId)
-    }
-    else {
+    } else {
         ('https://{0}/{1}/adminconsent?client_id=<appId>' -f $consentHost, $TenantId)
     }
 
@@ -405,20 +397,18 @@ function New-ZTAssessAppRegistration {
                         -ResourceId $graphServicePrincipal.Id `
                         -AppRoleId $role.Id `
                         -ErrorAction Stop
-                    Write-Host ("  Granted: {0}" -f $role.Scope) -ForegroundColor Green
-                }
-                catch {
+                    Write-Host ('  Granted: {0}' -f $role.Scope) -ForegroundColor Green
+                } catch {
                     Write-Warning ("Failed to grant '{0}': {1}" -f $role.Scope, $_.Exception.Message)
                     $failedGrants.Add([pscustomobject]@{ Scope = $role.Scope; Error = $_.Exception.Message })
                 }
             }
         }
-    }
-    else {
+    } else {
         Write-Host ''
         Write-Host 'Admin consent is required before the assessment can run.' -ForegroundColor Yellow
         Write-Host 'Ask a Privileged Role Administrator (or Global Administrator) to approve this URL:' -ForegroundColor Yellow
-        Write-Host ("  {0}" -f $consentUrl)
+        Write-Host ('  {0}' -f $consentUrl)
     }
 
     # --- Write the non-secret configuration ------------------------------------
@@ -445,7 +435,7 @@ function New-ZTAssessAppRegistration {
     if ($PSCmdlet.ShouldProcess($ConfigOutputPath, 'Write non-secret connection configuration')) {
         $json = $config | ConvertTo-Json -Depth 4
         Set-Content -Path $ConfigOutputPath -Value $json -Encoding utf8
-        Write-Host ("Wrote connection configuration to {0}" -f $ConfigOutputPath) -ForegroundColor Green
+        Write-Host ('Wrote connection configuration to {0}' -f $ConfigOutputPath) -ForegroundColor Green
     }
 
     # --- Final summary ---------------------------------------------------------
@@ -462,13 +452,13 @@ function New-ZTAssessAppRegistration {
 
     Write-Host ''
     Write-Host 'Provisioning summary:' -ForegroundColor Cyan
-    Write-Host ("  ClientId   : {0}" -f $summary.ClientId)
-    Write-Host ("  TenantId   : {0}" -f $summary.TenantId)
-    Write-Host ("  Thumbprint : {0}" -f $summary.CertificateThumbprint)
-    Write-Host ("  Config     : {0}" -f $summary.ConfigPath)
-    Write-Host ("  Consent URL: {0}" -f $summary.ConsentUrl)
+    Write-Host ('  ClientId   : {0}' -f $summary.ClientId)
+    Write-Host ('  TenantId   : {0}' -f $summary.TenantId)
+    Write-Host ('  Thumbprint : {0}' -f $summary.CertificateThumbprint)
+    Write-Host ('  Config     : {0}' -f $summary.ConfigPath)
+    Write-Host ('  Consent URL: {0}' -f $summary.ConsentUrl)
     if ($summary.FailedGrants.Count -gt 0) {
-        Write-Host ("  Failed grants: {0}" -f (($summary.FailedGrants | ForEach-Object { $_.Scope }) -join ', ')) -ForegroundColor Yellow
+        Write-Host ('  Failed grants: {0}' -f (($summary.FailedGrants | ForEach-Object { $_.Scope }) -join ', ')) -ForegroundColor Yellow
     }
     Write-Host ''
 
