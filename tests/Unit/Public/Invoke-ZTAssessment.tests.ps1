@@ -58,6 +58,7 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessApplicationCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessHybridCollection -MockWith { @{} }
         Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessMonitoringCollection -MockWith { @{} }
+        Mock -ModuleName $script:dscModuleName -CommandName Invoke-ZTAssessDefenderCollection -MockWith { @{} }
 
         # Engagement scaffold.
         $script:engagementPath = Join-Path $TestDrive "engagement-$([guid]::NewGuid().ToString('n').Substring(0,8))"
@@ -135,12 +136,22 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
     }
 
     Context 'When running every implemented module' {
-        It 'Should emit all 92 findings' {
-            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring
+        It 'Should emit all 96 findings' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender
 
             $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
-            @($findings).Count | Should -Be 92
-            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 11
+            @($findings).Count | Should -Be 96
+            (@($findings).Domain | Sort-Object -Unique).Count | Should -Be 12
+        }
+    }
+
+    Context 'When running the Defender module' {
+        It 'Should emit the 4 Defender findings' {
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Defender
+
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Count | Should -Be 4
+            (@($findings).Domain | Sort-Object -Unique) | Should -Be 'Defender'
         }
     }
 

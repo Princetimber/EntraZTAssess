@@ -110,6 +110,16 @@
             Optional       = $false
         }
 
+        Defender = @{
+            Description    = 'Microsoft Secure Score coverage, unified security alert triage signals, and a Defender for Endpoint device-onboarding proxy via secure score controls.'
+            Scopes         = @(
+                'SecurityEvents.Read.All'
+                'SecurityAlert.Read.All'
+            )
+            AlwaysIncluded = $false
+            Optional       = $false
+        }
+
         Sentinel = @{
             Description    = 'Microsoft Sentinel data connector assessment via Azure Resource Manager. Requires Az.Accounts and Azure Reader role; no Graph scopes.'
             Scopes         = @()

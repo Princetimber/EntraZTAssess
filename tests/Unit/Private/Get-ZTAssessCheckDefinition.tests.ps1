@@ -23,12 +23,12 @@ AfterAll {
 Describe 'Get-ZTAssessCheckDefinition' -Tag 'Unit' {
 
     Context 'When loading the shipped check library' {
-        It 'Should load all 92 check definitions' {
+        It 'Should load all 96 check definitions' {
             $checks = InModuleScope -ModuleName $script:dscModuleName {
                 Get-ZTAssessCheckDefinition -Force
             }
 
-            $checks.Count | Should -Be 92
+            $checks.Count | Should -Be 96
         }
 
         It 'Should expose the expected domains with the expected counts' {
@@ -44,6 +44,7 @@ Describe 'Get-ZTAssessCheckDefinition' -Tag 'Unit' {
             (Get-ZTAssessCheckDefinition -Domain 'ApplicationSecurity').Count | Should -Be 7
             (Get-ZTAssessCheckDefinition -Domain 'HybridIdentity').Count | Should -Be 6
             (Get-ZTAssessCheckDefinition -Domain 'MonitoringDetection').Count | Should -Be 6
+            (Get-ZTAssessCheckDefinition -Domain 'Defender').Count | Should -Be 4
             }
         }
 

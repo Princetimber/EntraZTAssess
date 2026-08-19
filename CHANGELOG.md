@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the **Defender** assessment module/domain (4 checks, DF-001 to DF-004),
+  Graph-only, with no dependency on the Exchange Online / IPPS surface added
+  previously:
+  - `Invoke-ZTAssessDefenderCollection` collects the latest Microsoft Secure
+    Score entry, secure score control profile metadata, and unified security
+    alerts (`/security/secureScores`, `/security/secureScoreControlProfiles`,
+    `/security/alerts_v2`).
+  - `Test-ZTAssessDefender` implements: DF-001 (Secure Score meets a
+    configurable maturity floor), DF-002 (Defender for Endpoint device
+    onboarding coverage — a best-effort proxy via the tenant's Secure Score
+    control contribution, since Microsoft Graph exposes no direct
+    "onboarded machines" list; degrades to `NotAssessed` if the expected
+    control cannot be found), DF-003 (open high-severity alerts triaged
+    within a configurable SLA), and DF-004 (informational Secure Score
+    improvement-opportunity summary).
+  - New module catalogue entry in `Settings/permissions.psd1`
+    (`SecurityEvents.Read.All`, `SecurityAlert.Read.All`), new
+    `Settings.Thresholds.SecureScoreMinimumPercent` /
+    `OpenHighSeverityAlertMaxAgeDays`, and a new `Settings.Defender.
+    OnboardingControlNames` list of candidate secure score control names.
+  - Wired into `Invoke-ZTAssessment`'s collection and assessment phases;
+    `DomainWeights.Defender` added to `settings.psd1`.
+
 - Added a second, read-only connection surface for Exchange Online / Security
   & Compliance (IPPS), established lazily by `Connect-ZTAssessment` alongside
   Microsoft Graph, for assessment modules whose data does not exist in Graph.
