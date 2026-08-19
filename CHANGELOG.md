@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `Grant-ZTAssessExchangeOnlineRole` failing to grant `View-Only
+  Retention Management` and `View-Only DLP Compliance Management` with
+  `The "<role>" management role can't be found. Check the role entry
+  name, and try again.` — confirmed live against a real tenant that this
+  error recurs identically even after the IPPS-connection retry added
+  previously, meaning direct `New-ManagementRoleAssignment -App`
+  assignment is simply not supported for these two management roles,
+  regardless of connection. Added a fourth, final fallback mechanism
+  matching Microsoft's documented workaround for this case: create (or
+  reuse, on re-runs) a dedicated role group scoped to exactly that one
+  management role (`New-RoleGroup -Name 'EntraZTAssess - <role>' -Roles
+  '<role>' -Members <servicePrincipal>`) and add the app's service
+  principal to it. `Grant-ZTAssessExchangeOnlineRole` now tries, per
+  entry and in order: role-group membership, direct management-role
+  assignment, the same direct assignment again via IPPS, and finally this
+  dedicated-role-group workaround, stopping at the first that succeeds.
+
 - Fixed `Grant-ZTAssessExchangeOnlineRole` failing with "The
   ExchangeOnlineManagement module is required but these commands were not
   found: Get-ServicePrincipal, New-ServicePrincipal, Get-RoleGroupMember,

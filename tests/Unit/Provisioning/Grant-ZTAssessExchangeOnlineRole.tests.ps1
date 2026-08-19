@@ -14,6 +14,8 @@ BeforeAll {
     function global:Disconnect-ExchangeOnline { [CmdletBinding()] param([switch]$Confirm) }
     function global:Get-ServicePrincipal { [CmdletBinding()] param($Identity) }
     function global:New-ServicePrincipal { [CmdletBinding()] param($AppId, $ObjectId, $DisplayName) }
+    function global:Get-RoleGroup { [CmdletBinding()] param($Identity) }
+    function global:New-RoleGroup { [CmdletBinding()] param($Name, $Roles, $Members) }
     function global:Get-RoleGroupMember { [CmdletBinding()] param($Identity) }
     function global:Add-RoleGroupMember { [CmdletBinding()] param($Identity, $Member, [switch]$Confirm) }
     function global:New-ManagementRoleAssignment { [CmdletBinding()] param($Role, $App) }
@@ -31,6 +33,7 @@ AfterAll {
     Get-Module -Name $script:provModuleName -All | Remove-Module -Force -ErrorAction SilentlyContinue
     Remove-Item Function:\Connect-ExchangeOnline, Function:\Connect-IPPSSession, Function:\Disconnect-ExchangeOnline, `
         Function:\Get-ServicePrincipal, Function:\New-ServicePrincipal, `
+        Function:\Get-RoleGroup, Function:\New-RoleGroup, `
         Function:\Get-RoleGroupMember, Function:\Add-RoleGroupMember, `
         Function:\New-ManagementRoleAssignment -ErrorAction SilentlyContinue
 }
@@ -59,6 +62,8 @@ Describe 'Grant-ZTAssessExchangeOnlineRole' -Tag 'Unit' {
         }
         Mock -ModuleName $script:provModuleName Add-RoleGroupMember { }
         Mock -ModuleName $script:provModuleName New-ManagementRoleAssignment { }
+        Mock -ModuleName $script:provModuleName Get-RoleGroup { $null }
+        Mock -ModuleName $script:provModuleName New-RoleGroup { }
     }
 
     It 'Should create the Exchange Online service principal when none exists' {
@@ -169,12 +174,61 @@ Describe 'Grant-ZTAssessExchangeOnlineRole' -Tag 'Unit' {
 
     It 'Should record a failed grant without throwing when every mechanism fails for an entry' {
         Mock -ModuleName $script:provModuleName New-ManagementRoleAssignment { throw 'boom' }
+        Mock -ModuleName $script:provModuleName New-RoleGroup { throw 'boom' }
 
         $result = Grant-ZTAssessExchangeOnlineRole -AppId $script:appId -Organization 'contoso.onmicrosoft.com' `
             -Modules 'ThreatProtection' -Confirm:$false
 
         $result.FailedGrants.RoleGroup | Should -Contain 'View-Only Configuration'
         $result.RoleGroupsGranted | Should -Contain 'Security Reader'
+    }
+
+    It 'Should create a dedicated role group when direct -App assignment is not supported for a management role' {
+        # SecurityCompliance requires 'View-Only Retention Management' and
+        # 'View-Only Configuration'. Confirmed live: direct -App assignment
+        # fails identically against both the Exchange Online and the IPPS
+        # connection for 'View-Only Retention Management' -- the documented
+        # workaround is a role group scoped to just that role.
+        Mock -ModuleName $script:provModuleName Get-RoleGroupMember { throw 'The role group was not found.' }
+        Mock -ModuleName $script:provModuleName New-ManagementRoleAssignment {
+            if ($Role -eq 'View-Only Retention Management') { throw 'The "View-Only Retention Management" management role can''t be found. Check the role entry name, and try again.' }
+        }
+
+        $result = Grant-ZTAssessExchangeOnlineRole -AppId $script:appId -Organization 'contoso.onmicrosoft.com' `
+            -Modules 'SecurityCompliance' -Confirm:$false
+
+        $result.RoleGroupsGranted | Should -Contain 'View-Only Retention Management'
+        $result.RoleGroupsGranted | Should -Contain 'View-Only Configuration'
+        Should -Invoke -ModuleName $script:provModuleName New-RoleGroup -Times 1 -Exactly -ParameterFilter {
+            $Name -eq 'EntraZTAssess - View-Only Retention Management' -and
+            $Roles -eq 'View-Only Retention Management' -and
+            $Members -eq $script:spIdentity
+        }
+    }
+
+    It 'Should add to an existing dedicated role group rather than recreating it' {
+        Mock -ModuleName $script:provModuleName New-ManagementRoleAssignment {
+            if ($Role -eq 'View-Only Retention Management') { throw 'The "View-Only Retention Management" management role can''t be found. Check the role entry name, and try again.' }
+        }
+        Mock -ModuleName $script:provModuleName Get-RoleGroup {
+            if ($Identity -eq 'EntraZTAssess - View-Only Retention Management') {
+                [pscustomobject]@{ Name = $Identity }
+            }
+        }
+        Mock -ModuleName $script:provModuleName Get-RoleGroupMember {
+            param($Identity)
+            if ($Identity -eq 'EntraZTAssess - View-Only Retention Management') { @() }
+            else { throw 'The role group was not found.' }
+        }
+
+        $result = Grant-ZTAssessExchangeOnlineRole -AppId $script:appId -Organization 'contoso.onmicrosoft.com' `
+            -Modules 'SecurityCompliance' -Confirm:$false
+
+        $result.RoleGroupsGranted | Should -Contain 'View-Only Retention Management'
+        Should -Invoke -ModuleName $script:provModuleName New-RoleGroup -Times 0 -Exactly
+        Should -Invoke -ModuleName $script:provModuleName Add-RoleGroupMember -Times 1 -Exactly -ParameterFilter {
+            $Identity -eq 'EntraZTAssess - View-Only Retention Management'
+        }
     }
 
     It 'Should always disconnect from Exchange Online, even on failure' {
