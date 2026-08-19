@@ -34,6 +34,7 @@
         GuestCountReviewThreshold           = 10    # IG-002 guest population requiring access reviews
         SecureScoreMinimumPercent           = 60    # DF-001 Secure Score maturity floor
         OpenHighSeverityAlertMaxAgeDays     = 7     # DF-003 high-severity alert triage SLA
+        PhishThresholdMinimumLevel          = 2     # TP-003 anti-phishing threshold floor (1-4)
     }
 
     # Candidate Microsoft Secure Score control names for the Defender for
@@ -133,6 +134,7 @@
         DeviceTrust               = 1.0
         MonitoringDetection       = 1.0
         Defender                  = 1.0
+        ThreatProtection          = 1.0
         ApplicationSecurity       = 1.0
         ByodGovernance            = 0.75
         CorporateDeviceGovernance = 0.75

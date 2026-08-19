@@ -22,9 +22,12 @@ function Invoke-ZTAssessment {
     The assessment modules to execute. Defaults to the modules selected at
     connection time. Supported: Identity, ConditionalAccess,
     PrivilegedAccess, Devices, IdentityGovernance, Applications,
-    HybridIdentity, Monitoring, and Defender. The optional Sentinel module,
-    and the SecurityCompliance/Collaboration/DataProtection/ThreatProtection/
-    CloudAppSecurity module catalogue entries, are not yet implemented.
+    HybridIdentity, Monitoring, Defender, and ThreatProtection (the last
+    requires the Exchange Online / IPPS connection surface established by
+    Connect-ZTAssessment; its checks report NotAssessed if that connection
+    is unavailable). The optional Sentinel module, and the
+    SecurityCompliance/Collaboration/DataProtection/CloudAppSecurity module
+    catalogue entries, are not yet implemented.
 
     .PARAMETER SignInLookbackDays
     The number of days of sign-in data to aggregate for legacy
@@ -84,7 +87,7 @@ function Invoke-ZTAssessment {
     # with a filtered (possibly empty) array.
     $selectedModules = if ($Modules) { @($Modules) } else { @($connection.Modules) }
 
-    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices', 'IdentityGovernance', 'Applications', 'HybridIdentity', 'Monitoring', 'Defender')
+    $supportedModules = @('Identity', 'ConditionalAccess', 'PrivilegedAccess', 'Devices', 'IdentityGovernance', 'Applications', 'HybridIdentity', 'Monitoring', 'Defender', 'ThreatProtection')
     $unsupported = @($selectedModules | Where-Object { $_ -notin $supportedModules })
     if ($unsupported.Count -gt 0) {
         Write-Warning ('The following selected modules are not yet implemented and will be skipped: {0}.' -f ($unsupported -join ', '))
@@ -149,6 +152,13 @@ function Invoke-ZTAssessment {
     if ($selectedModules -contains 'Defender') {
         $collectionStatus += Invoke-ZTAssessDefenderCollection -RunPath $runPath -Manifest $manifest
     }
+    if ($selectedModules -contains 'ThreatProtection') {
+        if ($connection.ExchangeOnlineConnected) {
+            $collectionStatus += Invoke-ZTAssessThreatProtectionCollection -RunPath $runPath -Manifest $manifest
+        } else {
+            $manifest.AddWarning('Exchange Online / IPPS connection unavailable; ThreatProtection checks will be reported as NotAssessed.')
+        }
+    }
 
     $collectionStatus | ConvertTo-Json -Depth 5 |
         Set-Content -LiteralPath (Join-Path $runPath 'Raw/_collectionStatus.json') -Encoding utf8NoBOM
@@ -178,6 +188,9 @@ function Invoke-ZTAssessment {
     }
     if ($selectedModules -contains 'Defender') {
         $findings.AddRange(@(Test-ZTAssessDefender -RunPath $runPath -Settings $settings))
+    }
+    if ($selectedModules -contains 'ThreatProtection') {
+        $findings.AddRange(@(Test-ZTAssessThreatProtection -RunPath $runPath -Settings $settings))
     }
 
     $findingsFolder = Join-Path $runPath 'Findings'

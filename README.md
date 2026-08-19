@@ -1,8 +1,8 @@
 # Get-EntraZTAssess
 
-**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph, collects tenant configuration snapshots, evaluates them against a declarative check library (96 checks across 12 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
+**Entra ID Security & Endpoint Zero Trust Assessment** — a read-only, consultancy-grade PowerShell 7+ module built with the [Sampler](https://github.com/gaelcolas/Sampler) framework. It connects to Microsoft Graph (and, for a subset of modules, a read-only Exchange Online / Security & Compliance connection), collects tenant configuration snapshots, evaluates them against a declarative check library (100 checks across 13 domains), scores maturity and risk, and writes local evidence artifacts for consultant reporting.
 
-**Build status:** Phase 5 delivery hardening present. 9 assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender. A read-only Exchange Online / Security & Compliance (IPPS) connection surface is also in place for four additional modules (SecurityCompliance, Collaboration, DataProtection, ThreatProtection) whose checks ship in follow-up phases. Remaining roadmap: those four modules' checks, the CloudAppSecurity module, and richer report packaging (PDF, Excel, dashboard outputs) if required.
+**Build status:** Phase 5 delivery hardening present. 10 assessment modules implemented: Identity, ConditionalAccess, PrivilegedAccess, Devices, IdentityGovernance, Applications, HybridIdentity, Monitoring, Defender, ThreatProtection. ThreatProtection is the first module built on the read-only Exchange Online / Security & Compliance (IPPS) connection surface; three more modules (SecurityCompliance, Collaboration, DataProtection) use that same surface but their checks ship in follow-up phases. Remaining roadmap: those three modules' checks, the CloudAppSecurity module, and richer report packaging (PDF, Excel, dashboard outputs) if required.
 
 ---
 
@@ -57,7 +57,7 @@ Import-Module ./output/Get-EntraZTAssess/<version>/Get-EntraZTAssess.psd1
 
 Full setup, cross-platform certificate guidance, the read-only Application-permissions table, and CI/headless usage are documented in [`docs/Authentication.md`](docs/Authentication.md).
 
-Modules whose data does not exist in Microsoft Graph (`SecurityCompliance`, `Collaboration`, `DataProtection`, `ThreatProtection`) use a second, lazily-established, read-only Exchange Online / Security & Compliance (IPPS) connection alongside Graph, reusing the same certificate. It is app-only only and never fails the overall connection — see [Exchange Online / Security & Compliance Connection](docs/Authentication.md#exchange-online--security--compliance-connection). Checks for these four modules ship in follow-up phases.
+Modules whose data does not exist in Microsoft Graph (`ThreatProtection`, `SecurityCompliance`, `Collaboration`, `DataProtection`) use a second, lazily-established, read-only Exchange Online / Security & Compliance (IPPS) connection alongside Graph, reusing the same certificate. It is app-only only and never fails the overall connection — see [Exchange Online / Security & Compliance Connection](docs/Authentication.md#exchange-online--security--compliance-connection). `ThreatProtection` is implemented; checks for the remaining three modules ship in follow-up phases.
 
 ### Provisioning quickstart
 
@@ -272,7 +272,8 @@ The assessment library is data-driven. Each check is a declarative `.psd1` file 
 | HybridIdentity | HybridIdentity | 6 |
 | Monitoring | MonitoringDetection | 6 |
 | Defender | Defender | 4 |
-| **Total** | | **96** |
+| ThreatProtection | ThreatProtection | 4 |
+| **Total** | | **100** |
 
 `source/Settings/settings.psd1` defines thresholds, scoring weights, retry behaviour, and remediation SLA days (Critical: 7, High: 30, Medium: 90, Low: 180).
 
