@@ -5,6 +5,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Filled in the MIT `LICENSE` copyright holder (was a template placeholder,
+  `{{AUTHOR}}`) and populated the manifest's `PrivateData.PSData.LicenseUri`
+  and `ProjectUri` so PSGallery shows license/project links on the package
+  page.
+- Added `../README.md` to `build.yaml`'s `CopyPaths` so the repo's README
+  is copied into the built module root and rendered by PSGallery as the
+  package readme; previously the built package shipped without one.
+
 ## [0.2.0] - 2026-08-19
 
 ### Fixed

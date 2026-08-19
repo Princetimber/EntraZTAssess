@@ -8,6 +8,7 @@ CopyPaths:
   - en-US
   - Settings
   - Checks
+  - ../README.md
 #  - DSCResources
 # - Modules
 Encoding: UTF8
