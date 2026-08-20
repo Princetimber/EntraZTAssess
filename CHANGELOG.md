@@ -5,6 +5,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `EntraZTAssess.Provisioning` 0.1.1: fixed `New-ZTAssessAppRegistration`
+  throwing `Permission catalogue not found` for anyone who installed the
+  module from PSGallery (`Install-Module EntraZTAssess.Provisioning`). The
+  function resolved the catalogue via a dev-checkout-relative path
+  (`../../../source/Settings/permissions.psd1`), which only exists inside a
+  git clone of this repository - never inside an installed module. The
+  module now bundles its own copy at `Settings/permissions.psd1` (declared
+  in the manifest `FileList`) and resolves it relative to its own root.
+
 ### Changed
 
 - Updated `CLAUDE.md` to document: the ModuleFast → PSResourceGet automatic

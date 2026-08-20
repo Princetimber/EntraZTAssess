@@ -190,7 +190,12 @@ function New-ZTAssessAppRegistration {
 
     # --- Compute the read-only scope union ------------------------------------
 
-    $permissionsPath = Join-Path -Path $PSScriptRoot -ChildPath '../../../source/Settings/permissions.psd1'
+    # Bundled with this module at Settings/permissions.psd1 (a sibling of
+    # Public/), sourced from source/Settings/permissions.psd1 in the main
+    # repo - see Settings/permissions.psd1's header. Resolved relative to the
+    # module's own root so it works from a PSGallery install, not just a git
+    # checkout.
+    $permissionsPath = Join-Path -Path $PSScriptRoot -ChildPath '../Settings/permissions.psd1'
     if (-not (Test-Path -LiteralPath $permissionsPath)) {
         throw ('Permission catalogue not found at {0}.' -f $permissionsPath)
     }
