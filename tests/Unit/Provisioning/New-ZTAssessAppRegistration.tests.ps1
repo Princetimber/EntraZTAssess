@@ -14,7 +14,7 @@ BeforeAll {
     # Pester-generated mock bind those arguments cleanly. [CmdletBinding()] also
     # gives them -ErrorAction. This lets the function's Get-Command precondition
     # pass and the tests run with no real SDK installed.
-    function global:Connect-MgGraph { [CmdletBinding()] param($TenantId, $Scopes, $Environment, [switch]$NoWelcome) }
+    function global:Connect-MgGraph { [CmdletBinding()] param($TenantId, $Scopes, $Environment, [switch]$NoWelcome, [switch]$UseDeviceCode) }
     function global:Get-MgApplication { [CmdletBinding()] param($Filter) }
     function global:Get-MgServicePrincipal { [CmdletBinding()] param($Filter) }
     function global:New-MgApplication { [CmdletBinding()] param($DisplayName, $SignInAudience, $RequiredResourceAccess, $KeyCredentials) }
@@ -162,6 +162,43 @@ Describe 'New-ZTAssessAppRegistration' -Tag 'Unit' {
         Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 1 -ParameterFilter {
             @($Scopes) -contains 'Application.ReadWrite.All' -and
             @($Scopes) -contains 'AppRoleAssignment.ReadWrite.All'
+        }
+    }
+
+    It 'Should pass -UseDeviceCode through to Connect-MgGraph when supplied' {
+        New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' -UseDeviceCode `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-devicecode.json') -Confirm:$false
+
+        Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 1 -ParameterFilter {
+            $UseDeviceCode -eq $true
+        }
+    }
+
+    It 'Should not request device code sign-in when -UseDeviceCode is omitted' {
+        New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+            -CertificatePath $script:cerPath -Modules 'Identity' `
+            -ConfigOutputPath (Join-Path $TestDrive 'auth-no-devicecode.json') -Confirm:$false
+
+        Should -Invoke -ModuleName $script:provModuleName Connect-MgGraph -Times 1 -ParameterFilter {
+            -not $UseDeviceCode
+        }
+    }
+
+    It 'Should connect without throwing when the installed Connect-MgGraph predates -NoWelcome' {
+        # Regression test: older Microsoft.Graph.Authentication releases do not
+        # declare -NoWelcome. The function must probe for the parameter before
+        # adding it to the splat rather than assuming every installed SDK has it.
+        function global:Connect-MgGraph { [CmdletBinding()] param($TenantId, $Scopes, $Environment, [switch]$UseDeviceCode) }
+        try {
+            Mock -ModuleName $script:provModuleName Connect-MgGraph { }
+
+            { New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' `
+                -CertificatePath $script:cerPath -Modules 'Identity' `
+                -ConfigOutputPath (Join-Path $TestDrive 'auth-old-sdk.json') -Confirm:$false } |
+                Should -Not -Throw
+        } finally {
+            function global:Connect-MgGraph { [CmdletBinding()] param($TenantId, $Scopes, $Environment, [switch]$NoWelcome, [switch]$UseDeviceCode) }
         }
     }
 

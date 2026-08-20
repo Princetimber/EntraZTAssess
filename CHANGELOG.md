@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `EntraZTAssess.Provisioning` 0.1.2: `New-ZTAssessAppRegistration` failed to
+  connect to Microsoft Graph on tenants whose Conditional Access policy
+  blocks interactive browser sign-in, and separately threw `A parameter
+  cannot be found that matches parameter name 'NoWelcome'` on older
+  installed `Microsoft.Graph.Authentication` releases that predate that
+  parameter. Added a `-UseDeviceCode` switch (mirrors `Connect-ZTAssessment`)
+  to request the OAuth device-code flow for this function's one-time
+  interactive setup sign-in, and `-NoWelcome` is now only added to the
+  `Connect-MgGraph` call when the installed cmdlet actually declares it.
 - `EntraZTAssess.Provisioning` 0.1.1: fixed `New-ZTAssessAppRegistration`
   throwing `Permission catalogue not found` for anyone who installed the
   module from PSGallery (`Install-Module EntraZTAssess.Provisioning`). The

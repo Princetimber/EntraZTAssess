@@ -87,6 +87,12 @@ New-ZTAssessAppRegistration -TenantId '<tenant>' -CertificatePath ~/.ztassess/En
 
 `New-ZTAssessAppRegistration` creates the enterprise application and grants the **read-only Application permissions** listed below (the required app roles are resolved at runtime). By default it emits the admin-consent URL. It writes the non-secret connection details to `~/.ztassess/auth.json`.
 
+This step's own sign-in is interactive and delegated (it is a one-time, admin-run setup action, separate from the app-only connection the assessment itself uses). If the tenant's Conditional Access policy blocks interactive browser sign-in, add `-UseDeviceCode` to use the OAuth device-code flow instead:
+
+```powershell
+New-ZTAssessAppRegistration -TenantId '<tenant>' -CertificatePath ~/.ztassess/EntraZTAssess.cer -UseDeviceCode
+```
+
 ### 3. Grant admin consent
 
 Open the admin-consent URL emitted in step 2 signed in as a **Privileged Role Administrator** (or Global Administrator), or grant consent programmatically:
