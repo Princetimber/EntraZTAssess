@@ -61,6 +61,13 @@ function New-ZTAssessAppRegistration {
     The national cloud to provision in. Valid values are Global, USGov, and China.
     Defaults to Global.
 
+    .PARAMETER UseDeviceCode
+    Uses the device code flow for the one-time interactive Microsoft Graph
+    sign-in this function performs, instead of the default interactive
+    browser sign-in. Use this when a local browser is unavailable, or when
+    the tenant's Conditional Access policy blocks interactive browser
+    sign-in and requires device code authentication instead.
+
     .PARAMETER GrantAdminConsent
     Grants the read-only application permissions programmatically by creating app
     role assignments on the new service principal. Requires a Privileged Role
@@ -91,6 +98,13 @@ function New-ZTAssessAppRegistration {
 
     Creates the application scoped to three assessment modules and grants admin
     consent programmatically.
+
+    .EXAMPLE
+    New-ZTAssessAppRegistration -TenantId 'contoso.onmicrosoft.com' -CertificatePath ~/.ztassess/EntraZTAssess.cer -UseDeviceCode
+
+    Creates the application using the device code flow for the interactive
+    sign-in, for tenants whose Conditional Access policy blocks interactive
+    browser sign-in.
 
     .OUTPUTS
     PSCustomObject
@@ -141,6 +155,9 @@ function New-ZTAssessAppRegistration {
         [Parameter()]
         [ValidateSet('Global', 'USGov', 'China')]
         [string]$Environment = 'Global',
+
+        [Parameter()]
+        [switch]$UseDeviceCode,
 
         [Parameter()]
         [switch]$GrantAdminConsent,
@@ -254,8 +271,25 @@ function New-ZTAssessAppRegistration {
         return
     }
 
+    # Splatted rather than called with fixed parameters so -UseDeviceCode can
+    # be added only when requested, and -NoWelcome only when the installed
+    # Connect-MgGraph actually declares it - older Microsoft.Graph.Authentication
+    # releases predate that parameter and would otherwise fail to bind it.
+    $connectParameters = @{
+        TenantId    = $TenantId
+        Scopes      = $setupScopes
+        Environment = $Environment
+        ErrorAction = 'Stop'
+    }
+    if ($UseDeviceCode) {
+        $connectParameters['UseDeviceCode'] = $true
+    }
+    if ((Get-Command -Name 'Connect-MgGraph').Parameters.ContainsKey('NoWelcome')) {
+        $connectParameters['NoWelcome'] = $true
+    }
+
     try {
-        Connect-MgGraph -TenantId $TenantId -Scopes $setupScopes -Environment $Environment -NoWelcome -ErrorAction Stop
+        Connect-MgGraph @connectParameters
     } catch {
         throw ('Failed to connect to Microsoft Graph: {0}' -f $_.Exception.Message)
     }

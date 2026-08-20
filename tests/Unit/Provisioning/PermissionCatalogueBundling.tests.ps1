@@ -41,7 +41,7 @@ Describe 'EntraZTAssess.Provisioning permission catalogue bundling' -Tag 'Unit' 
 
         $installedManifest = Join-Path $installRoot 'EntraZTAssess.Provisioning.psd1'
 
-        function global:Connect-MgGraph { [CmdletBinding()] param($TenantId, $Scopes, $Environment, [switch]$NoWelcome) }
+        function global:Connect-MgGraph { [CmdletBinding()] param($TenantId, $Scopes, $Environment, [switch]$NoWelcome, [switch]$UseDeviceCode) }
         function global:Get-MgApplication { [CmdletBinding()] param($Filter) }
         function global:Get-MgServicePrincipal { [CmdletBinding()] param($Filter) }
         function global:New-MgApplication { [CmdletBinding()] param($DisplayName, $SignInAudience, $RequiredResourceAccess, $KeyCredentials) }
