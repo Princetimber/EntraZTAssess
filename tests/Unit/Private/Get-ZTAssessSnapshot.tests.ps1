@@ -60,4 +60,38 @@ Describe 'Get-ZTAssessSnapshot' -Tag 'Unit' {
             }
         }
     }
+
+    Context 'When the snapshot has sibling keys differing only by case' {
+        It 'Should fall back to -AsHashtable and return the object instead of throwing' {
+            # Regression test: some collected payloads (observed live against
+            # Get-DlpCompliancePolicy via the EXO/IPPS REST connection) carry
+            # a 'value' property alongside a 'Value' property at the same
+            # object level - legal JSON, but ConvertFrom-Json's default
+            # case-insensitive PSCustomObject mode throws
+            # "contains keys with different casing" reading it back.
+            InModuleScope -ModuleName $script:dscModuleName {
+                $runPath = Join-Path $TestDrive 'run-4'
+                $null = New-Item -Path (Join-Path $runPath 'Raw') -ItemType Directory -Force
+                Set-Content -Path (Join-Path $runPath 'Raw/casing.json') -Value '[{"Name":"Policy1","Value":"Real","value":"Shadow"}]'
+
+                $result = Get-ZTAssessSnapshot -RunPath $runPath -Name 'casing'
+
+                @($result).Count | Should -Be 1
+                @($result)[0].Name | Should -Be 'Policy1'
+            }
+        }
+    }
+
+    Context 'When the snapshot is genuinely corrupt (not a casing collision)' {
+        It 'Should still throw with an actionable message' {
+            InModuleScope -ModuleName $script:dscModuleName {
+                $runPath = Join-Path $TestDrive 'run-5'
+                $null = New-Item -Path (Join-Path $runPath 'Raw') -ItemType Directory -Force
+                Set-Content -Path (Join-Path $runPath 'Raw/broken.json') -Value '{ this is not valid json'
+
+                { Get-ZTAssessSnapshot -RunPath $runPath -Name 'broken' } |
+                    Should -Throw -ExpectedMessage "*Failed to read snapshot 'broken'*"
+            }
+        }
+    }
 }
