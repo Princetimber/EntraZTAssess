@@ -5,6 +5,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `.github/workflows/release.yml`'s `Publish` job ran `./build.ps1 -tasks publish`,
+  but `build.yaml` defines no task named `publish` — only `publish_psgallery`
+  and `publish_github` — so the job has failed on every tagged release to
+  date (`v0.2.0`, `v0.2.1`), with those versions actually reaching PSGallery
+  only via a manual local publish afterwards. Changed to
+  `-tasks publish_psgallery`; GitHub release creation is left to the
+  workflow's separate `softprops/action-gh-release` step, which already
+  covers it.
+
 ## [0.3.0] - 2026-08-21
 
 ### Added

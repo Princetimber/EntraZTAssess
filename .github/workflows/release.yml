@@ -82,7 +82,7 @@ jobs:
 
       - name: Publish to PSGallery
         shell: pwsh
-        run: ./build.ps1 -tasks publish
+        run: ./build.ps1 -tasks publish_psgallery
         env:
           GitHubToken: ${{ secrets.GITHUB_TOKEN }}
           GalleryApiToken: ${{ secrets.PSGALLERY_API_KEY }}
