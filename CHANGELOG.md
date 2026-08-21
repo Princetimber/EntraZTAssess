@@ -5,6 +5,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Clarified in `docs/Authentication.md` and `README.md` that
+  `Grant-ZTAssessExchangeOnlineRole` (and the rest of the "CBA Setup"
+  provisioning steps) applies only to app-only (CBA) engagements. It
+  authorizes the app registration's own service principal, but
+  device-code mode (`Connect-ZTAssessment -UseDeviceCode`) never
+  connects as an app - both its Graph and Exchange Online / IPPS
+  sign-ins authenticate as the signed-in consultant, so this step is
+  skipped entirely for a device-code engagement. What matters instead
+  is whether the consultant's own account already holds the equivalent
+  Exchange Online / Security & Compliance permissions.
+
 ## [0.3.2] - 2026-08-21
 
 ### Fixed
