@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Documented in `docs/Authentication.md` exactly where each Exchange
+  Online / Security & Compliance role in the guidance table is actually
+  assigned - `View-Only Configuration` and `View-Only Recipients` in the
+  Exchange admin center; `View-Only Retention Management` and
+  `View-Only DLP Compliance Management` only in the Microsoft Purview
+  compliance portal (they don't exist in the EAC at all), and only via
+  a `Connect-IPPSSession`, not a plain Exchange Online session.
 - Clarified in `docs/Authentication.md` and `README.md` that
   `Grant-ZTAssessExchangeOnlineRole` (and the rest of the "CBA Setup"
   provisioning steps) applies only to app-only (CBA) engagements. It
