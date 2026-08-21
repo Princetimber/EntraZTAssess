@@ -70,21 +70,40 @@ Describe 'Connect-MgGraphWrapper' -Tag 'Unit' {
         }
     }
 
-    It 'Should not capture the output of Connect-MgGraph when using device code' {
+    It 'Should render (not discard) the output of Connect-MgGraph when using device code' {
         # Regression test: Connect-MgGraph's device-code prompt is silenced
-        # on affected ExchangeOnlineManagement/Microsoft.Graph.Authentication
-        # SDK versions when its return value is captured (even `$null =`) -
+        # on affected Microsoft.Graph.Authentication SDK versions whenever
+        # its return value is DISCARDED before rendering - `$null = ...`
+        # and `| Out-Null` both do this and were confirmed NOT to work -
         # https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798.
-        # This asserts the wrapper's source text calls it bare in the
+        # `| Out-Host` renders immediately at this call site and produces
+        # no output of its own, so it neither discards the prompt nor lets
+        # anything leak into this function's own return value. This
+        # asserts the wrapper's source text uses that exact pattern in the
         # device-code branch, since a functional Pester mock can't observe
         # real console rendering.
         $wrapperSource = Get-Content -Raw -Path (Join-Path $PSScriptRoot '../../../source/Private/Connect-MgGraphWrapper.ps1')
-        $wrapperSource | Should -Match '(?m)^\s{8}Connect-MgGraph @connectParameters\s*$'
+        $wrapperSource | Should -Match '(?m)^\s{8}Connect-MgGraph @connectParameters \| Out-Host\s*$'
+        $wrapperSource | Should -Not -Match '(?m)^\s{8}\$null = Connect-MgGraph @connectParameters \| Out-Null\s*$'
     }
 
-    It 'Should still connect successfully when the device-code call is invoked bare' {
+    It 'Should still connect successfully when the device-code call is piped to Out-Host' {
         InModuleScope -ModuleName $script:dscModuleName {
             { Connect-MgGraphWrapper -Scopes 'Directory.Read.All' -UseDeviceCode } | Should -Not -Throw
+        }
+    }
+
+    It 'Should not leak whatever Connect-MgGraph returns into its own output for the device-code path' {
+        # Mocks a non-empty return (simulating an SDK version that emits an
+        # auth-context-like object) to prove Out-Host actually consumes it,
+        # rather than trivially passing because the mock returned nothing.
+        Mock -ModuleName $script:dscModuleName -CommandName Connect-MgGraph -MockWith {
+            [pscustomobject]@{ TenantId = 'contoso' }
+        }
+
+        InModuleScope -ModuleName $script:dscModuleName {
+            $result = Connect-MgGraphWrapper -Scopes 'Directory.Read.All' -UseDeviceCode
+            $result | Should -BeNullOrEmpty
         }
     }
 }
