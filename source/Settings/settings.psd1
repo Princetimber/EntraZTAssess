@@ -52,6 +52,24 @@
         )
     }
 
+    # Device-code identity used to bridge Connect-ZTAssessment's Exchange
+    # Online / Security & Compliance (IPPS) connection when Microsoft Graph
+    # itself authenticated via -UseDeviceCode. Connect-IPPSSession has no
+    # -Device switch of its own, so a token is obtained separately via the
+    # OAuth device-code flow (RFC 8628) and passed to both
+    # Connect-ExchangeOnline -AccessToken and Connect-IPPSSession
+    # -AccessToken. DeviceCodeClientId defaults to the well-known Microsoft
+    # first-party "Microsoft Exchange REST API Based PowerShell" public
+    # client (fb78d390-0c51-40cd-8e17-fdbfab77341b) - the same client
+    # Connect-ExchangeOnline -Device already uses internally, so no new app
+    # registration or permission grant is required. A tenant whose
+    # Conditional Access policy blocks sign-in by well-known native client
+    # IDs can override this with their own registered public-client app.
+    ExchangeOnline = @{
+        DeviceCodeClientId = 'fb78d390-0c51-40cd-8e17-fdbfab77341b'
+        DeviceCodeScope    = 'https://outlook.office365.com/.default offline_access'
+    }
+
     # Candidate Microsoft Secure Score control names for the Defender for
     # Cloud Apps / Cloud App Security setup proxy (CAS-001/CAS-002). This
     # domain is explicitly a best-effort Secure Score proxy - Microsoft

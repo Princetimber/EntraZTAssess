@@ -5,6 +5,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Connect-ZTAssessment` can now establish the Exchange Online / Security &
+  Compliance (IPPS) connection when Microsoft Graph itself authenticated via
+  `-UseDeviceCode`, instead of always skipping it. `Connect-IPPSSession` has
+  no device-code switch of its own (unlike `Connect-ExchangeOnline`), so a
+  separate OAuth device-code flow (RFC 8628, plain `Invoke-RestMethod`
+  calls against the Microsoft identity platform - no new module dependency)
+  obtains an access token for the Exchange Online resource, which is then
+  passed to both surfaces via their `-AccessToken` parameter. The default
+  client ID (`Settings/settings.psd1` → `ExchangeOnline.DeviceCodeClientId`)
+  is the well-known Microsoft first-party "Microsoft Exchange REST API
+  Based PowerShell" public client that `Connect-ExchangeOnline -Device`
+  already uses internally, so this requires no new app registration, no
+  public-client-flow toggle, and no `Exchange.ManageAsApp` grant. Tenants
+  whose Conditional Access policy blocks sign-in by well-known native
+  client IDs can override `ExchangeOnline.DeviceCodeClientId` (and
+  `DeviceCodeScope`) with their own registered public-client app. Plain
+  interactive delegated sign-in (no `-UseDeviceCode`) is unchanged and
+  still skips the Exchange Online / IPPS surface. `-Organization` is now
+  also accepted alongside `-UseDeviceCode` (previously only available for
+  the app-only and auto parameter sets), since it can no longer be resolved
+  from a certificate-based auth config in this mode.
+
 ### Fixed
 
 - `EntraZTAssess.Provisioning` 0.1.3: fixed `Get-ZTAssessExchangeOnlineRoleGuidance`

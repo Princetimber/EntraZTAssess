@@ -8,11 +8,11 @@ BeforeAll {
     # real ExchangeOnlineManagement module installed.
     function global:Connect-ExchangeOnline {
         [CmdletBinding()]
-        param($Organization, $AppId, $Certificate, $CertificateThumbprint, $CommandName, [switch]$ShowBanner)
+        param($Organization, $AppId, $Certificate, $CertificateThumbprint, $AccessToken, $CommandName, [switch]$ShowBanner)
     }
     function global:Connect-IPPSSession {
         [CmdletBinding()]
-        param($Organization, $AppId, $Certificate, $CertificateThumbprint, $CommandName, [switch]$ShowBanner)
+        param($Organization, $AppId, $Certificate, $CertificateThumbprint, $AccessToken, $CommandName, [switch]$ShowBanner)
     }
 
     if (Get-Module -ListAvailable -Name $script:dscModuleName -ErrorAction SilentlyContinue) {
@@ -79,10 +79,37 @@ Describe 'Connect-ExchangeOnlineWrapper' -Tag 'Unit' {
         }
     }
 
-    It 'Should throw when neither a certificate nor a thumbprint is supplied' {
+    It 'Should throw when neither an access token, a certificate, nor a thumbprint is supplied' {
         InModuleScope -ModuleName $script:dscModuleName {
             { Connect-ExchangeOnlineWrapper -Surface ExchangeOnline -Organization 'contoso.onmicrosoft.com' -AppId 'app-1' } |
-                Should -Throw -ExpectedMessage '*Either -Certificate or -CertificateThumbprint*'
+                Should -Throw -ExpectedMessage '*Either -AccessToken, -Certificate, or -CertificateThumbprint*'
+        }
+    }
+
+    It 'Should connect to Exchange Online with an access token (device-code bridge)' {
+        InModuleScope -ModuleName $script:dscModuleName {
+            Connect-ExchangeOnlineWrapper -Surface ExchangeOnline -Organization 'contoso.onmicrosoft.com' -AccessToken 'token-1'
+
+            Should -Invoke Connect-ExchangeOnline -Times 1 -Exactly -ParameterFilter {
+                $Organization -eq 'contoso.onmicrosoft.com' -and $AccessToken -eq 'token-1' -and $ShowBanner -eq $false
+            }
+        }
+    }
+
+    It 'Should connect to IPPS with an access token (device-code bridge)' {
+        InModuleScope -ModuleName $script:dscModuleName {
+            Connect-ExchangeOnlineWrapper -Surface IPPS -Organization 'contoso.onmicrosoft.com' -AccessToken 'token-1'
+
+            Should -Invoke Connect-IPPSSession -Times 1 -Exactly -ParameterFilter {
+                $Organization -eq 'contoso.onmicrosoft.com' -and $AccessToken -eq 'token-1'
+            }
+        }
+    }
+
+    It 'Should throw when an AppId is required for certificate-based auth but not supplied' {
+        InModuleScope -ModuleName $script:dscModuleName {
+            { Connect-ExchangeOnlineWrapper -Surface ExchangeOnline -Organization 'contoso.onmicrosoft.com' -CertificateThumbprint 'ABC123' } |
+                Should -Throw -ExpectedMessage '*-AppId is required for certificate-based authentication*'
         }
     }
 }

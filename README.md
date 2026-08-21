@@ -57,7 +57,7 @@ Import-Module ./output/Get-EntraZTAssess/<version>/Get-EntraZTAssess.psd1
 
 Full setup, cross-platform certificate guidance, the read-only Application-permissions table, and CI/headless usage are documented in [`docs/Authentication.md`](docs/Authentication.md).
 
-Modules whose data does not exist in Microsoft Graph (`ThreatProtection`, `SecurityCompliance`, `DataProtection`, `Collaboration`) use a second, lazily-established, read-only Exchange Online / Security & Compliance (IPPS) connection alongside Graph, reusing the same certificate. It is app-only only and never fails the overall connection — see [Exchange Online / Security & Compliance Connection](docs/Authentication.md#exchange-online--security--compliance-connection). All four are implemented.
+Modules whose data does not exist in Microsoft Graph (`ThreatProtection`, `SecurityCompliance`, `DataProtection`, `Collaboration`) use a second, lazily-established, read-only Exchange Online / Security & Compliance (IPPS) connection alongside Graph. In app-only mode it reuses the same certificate as Graph; when Graph itself used `-UseDeviceCode`, it bridges via a separate Exchange Online device-code sign-in instead, since the Security & Compliance session cmdlet has no device-code switch of its own. It is skipped only for plain interactive delegated sign-in, and never fails the overall connection — see [Exchange Online / Security & Compliance Connection](docs/Authentication.md#exchange-online--security--compliance-connection). All four are implemented.
 
 ### Provisioning quickstart
 
