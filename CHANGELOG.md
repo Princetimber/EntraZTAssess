@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `EntraZTAssess.Provisioning` 0.1.3: fixed `Get-ZTAssessExchangeOnlineRoleGuidance`
+  throwing `Permission catalogue not found` for anyone who installed the
+  module from PSGallery (`Install-Module EntraZTAssess.Provisioning`). Like
+  the `New-ZTAssessAppRegistration` bug fixed in 0.1.1, the function
+  resolved the catalogue via a dev-checkout-relative path
+  (`../../../source/Settings/permissions.psd1`), which only exists inside a
+  git clone of this repository - never inside an installed module. It now
+  resolves the same bundled copy at `Settings/permissions.psd1` that
+  `New-ZTAssessAppRegistration` already uses.
 - `EntraZTAssess.Provisioning` 0.1.2: `New-ZTAssessAppRegistration` failed to
   connect to Microsoft Graph on tenants whose Conditional Access policy
   blocks interactive browser sign-in, and separately threw `A parameter

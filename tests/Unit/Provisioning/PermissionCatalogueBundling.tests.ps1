@@ -82,6 +82,13 @@ Describe 'EntraZTAssess.Provisioning permission catalogue bundling' -Tag 'Unit' 
                 -ConfigOutputPath (Join-Path $TestDrive 'auth-simulated-install.json') -Confirm:$false
 
             $result.ClientId | Should -Be '11111111-1111-1111-1111-111111111111'
+
+            # Regression test for the same bug in
+            # Get-ZTAssessExchangeOnlineRoleGuidance, which resolved the
+            # catalogue via '../../../source/Settings/permissions.psd1'
+            # instead of the bundled '../Settings/permissions.psd1'.
+            $guidance = Get-ZTAssessExchangeOnlineRoleGuidance -Modules 'SecurityCompliance'
+            $guidance | Should -Not -BeNullOrEmpty
         }
         finally {
             Get-Module -Name $script:provModuleName -All | Remove-Module -Force -ErrorAction SilentlyContinue
