@@ -265,7 +265,12 @@ function Connect-ZTAssessment {
     Write-ToLog -Message "Connecting to Microsoft Graph ($authMode, $effectiveEnvironment) for module(s): $($Modules -join ', ')" -Level INFO -NoConsole
 
     try {
-        Connect-MgGraphWrapper @connectSplat
+        # Captured here (unlike Connect-MgGraph's own call inside the
+        # wrapper) purely as a safety net against any stray return value
+        # reaching this function's own output - this capture happens one
+        # frame removed from Connect-MgGraph's direct invocation, so it has
+        # no bearing on whether its device-code prompt rendered.
+        $null = Connect-MgGraphWrapper @connectSplat
     } catch {
         Write-ToLog -ErrorRecord $_ -NoConsole
         if ($cbaConfigResolved) {

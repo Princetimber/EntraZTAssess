@@ -67,5 +67,21 @@ function Connect-MgGraphWrapper {
         }
     }
 
-    $null = Connect-MgGraph @connectParameters
+    if ($UseDeviceCode) {
+        # Device-code sign-in must NOT have its output captured. On several
+        # Microsoft.Graph.Authentication SDK versions the "To sign in, use a
+        # web browser..." device-code prompt is emitted through the same
+        # stream as the cmdlet's return value rather than reliably via
+        # Write-Host, so assigning the call to a variable (even `$null =`)
+        # or piping it to Out-Null silently swallows the prompt the user
+        # needs to read and act on - confirmed by a Microsoft maintainer:
+        # https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/1403#issuecomment-1191685915
+        # and tracked as an open SDK defect:
+        # https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798
+        # Connect-ZTAssessment retrieves the resulting context separately via
+        # Get-MgContextWrapper, so no return value is needed here.
+        Connect-MgGraph @connectParameters
+    } else {
+        $null = Connect-MgGraph @connectParameters
+    }
 }
