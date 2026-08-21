@@ -5,6 +5,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Rewrote `README.md`'s build-status paragraph to be honest about testing
+  maturity: the 650+ test Pester/QA suite is built on mocked Graph/Exchange
+  responses, not live-tenant validation, and the module's first real
+  engagement run surfaced several real issues (the assessor-abort crash,
+  the device-code prompt bug, the release pipeline never having actually
+  auto-published before) rather than implying "hardening" was a completed
+  state.
+
 ## [0.3.3] - 2026-08-21
 
 ### Fixed
