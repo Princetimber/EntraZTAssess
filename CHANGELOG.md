@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Applied the same honesty fix to `CLAUDE.md`'s build-status paragraph as
+  README.md: removed the "Phase 5 delivery hardening present" claim and
+  replaced it with the actual testing-maturity picture (mocked-response
+  unit coverage vs. the real issues the first live-tenant engagement run
+  surfaced), plus explicit guidance for future changes to prefer
+  graceful degradation over exceptions that propagate, given that
+  history.
+
 - Rewrote `README.md`'s build-status paragraph to be honest about testing
   maturity: the 650+ test Pester/QA suite is built on mocked Graph/Exchange
   responses, not live-tenant validation, and the module's first real
