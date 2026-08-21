@@ -359,6 +359,33 @@ Describe 'Connect-ZTAssessment' -Tag 'Unit' {
 
             Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -Times 0 -Exactly
         }
+
+        It 'Should connect both surfaces via the device-code access-token bridge when Graph used -UseDeviceCode' {
+            Mock -ModuleName $script:dscModuleName -CommandName Get-ZTAssessExchangeOnlineDeviceCodeToken -MockWith { 'device-code-token' }
+
+            $result = Connect-ZTAssessment -Modules ThreatProtection -UseDeviceCode -Organization 'contoso.onmicrosoft.com'
+
+            $result.AuthMode | Should -Be 'DeviceCode'
+            $result.ExchangeOnlineConnected | Should -BeTrue
+            $result.ExchangeOnlineWarning | Should -BeNullOrEmpty
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Get-ZTAssessExchangeOnlineDeviceCodeToken -Times 1 -Exactly
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -Times 2 -Exactly -ParameterFilter {
+                $Organization -eq 'contoso.onmicrosoft.com' -and $AccessToken -eq 'device-code-token'
+            }
+        }
+
+        It 'Should warn but not fail the overall connection when the device-code token request fails' {
+            Mock -ModuleName $script:dscModuleName -CommandName Get-ZTAssessExchangeOnlineDeviceCodeToken -MockWith {
+                throw 'Exchange Online device-code sign-in expired before the user completed authentication.'
+            }
+
+            $result = Connect-ZTAssessment -Modules ThreatProtection -UseDeviceCode -Organization 'contoso.onmicrosoft.com' -WarningAction SilentlyContinue
+
+            $result.AuthMode | Should -Be 'DeviceCode'
+            $result.ExchangeOnlineConnected | Should -BeFalse
+            $result.ExchangeOnlineWarning | Should -Match 'device code'
+            Should -Invoke -ModuleName $script:dscModuleName -CommandName Connect-ExchangeOnlineWrapper -Times 0 -Exactly
+        }
     }
 
     Context 'When a resolved certificate configuration fails to connect' {

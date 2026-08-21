@@ -27,12 +27,16 @@ function Connect-ZTAssessment {
 
     When a selected module requires the read-only Exchange Online / Security
     & Compliance (IPPS) surface (see Get-ZTAssessModuleCatalog), a second,
-    lazily-established, certificate-based app-only connection is attempted
-    using the same certificate after Microsoft Graph connects. This surface
-    is only available in app-only mode; it is skipped for delegated/device
-    code sign-in. A failed or skipped Exchange Online / IPPS connection never
-    fails the overall connection or affects Graph-only modules - dependent
-    checks are simply reported as NotAssessed.
+    lazily-established connection is attempted after Microsoft Graph
+    connects. In app-only mode this reuses the same certificate. In
+    device-code mode (-UseDeviceCode), the IPPS session-establishing cmdlet
+    has no device-code switch of its own, so a separate Exchange Online
+    device-code sign-in is performed and the resulting access token is used
+    for both the Exchange Online and IPPS surfaces. This surface is skipped
+    for plain interactive delegated sign-in. A failed or skipped Exchange
+    Online / IPPS connection
+    never fails the overall connection or affects Graph-only modules -
+    dependent checks are simply reported as NotAssessed.
 
     .PARAMETER Modules
     The assessment modules the connection must support. Scopes are computed
@@ -154,6 +158,7 @@ function Connect-ZTAssessment {
         [securestring]$CertificatePassword,
 
         [Parameter(ParameterSetName = 'Auto')]
+        [Parameter(ParameterSetName = 'Delegated')]
         [Parameter(ParameterSetName = 'AppOnlyThumbprint')]
         [Parameter(ParameterSetName = 'AppOnlyCertificate')]
         [ValidateNotNullOrEmpty()]
@@ -284,19 +289,15 @@ function Connect-ZTAssessment {
     }
 
     # --- Exchange Online / Security & Compliance (IPPS), lazily -------------
-    # Only attempted when a selected module needs it, and only in app-only
-    # mode. A failure here never fails the overall connection: Graph-only
-    # modules must keep working, and dependent checks degrade to
+    # Only attempted when a selected module needs it, and only in app-only or
+    # device-code mode. A failure here never fails the overall connection:
+    # Graph-only modules must keep working, and dependent checks degrade to
     # NotAssessed, matching the existing collector-failure pattern.
     $exchangeOnlineConnected = $false
     $exchangeOnlineWarning = $null
 
     if ($needsExchangeOnline) {
-        if ($authMode -ne 'AppOnly') {
-            $exchangeOnlineWarning = 'Exchange Online / Security & Compliance requires certificate-based app-only authentication; it was skipped for Delegated/DeviceCode sign-in. Dependent checks will be reported as NotAssessed.'
-            Write-Warning $exchangeOnlineWarning
-            Write-ToLog -Message $exchangeOnlineWarning -Level WARN -NoConsole
-        } else {
+        if ($authMode -eq 'AppOnly') {
             $resolvedOrganization = Resolve-ZTAssessOrganization -Organization $Organization -AuthConfig $authConfig -TenantId $context.TenantId
 
             if (-not $resolvedOrganization) {
@@ -325,6 +326,32 @@ function Connect-ZTAssessment {
                     Write-ToLog -ErrorRecord $_ -NoConsole
                 }
             }
+        } elseif ($authMode -eq 'DeviceCode') {
+            $resolvedOrganization = Resolve-ZTAssessOrganization -Organization $Organization -AuthConfig $authConfig -TenantId $context.TenantId
+
+            if (-not $resolvedOrganization) {
+                $exchangeOnlineWarning = 'Could not resolve an Exchange Online organization (verified domain). Supply -Organization or set ZTASSESS_ORGANIZATION. Dependent checks will be reported as NotAssessed.'
+                Write-Warning $exchangeOnlineWarning
+                Write-ToLog -Message $exchangeOnlineWarning -Level WARN -NoConsole
+            } else {
+                try {
+                    Write-ToLog -Message 'Exchange Online / Security & Compliance requires a separate device-code sign-in (Microsoft Graph and Exchange Online use different resources and cannot share a token).' -Level INFO -NoConsole
+                    $exoAccessToken = Get-ZTAssessExchangeOnlineDeviceCodeToken -TenantId $context.TenantId -ErrorAction Stop
+
+                    Connect-ExchangeOnlineWrapper -Surface ExchangeOnline -Organization $resolvedOrganization -AccessToken $exoAccessToken
+                    Connect-ExchangeOnlineWrapper -Surface IPPS -Organization $resolvedOrganization -AccessToken $exoAccessToken
+                    $exchangeOnlineConnected = $true
+                    Write-ToLog -Message "Connected to Exchange Online / Security & Compliance via device code ($resolvedOrganization)." -Level SUCCESS -NoConsole
+                } catch {
+                    $exchangeOnlineWarning = "Failed to connect to Exchange Online / Security & Compliance via device code: $($_.Exception.Message). Dependent checks will be reported as NotAssessed."
+                    Write-Warning $exchangeOnlineWarning
+                    Write-ToLog -ErrorRecord $_ -NoConsole
+                }
+            }
+        } else {
+            $exchangeOnlineWarning = 'Exchange Online / Security & Compliance requires certificate-based app-only authentication or device-code sign-in (-UseDeviceCode); it was skipped for interactive delegated sign-in. Dependent checks will be reported as NotAssessed.'
+            Write-Warning $exchangeOnlineWarning
+            Write-ToLog -Message $exchangeOnlineWarning -Level WARN -NoConsole
         }
     }
 
