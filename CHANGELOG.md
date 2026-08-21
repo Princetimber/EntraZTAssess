@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Connect-ZTAssessment -UseDeviceCode` printed nothing to the console when
+  signing in - no "To sign in, use a web browser..." prompt appeared at
+  all, leaving the connection to eventually fail with an inactivity
+  timeout. `Connect-MgGraphWrapper` (`source/Private/Connect-MgGraphWrapper.ps1`)
+  captured `Connect-MgGraph`'s return value with `$null = ...` unconditionally;
+  on affected `Microsoft.Graph.Authentication` SDK versions the device-code
+  prompt is emitted through the same stream as the cmdlet's return value
+  rather than reliably via `Write-Host`, so capturing it - even into
+  `$null` - silently swallows the prompt. Confirmed by a Microsoft
+  maintainer and tracked as an open SDK defect
+  ([msgraph-sdk-powershell#1403](https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/1403#issuecomment-1191685915),
+  [#2798](https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798)).
+  `Connect-MgGraphWrapper` now invokes `Connect-MgGraph` fully bare (no
+  capture) specifically for the device-code path; `Connect-ZTAssessment`
+  already retrieves the resulting context separately via
+  `Get-MgContextWrapper`, so no return value was ever needed there.
 - `.github/workflows/release.yml`'s `Publish` job ran `./build.ps1 -tasks publish`,
   but `build.yaml` defines no task named `publish` — only `publish_psgallery`
   and `publish_github` — so the job has failed on every tagged release to

@@ -69,4 +69,22 @@ Describe 'Connect-MgGraphWrapper' -Tag 'Unit' {
             }
         }
     }
+
+    It 'Should not capture the output of Connect-MgGraph when using device code' {
+        # Regression test: Connect-MgGraph's device-code prompt is silenced
+        # on affected ExchangeOnlineManagement/Microsoft.Graph.Authentication
+        # SDK versions when its return value is captured (even `$null =`) -
+        # https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798.
+        # This asserts the wrapper's source text calls it bare in the
+        # device-code branch, since a functional Pester mock can't observe
+        # real console rendering.
+        $wrapperSource = Get-Content -Raw -Path (Join-Path $PSScriptRoot '../../../source/Private/Connect-MgGraphWrapper.ps1')
+        $wrapperSource | Should -Match '(?m)^\s{8}Connect-MgGraph @connectParameters\s*$'
+    }
+
+    It 'Should still connect successfully when the device-code call is invoked bare' {
+        InModuleScope -ModuleName $script:dscModuleName {
+            { Connect-MgGraphWrapper -Scopes 'Directory.Read.All' -UseDeviceCode } | Should -Not -Throw
+        }
+    }
 }
