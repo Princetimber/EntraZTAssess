@@ -68,19 +68,24 @@ function Connect-MgGraphWrapper {
     }
 
     if ($UseDeviceCode) {
-        # Device-code sign-in must NOT have its output captured. On several
+        # Piped through Out-Host, not assigned/discarded. On several
         # Microsoft.Graph.Authentication SDK versions the "To sign in, use a
-        # web browser..." device-code prompt is emitted through the same
+        # web browser..." device-code prompt travels through the same
         # stream as the cmdlet's return value rather than reliably via
-        # Write-Host, so assigning the call to a variable (even `$null =`)
-        # or piping it to Out-Null silently swallows the prompt the user
-        # needs to read and act on - confirmed by a Microsoft maintainer:
+        # Write-Host - confirmed by a Microsoft maintainer:
         # https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/1403#issuecomment-1191685915
         # and tracked as an open SDK defect:
         # https://github.com/microsoftgraph/msgraph-sdk-powershell/issues/2798
-        # Connect-ZTAssessment retrieves the resulting context separately via
-        # Get-MgContextWrapper, so no return value is needed here.
-        Connect-MgGraph @connectParameters
+        # `$null = ...` or `| Out-Null` DISCARD that stream before it can
+        # render anywhere, silently swallowing the prompt - this was tried
+        # first and confirmed NOT to work. Out-Host instead renders
+        # whatever comes through immediately, right here, and produces no
+        # output of its own, so nothing leaks into this function's return
+        # value (or further up into Connect-ZTAssessment's) regardless of
+        # how many ancestor calls capture their own results. Connect-
+        # ZTAssessment retrieves the resulting context separately via
+        # Get-MgContextWrapper, so no return value is needed here anyway.
+        Connect-MgGraph @connectParameters | Out-Host
     } else {
         $null = Connect-MgGraph @connectParameters
     }

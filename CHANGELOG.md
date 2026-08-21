@@ -5,6 +5,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `Connect-ZTAssessment -UseDeviceCode` still printed no device-code
+  prompt after the 0.3.1 fix, confirmed against a live tenant - the
+  Graph sign-in still timed out after ~120 seconds with nothing shown.
+  The 0.3.1 fix made `Connect-MgGraphWrapper`'s own call to
+  `Connect-MgGraph` bare, but `Connect-ZTAssessment`'s call to
+  `Connect-MgGraphWrapper` was then changed to `$null = ...` as a
+  "safety net" - which re-discarded the exact same value one frame
+  later, before it could ever reach the console. `$null = ...` and
+  `| Out-Null` don't just consume a pipeline, they discard it without
+  rendering anything, so capturing at ANY point between the cmdlet and
+  the console silently swallows the prompt, no matter how many levels
+  deeper were left bare. `Connect-MgGraphWrapper` now pipes the
+  device-code call to `Out-Host` instead, which renders immediately at
+  that exact point and produces no output of its own - so the prompt
+  displays and nothing leaks into either function's return value,
+  regardless of what any caller does with it afterwards.
+
 ## [0.3.1] - 2026-08-21
 
 ### Fixed
