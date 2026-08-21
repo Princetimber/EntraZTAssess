@@ -5,6 +5,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A single module's assessor throwing (for example on a corrupt or
+  unexpectedly-shaped persisted snapshot) aborted the *entire* assessment
+  run, leaving every other module's findings lost and the caller's
+  `$run` variable never assigned - reported live: `Get-DlpCompliancePolicy`
+  (via the EXO/IPPS REST connection) returned a payload with sibling
+  properties differing only by case (`value` and `Value`), which
+  `ConvertFrom-Json`'s default mode cannot parse, and that exception
+  propagated straight out of `Invoke-ZTAssessment` uncaught. Two fixes:
+  - `Get-ZTAssessSnapshot` now falls back to `ConvertFrom-Json -AsHashtable`
+    specifically for this casing-collision error, then normalizes the
+    result back to the usual `PSCustomObject` shape via the new private
+    `ConvertTo-ZTAssessNormalizedJsonObject`, resolving the collision
+    instead of losing the snapshot.
+  - Every module's assessor call in `Invoke-ZTAssessment` is now wrapped
+    by the new private `Invoke-ZTAssessAssessorSafely`, mirroring the
+    graceful-degradation pattern collector failures already had: an
+    assessor exception degrades just that module to zero findings
+    (recorded as a run manifest warning) instead of aborting the run for
+    every other module too.
+
 ### Changed
 
 - Documented in `docs/Authentication.md` exactly where each Exchange

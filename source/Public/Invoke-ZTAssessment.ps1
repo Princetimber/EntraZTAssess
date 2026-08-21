@@ -56,8 +56,12 @@ function Invoke-ZTAssessment {
 
     .NOTES
     Collector failures degrade gracefully: affected checks are reported as
-    NotAssessed and the run continues. Reports are generated separately by
-    Export-ZTAssessReport (later phase) from the persisted run folder.
+    NotAssessed and the run continues. A module's assessor failing (for
+    example on a corrupt or unexpectedly-shaped persisted snapshot) degrades
+    the same way - that module contributes zero findings, recorded as a run
+    manifest warning, but every other module's assessment still completes.
+    Reports are generated separately by Export-ZTAssessReport (later phase)
+    from the persisted run folder.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -190,69 +194,79 @@ function Invoke-ZTAssessment {
         Set-Content -LiteralPath (Join-Path $runPath 'Raw/_collectionStatus.json') -Encoding utf8NoBOM
 
     # --- Assessment -----------------------------------------------------------
+    # Each module's assessor call is wrapped by Invoke-ZTAssessAssessorSafely:
+    # an exception from one module (a corrupt/unparseable snapshot, an
+    # unexpected data shape) degrades just that module to zero findings
+    # instead of aborting the run for every other module too - the same
+    # graceful-degradation guarantee already applied to collector failures.
     $findings = [System.Collections.Generic.List[object]]::new()
     if ($selectedModules -contains 'Identity') {
-        $findings.AddRange(@(Test-ZTAssessIdentitySecurity -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'Identity' -Manifest $manifest -ScriptBlock { Test-ZTAssessIdentitySecurity -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'ConditionalAccess') {
-        $findings.AddRange(@(Test-ZTAssessConditionalAccess -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'ConditionalAccess' -Manifest $manifest -ScriptBlock { Test-ZTAssessConditionalAccess -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'PrivilegedAccess') {
-        $findings.AddRange(@(Test-ZTAssessPrivilegedAccess -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'PrivilegedAccess' -Manifest $manifest -ScriptBlock { Test-ZTAssessPrivilegedAccess -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'IdentityGovernance') {
-        $findings.AddRange(@(Test-ZTAssessIdentityGovernance -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'IdentityGovernance' -Manifest $manifest -ScriptBlock { Test-ZTAssessIdentityGovernance -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'Applications') {
-        $findings.AddRange(@(Test-ZTAssessApplicationSecurity -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'Applications' -Manifest $manifest -ScriptBlock { Test-ZTAssessApplicationSecurity -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'HybridIdentity') {
-        $findings.AddRange(@(Test-ZTAssessHybridIdentity -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'HybridIdentity' -Manifest $manifest -ScriptBlock { Test-ZTAssessHybridIdentity -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'Monitoring') {
-        $findings.AddRange(@(Test-ZTAssessMonitoring -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'Monitoring' -Manifest $manifest -ScriptBlock { Test-ZTAssessMonitoring -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'Defender') {
-        $findings.AddRange(@(Test-ZTAssessDefender -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'Defender' -Manifest $manifest -ScriptBlock { Test-ZTAssessDefender -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'ThreatProtection') {
-        $findings.AddRange(@(Test-ZTAssessThreatProtection -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'ThreatProtection' -Manifest $manifest -ScriptBlock { Test-ZTAssessThreatProtection -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'SecurityCompliance') {
-        $findings.AddRange(@(Test-ZTAssessSecurityCompliance -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'SecurityCompliance' -Manifest $manifest -ScriptBlock { Test-ZTAssessSecurityCompliance -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'DataProtection') {
-        $findings.AddRange(@(Test-ZTAssessDataProtection -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'DataProtection' -Manifest $manifest -ScriptBlock { Test-ZTAssessDataProtection -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'Collaboration') {
-        $findings.AddRange(@(Test-ZTAssessCollaboration -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'Collaboration' -Manifest $manifest -ScriptBlock { Test-ZTAssessCollaboration -RunPath $runPath -Settings $settings }))
     }
     if ($selectedModules -contains 'CloudAppSecurity') {
-        $findings.AddRange(@(Test-ZTAssessCloudAppSecurity -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'CloudAppSecurity' -Manifest $manifest -ScriptBlock { Test-ZTAssessCloudAppSecurity -RunPath $runPath -Settings $settings }))
     }
 
     $findingsFolder = Join-Path $runPath 'Findings'
     $null = New-Item -Path $findingsFolder -ItemType Directory -Force
 
     if ($selectedModules -contains 'Devices') {
-        $findings.AddRange(@(Test-ZTAssessDeviceTrust -RunPath $runPath -Settings $settings))
-        $findings.AddRange(@(Test-ZTAssessEndpointManagement -RunPath $runPath -Settings $settings))
-        $findings.AddRange(@(Test-ZTAssessByodGovernance -RunPath $runPath -Settings $settings))
-        $findings.AddRange(@(Test-ZTAssessCorporateGovernance -RunPath $runPath -Settings $settings))
+        $findings.AddRange(@(Invoke-ZTAssessAssessorSafely -ModuleName 'Devices' -Manifest $manifest -ScriptBlock {
+                    $deviceFindings = [System.Collections.Generic.List[object]]::new()
+                    $deviceFindings.AddRange(@(Test-ZTAssessDeviceTrust -RunPath $runPath -Settings $settings))
+                    $deviceFindings.AddRange(@(Test-ZTAssessEndpointManagement -RunPath $runPath -Settings $settings))
+                    $deviceFindings.AddRange(@(Test-ZTAssessByodGovernance -RunPath $runPath -Settings $settings))
+                    $deviceFindings.AddRange(@(Test-ZTAssessCorporateGovernance -RunPath $runPath -Settings $settings))
 
-        # Persist the device classification and per-platform profiles for the
-        # device enrolment and BYOD comparison reports (Phase 4).
-        $managedDevices = Get-ZTAssessSnapshot -RunPath $runPath -Name 'managedDevices'
-        $entraDevices = Get-ZTAssessSnapshot -RunPath $runPath -Name 'entraDevices'
-        if ($managedDevices -or $entraDevices) {
-            $deviceClasses = Get-ZTAssessDeviceClass -ManagedDevices @($managedDevices) -EntraDevices @($entraDevices) -Settings $settings
-            ConvertTo-Json -InputObject @($deviceClasses) -Depth 10 |
-                Set-Content -LiteralPath (Join-Path $findingsFolder 'deviceClassification.json') -Encoding utf8NoBOM
+                    # Persist the device classification and per-platform profiles for the
+                    # device enrolment and BYOD comparison reports (Phase 4).
+                    $managedDevices = Get-ZTAssessSnapshot -RunPath $runPath -Name 'managedDevices'
+                    $entraDevices = Get-ZTAssessSnapshot -RunPath $runPath -Name 'entraDevices'
+                    if ($managedDevices -or $entraDevices) {
+                        $deviceClasses = Get-ZTAssessDeviceClass -ManagedDevices @($managedDevices) -EntraDevices @($entraDevices) -Settings $settings
+                        ConvertTo-Json -InputObject @($deviceClasses) -Depth 10 |
+                            Set-Content -LiteralPath (Join-Path $findingsFolder 'deviceClassification.json') -Encoding utf8NoBOM
 
-            $platformProfiles = Get-ZTAssessPlatformProfile -RunPath $runPath -DeviceClasses @($deviceClasses)
-            ConvertTo-Json -InputObject @($platformProfiles) -Depth 10 |
-                Set-Content -LiteralPath (Join-Path $findingsFolder 'platformProfiles.json') -Encoding utf8NoBOM
-        }
+                        $platformProfiles = Get-ZTAssessPlatformProfile -RunPath $runPath -DeviceClasses @($deviceClasses)
+                        ConvertTo-Json -InputObject @($platformProfiles) -Depth 10 |
+                            Set-Content -LiteralPath (Join-Path $findingsFolder 'platformProfiles.json') -Encoding utf8NoBOM
+                    }
+
+                    return @($deviceFindings)
+                }))
     }
     ConvertTo-Json -InputObject @($findings) -Depth 10 |
         Set-Content -LiteralPath (Join-Path $findingsFolder 'findings.json') -Encoding utf8NoBOM

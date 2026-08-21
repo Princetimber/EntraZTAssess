@@ -280,6 +280,38 @@ Describe 'Invoke-ZTAssessment' -Tag 'Unit' {
         }
     }
 
+    Context 'When one module''s assessor throws' {
+        It 'Should degrade that module to zero findings and still complete the run, including other modules'' findings' {
+            # Regression test for the DLP-snapshot-casing crash: an exception
+            # from one module's assessor (corrupt snapshot, unexpected shape,
+            # anything) must not abort the whole run.
+            Mock -ModuleName $script:dscModuleName -CommandName Test-ZTAssessConditionalAccess -MockWith {
+                throw 'Simulated corrupt snapshot.'
+            }
+
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules ConditionalAccess, PrivilegedAccess -WarningAction SilentlyContinue
+
+            $summary.RunPath | Should -Not -BeNullOrEmpty
+            $findings = Get-Content (Join-Path $summary.RunPath 'Findings/findings.json') -Raw | ConvertFrom-Json -Depth 20
+            @($findings).Domain | Should -Not -Contain 'ConditionalAccess'
+            @($findings).Domain | Should -Contain 'PrivilegedAccess'
+        }
+
+        It 'Should warn on console and record the failure in the manifest' {
+            Mock -ModuleName $script:dscModuleName -CommandName Test-ZTAssessConditionalAccess -MockWith {
+                throw 'Simulated corrupt snapshot.'
+            }
+
+            $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules ConditionalAccess -WarningVariable runWarnings -WarningAction SilentlyContinue
+
+            $runWarnings | Should -Not -BeNullOrEmpty
+            ($runWarnings -join ' ') | Should -Match "Assessor for module 'ConditionalAccess' failed"
+
+            $manifest = Get-Content (Join-Path $summary.RunPath 'manifest.json') -Raw | ConvertFrom-Json
+            ($manifest.Warnings -join ' ') | Should -Match "Assessor for module 'ConditionalAccess' failed"
+        }
+    }
+
     Context 'When unsupported modules are requested' {
         It 'Should warn and skip them' {
             $summary = Invoke-ZTAssessment -EngagementPath $script:engagementPath -Modules Identity, Sentinel -WarningVariable runWarnings -WarningAction SilentlyContinue
