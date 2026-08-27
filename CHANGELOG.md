@@ -5,6 +5,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `docs/RequiredRoles.md`, a consolidated reference for the Entra ID
+  directory roles (Privileged Role Administrator, Application/Cloud
+  Application Administrator) and Purview/Exchange Online RBAC roles
+  (`Security Reader`, `View-Only Configuration`, `View-Only Recipients`,
+  `View-Only Retention Management`, `View-Only DLP Compliance Management`)
+  needed across provisioning and assessment, sourced from
+  `source/Settings/permissions.psd1` and `docs/Authentication.md`.
+  Cross-linked from `README.md`, `docs/Authentication.md`, `CLAUDE.md`, and
+  `AGENTS.md`, and added to the Documentation Maintenance sync list in
+  `CLAUDE.md`/`AGENTS.md` so future role changes keep it current.
+
 ### Changed
 
 - Applied the same honesty fix to `CLAUDE.md`'s build-status paragraph as

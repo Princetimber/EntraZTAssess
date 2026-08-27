@@ -114,6 +114,9 @@ commit series as the change itself:
 4. `.github/copilot-instructions.md` — the Copilot summary.
 5. `README.md` — user-facing usage when exported commands or behaviour
    change.
+6. `docs/RequiredRoles.md` — Entra ID directory role and Purview/Exchange
+   Online RBAC role tables, kept consistent with
+   `source/Settings/permissions.psd1` and `docs/Authentication.md`.
 
 Record new design assumptions (licence detection defaults, beta endpoint
 usage, threshold defaults, and similar) where they are made rather than

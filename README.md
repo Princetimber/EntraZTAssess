@@ -30,7 +30,7 @@
 - PowerShell 7.2 or later (cross-platform: Windows, macOS, Linux)
 - [Microsoft.Graph](https://www.powershellgallery.com/packages/Microsoft.Graph) SDK — installed automatically via `RequiredModules.psd1`
 - Certificate-based (app-only) authentication is the **default**, with automatic fallback to interactive delegated sign-in. Provision the assessment app with the repository scripts under `scripts/` — see [`docs/Authentication.md`](docs/Authentication.md)
-- Read-only permissions as listed in [`docs/PermissionsGuidance.md`](docs/PermissionsGuidance.md) and [`docs/Authentication.md`](docs/Authentication.md)
+- Read-only permissions as listed in [`docs/PermissionsGuidance.md`](docs/PermissionsGuidance.md) and [`docs/Authentication.md`](docs/Authentication.md); see [`docs/RequiredRoles.md`](docs/RequiredRoles.md) for the Entra ID and Purview/Exchange RBAC roles needed to grant them
 
 ---
 
@@ -426,7 +426,8 @@ Get-EntraZTAssess/
 ├── docs/
 │   ├── Authentication.md              # CBA setup, cross-platform certs, app permissions
 │   ├── ConsultantRunbook.md           # Delivery workflow and QA checklist
-│   └── PermissionsGuidance.md         # Graph scope review and least-privilege guidance
+│   ├── PermissionsGuidance.md         # Graph scope review and least-privilege guidance
+│   └── RequiredRoles.md               # Entra ID directory roles and Purview/Exchange RBAC roles
 │
 ├── scripts/                           # Admin-run, one-time provisioning (NOT shipped by Install-Module)
 │   └── EntraZTAssess.Provisioning/     # Repo-local provisioning module (imported deliberately)
@@ -557,5 +558,6 @@ Release tasks should only be run intentionally:
 
 - [`docs/ConsultantRunbook.md`](docs/ConsultantRunbook.md) — full delivery workflow, pre-engagement checklist, and QA steps
 - [`docs/PermissionsGuidance.md`](docs/PermissionsGuidance.md) — Graph scope review and least-privilege guidance for client consent
+- [`docs/RequiredRoles.md`](docs/RequiredRoles.md) — Entra ID directory roles and Purview/Exchange Online RBAC roles required across provisioning and assessment
 - `source/Settings/settings.psd1` — remediation SLA days, scoring weights, and thresholds
 - `source/Settings/permissions.psd1` — complete module → scope mapping

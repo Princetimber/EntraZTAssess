@@ -167,6 +167,10 @@ branch and commit series as the change itself:
 4. **.github/copilot-instructions.md** — keep the Copilot summary consistent.
 5. **README.md** — update user-facing usage and capability descriptions when
    exported commands or behaviour change.
+6. **docs/RequiredRoles.md** — keep the Entra ID directory role and
+   Purview/Exchange Online RBAC role tables consistent with
+   `source/Settings/permissions.psd1` and `docs/Authentication.md` whenever
+   role or role-group requirements change.
 
 Record new design assumptions where they are made (for example licence
 detection defaults, beta endpoint usage, threshold defaults) rather than

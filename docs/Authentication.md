@@ -4,6 +4,8 @@
 
 Certificate-based, app-only authentication is the preferred method for repeatable and unattended (CI / headless) runs: it needs no interactive prompt, uses a certificate instead of a shared secret, and holds only the read-only Application permissions listed below.
 
+For a consolidated view of every Entra ID directory role and Purview/Exchange Online RBAC role referenced in this document — who needs to hold each one, and at which stage — see [`RequiredRoles.md`](RequiredRoles.md).
+
 ## Authentication Methods And Precedence
 
 `Connect-ZTAssessment` resolves how to authenticate in this order:
@@ -174,6 +176,8 @@ The CBA app registration holds only the read-only permissions below. They use th
 CloudAppSecurity shares its collected data with Defender (no separate collector) and is a Graph-only, best-effort Secure Score proxy — see the note under [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection) for why Microsoft Graph cannot provide a genuine Defender for Cloud Apps assessment. The Sentinel module uses Azure Reader via ARM and requires no Graph permissions.
 
 ### Exchange Online / Security & Compliance Role Groups
+
+See [`RequiredRoles.md`](RequiredRoles.md) for a consolidated view of these roles alongside the Entra ID directory roles used elsewhere in this document.
 
 The four modules below hold no Graph scopes; instead they need Exchange Online / Security & Compliance (IPPS) role groups and management roles granted to the app's service principal (see [Exchange Online / Security & Compliance Connection](#exchange-online--security--compliance-connection)). **The read-only assessment module (`source/`) cannot and does not grant these roles itself** — treat this table as pre-engagement guidance, not an enforced or verified permission set. Despite the naming, only one entry is actually a role group: verified against a live tenant, `Security Reader` is a genuine role group; `View-Only Configuration` and `View-Only Recipients` are management roles that accept direct `New-ManagementRoleAssignment -App` assignment; `View-Only Retention Management` and `View-Only DLP Compliance Management` are management roles visible only in the Security & Compliance / IPPS session, and direct `-App` assignment fails for both (`"<role>" management role can't be found`) against both the Exchange Online and the IPPS connection — they instead require the Microsoft-documented workaround of a dedicated role group scoped to just that role. `Grant-ZTAssessExchangeOnlineRole` handles all of this automatically, trying the role-group, direct-assignment, IPPS-retry, and dedicated-role-group mechanisms in order (see [step 3a](#3a-grant-exchange-online--purview-role-groups-only-for-securitycompliance-collaboration-dataprotection-threatprotection)), but a manual grant needs the right cmdlet, the right session, and possibly a dedicated role group for the right entry. Exact names may still vary by tenant license and national cloud; confirm with `Get-RoleGroup` / `Get-ManagementRole` in the tenant's Purview / Exchange admin center before assigning them. Granting them is a separate, optional step performed either manually by the tenant's own Exchange administrator, or with `Grant-ZTAssessExchangeOnlineRole` in the `EntraZTAssess.Provisioning` module.
 
