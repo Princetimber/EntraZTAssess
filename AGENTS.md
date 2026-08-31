@@ -111,8 +111,9 @@ commit series as the change itself:
 1. `CHANGELOG.md` — add an `Unreleased` entry (QA-enforced).
 2. `CLAUDE.md` — build status, module structure, architecture rules,
    workflow examples, and assumptions.
-3. `AGENTS.md` (this file) — module boundaries, security rules, testing
-   patterns.
+3. `AGENTS.md` (this file) — update only when the change affects the module
+   boundaries, security rules, or testing patterns documented here; not
+   required otherwise.
 4. `README.md` — user-facing usage when exported commands or behaviour
    change.
 5. `docs/RequiredRoles.md` — Entra ID directory role and Purview/Exchange
