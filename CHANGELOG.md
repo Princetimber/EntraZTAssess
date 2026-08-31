@@ -5,6 +5,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Removed `.github/copilot-instructions.md` (GitHub Copilot is no longer
+  used for this repository) and dropped its references from `CLAUDE.md`,
+  `AGENTS.md`, `docs/PermissionsGuidance.md`, and the
+  `entraztassess-repo-patterns`/`fix-and-pr` Claude Code skills' Documentation
+  Maintenance checklists.
+
 ### Added
 
 - Documented `.vscode/settings.json`'s `claudeCode.useTerminal` setting and

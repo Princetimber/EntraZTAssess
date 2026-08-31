@@ -59,7 +59,6 @@ Recent history shows documentation changes commonly travel with source and tests
 - `CHANGELOG.md` with an `[Unreleased]` entry.
 - `CLAUDE.md` for build status, architecture rules, workflow examples, and assumptions.
 - `AGENTS.md` for module boundaries, security rules, and testing patterns.
-- `.github/copilot-instructions.md` for Copilot-facing guidance.
 - `README.md` for user-facing usage when exported commands or behavior change.
 
 Record assumptions such as endpoint choice, threshold defaults, license detection behavior, beta endpoint usage, and reporting limitations where they are made.
