@@ -40,6 +40,8 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 
 - `Resolve-Dependency.psd1` installs required modules into `output/RequiredModules` and enables ModuleFast/NuGet version-range resolution by default.
 - `.vscode/tasks.json` uses `./build.ps1 -AutoRestore -Tasks test`; CI uses explicit restore/build/test commands.
+- `.vscode/settings.json` sets `claudeCode.useTerminal: true` so the Claude Code VS Code extension routes command execution through VS Code's integrated terminal for this workspace.
+- `.claude/hooks/pester-pre-commit.sh` and `.claude/hooks/scriptanalyzer-on-edit.sh` are local Claude Code hooks (not part of the shipped module) that run the Pester suite before commits and PSScriptAnalyzer on edited `.ps1`/`.psm1` files respectively.
 - `build.yaml` sets `CodeCoverageThreshold: 85` and copies `source/Checks`, `source/Settings`, and `source/en-US` into the built module.
 - After modifying `.ps1` or `.psm1`, run ScriptAnalyzer. After code changes, run the full test suite, not only adjacent tests.
 
