@@ -14,15 +14,19 @@ esac
 
 [ -f "$file" ] || exit 0
 
-PSModulePath="$ROOT/output/RequiredModules${PSModulePath:+:${PSModulePath}}" pwsh -NoProfile -NonInteractive -Command "
+PSModulePath="$ROOT/output/RequiredModules${PSModulePath:+:${PSModulePath}}" \
+  ZTASSESS_HOOK_FILE="$file" \
+  pwsh -NoProfile -NonInteractive -Command '
   Import-Module PSScriptAnalyzer -ErrorAction Stop
-  \$results = Invoke-ScriptAnalyzer -Path '$file' -Severity Error,Warning
-  if (\$results) {
-    Write-Output \"PSScriptAnalyzer: $(basename "$file") has \$(\$results.Count) warning(s)\"
-    \$results | Format-Table RuleName,Severity,Line,Message -AutoSize | Out-String -Width 200
+  $path = $env:ZTASSESS_HOOK_FILE
+  $name = Split-Path -Leaf $path
+  $results = Invoke-ScriptAnalyzer -Path $path -Severity Error,Warning
+  if ($results) {
+    Write-Output "PSScriptAnalyzer: $name has $($results.Count) warning(s)"
+    $results | Format-Table RuleName,Severity,Line,Message -AutoSize | Out-String -Width 200
   } else {
-    Write-Output 'PSScriptAnalyzer: no warnings for $(basename "$file")'
+    Write-Output "PSScriptAnalyzer: no warnings for $name"
   }
-" 2>&1
+' 2>&1
 
 exit 0
