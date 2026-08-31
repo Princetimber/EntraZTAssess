@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `.claude/hooks/pester-pre-commit.sh` and
+  `.claude/hooks/scriptanalyzer-on-edit.sh`, local Claude Code hooks that run
+  the Pester suite before commits and PSScriptAnalyzer on edited `.ps1`/`.psm1`
+  files respectively, so contributors using Claude Code get the same
+  lint/test feedback loop this repository's `CLAUDE.md` already mandates.
+
 - Added `docs/RequiredRoles.md`, a consolidated reference for the Entra ID
   directory roles (Privileged Role Administrator, Application/Cloud
   Application Administrator) and Purview/Exchange Online RBAC roles
