@@ -5,7 +5,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Relaxed the Documentation Maintenance policy in `CLAUDE.md`, `AGENTS.md`,
+  `docs/PermissionsGuidance.md`, and the `entraztassess-repo-patterns`/
+  `fix-and-pr` Claude Code skills: `AGENTS.md` now only needs updating when
+  a change actually affects the module boundaries, security rules, or
+  testing patterns it documents, rather than on every change.
+
+### Removed
+
+- Removed `.github/copilot-instructions.md` (GitHub Copilot is no longer
+  used for this repository) and dropped its references from `CLAUDE.md`,
+  `AGENTS.md`, `docs/PermissionsGuidance.md`, and the
+  `entraztassess-repo-patterns`/`fix-and-pr` Claude Code skills' Documentation
+  Maintenance checklists.
+
 ### Added
+
+- Documented `.vscode/settings.json`'s `claudeCode.useTerminal` setting and
+  the `.claude/hooks/` scripts in `AGENTS.md`, which had missed both
+  changes despite `CLAUDE.md`'s mandatory documentation-sync policy.
 
 - Added `.claude/hooks/pester-pre-commit.sh` and
   `.claude/hooks/scriptanalyzer-on-edit.sh`, local Claude Code hooks that run

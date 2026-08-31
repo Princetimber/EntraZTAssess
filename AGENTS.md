@@ -40,6 +40,8 @@ Invoke-ScriptAnalyzer -Path source/ -Recurse
 
 - `Resolve-Dependency.psd1` installs required modules into `output/RequiredModules` and enables ModuleFast/NuGet version-range resolution by default.
 - `.vscode/tasks.json` uses `./build.ps1 -AutoRestore -Tasks test`; CI uses explicit restore/build/test commands.
+- `.vscode/settings.json` sets `claudeCode.useTerminal: true` so the Claude Code VS Code extension routes command execution through VS Code's integrated terminal for this workspace.
+- `.claude/hooks/pester-pre-commit.sh` and `.claude/hooks/scriptanalyzer-on-edit.sh` are local Claude Code hooks (not part of the shipped module) that run the Pester suite before commits and PSScriptAnalyzer on edited `.ps1`/`.psm1` files respectively.
 - `build.yaml` sets `CodeCoverageThreshold: 85` and copies `source/Checks`, `source/Settings`, and `source/en-US` into the built module.
 - After modifying `.ps1` or `.psm1`, run ScriptAnalyzer. After code changes, run the full test suite, not only adjacent tests.
 
@@ -109,12 +111,12 @@ commit series as the change itself:
 1. `CHANGELOG.md` — add an `Unreleased` entry (QA-enforced).
 2. `CLAUDE.md` — build status, module structure, architecture rules,
    workflow examples, and assumptions.
-3. `AGENTS.md` (this file) — module boundaries, security rules, testing
-   patterns.
-4. `.github/copilot-instructions.md` — the Copilot summary.
-5. `README.md` — user-facing usage when exported commands or behaviour
+3. `AGENTS.md` (this file) — update only when the change affects the module
+   boundaries, security rules, or testing patterns documented here; not
+   required otherwise.
+4. `README.md` — user-facing usage when exported commands or behaviour
    change.
-6. `docs/RequiredRoles.md` — Entra ID directory role and Purview/Exchange
+5. `docs/RequiredRoles.md` — Entra ID directory role and Purview/Exchange
    Online RBAC role tables, kept consistent with
    `source/Settings/permissions.psd1` and `docs/Authentication.md`.
 

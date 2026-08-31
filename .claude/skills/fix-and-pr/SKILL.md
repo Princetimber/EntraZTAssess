@@ -19,7 +19,7 @@ Use this skill only after the user explicitly asks for a fix workflow that may l
 1. **Discover**: Inspect the closest source files, matching tests, and existing patterns before changing anything.
 2. **Plan**: Identify the smallest safe change. Prefer declarative `source/Checks/**/*.psd1`, `source/Settings/settings.psd1`, and `source/Settings/permissions.psd1` edits over procedural code when appropriate.
 3. **Fix**: Make minimal changes under `source/`, `tests/`, or documentation files. Never hand-edit generated files under `output/`.
-4. **Document**: When behavior, exported commands, checks, settings, permissions, or reporting semantics change, update the required docs in the same branch: `CHANGELOG.md`, `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, and `README.md` when user-facing behavior changes.
+4. **Document**: When behavior, exported commands, checks, settings, permissions, or reporting semantics change, update the required docs in the same branch: `CHANGELOG.md`, `CLAUDE.md`, `AGENTS.md` (only if the change affects the module boundaries, security rules, or testing patterns it documents), and `README.md` when user-facing behavior changes.
 5. **Verify**: Run the narrowest useful checks first, then widen as needed:
    - After `.ps1` or `.psm1` changes: `Invoke-ScriptAnalyzer -Path source/ -Recurse`
    - After code changes: `Invoke-Pester -Path tests`

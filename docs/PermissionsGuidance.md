@@ -43,4 +43,4 @@ Permission guidance is separate from report redaction. `Export-ZTAssessReport -R
 
 ## Source Of Truth
 
-For implementation changes, update `source/Settings/permissions.psd1` and the relevant check metadata together. Keep `README.md`, `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, and `CHANGELOG.md` synchronized whenever permission behavior changes.
+For implementation changes, update `source/Settings/permissions.psd1` and the relevant check metadata together. Keep `README.md`, `CLAUDE.md`, and `CHANGELOG.md` synchronized whenever permission behavior changes; update `AGENTS.md` too only if the change affects the module boundaries, security rules, or testing patterns it documents.

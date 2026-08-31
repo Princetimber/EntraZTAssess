@@ -162,12 +162,12 @@ branch and commit series as the change itself:
 1. **CHANGELOG.md** — add an entry under `Unreleased` (the QA suite enforces this).
 2. **CLAUDE.md** (this file) — update the build status, module structure,
    architecture rules, workflow examples, and assumptions whenever they change.
-3. **AGENTS.md** — keep the universal agent context (boundaries, security rules,
-   testing patterns) consistent with CLAUDE.md.
-4. **.github/copilot-instructions.md** — keep the Copilot summary consistent.
-5. **README.md** — update user-facing usage and capability descriptions when
+3. **AGENTS.md** — update only when the change affects the universal agent
+   context (boundaries, security rules, testing patterns) it documents;
+   not required otherwise.
+4. **README.md** — update user-facing usage and capability descriptions when
    exported commands or behaviour change.
-6. **docs/RequiredRoles.md** — keep the Entra ID directory role and
+5. **docs/RequiredRoles.md** — keep the Entra ID directory role and
    Purview/Exchange Online RBAC role tables consistent with
    `source/Settings/permissions.psd1` and `docs/Authentication.md` whenever
    role or role-group requirements change.
@@ -189,7 +189,3 @@ describe the repository as it now is.
 - Produce review-ready PowerShell: readable, testable, idempotent
 - Keep changes minimal; avoid drive-by refactors
 - If requirements are unclear, ask concise clarifying questions rather than guessing
-
-## Further Reference
-
-- `.github/copilot-instructions.md` — GitHub Copilot-specific instructions
