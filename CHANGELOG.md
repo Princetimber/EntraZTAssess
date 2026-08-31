@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added `claudeCode.useTerminal: true` to the project-scoped, checked-in
+  `.vscode/settings.json` so the Claude Code VS Code extension routes
+  command execution through VS Code's integrated terminal for this
+  workspace, rather than each contributor needing to opt in individually.
+
 - Applied the same honesty fix to `CLAUDE.md`'s build-status paragraph as
   README.md: removed the "Phase 5 delivery hardening present" claim and
   replaced it with the actual testing-maturity picture (mocked-response
