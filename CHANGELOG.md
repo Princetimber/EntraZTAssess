@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Documented `.vscode/settings.json`'s `claudeCode.useTerminal` setting and
+  the `.claude/hooks/` scripts in `AGENTS.md`, which had missed both
+  changes despite `CLAUDE.md`'s mandatory documentation-sync policy.
+
 - Added `.claude/hooks/pester-pre-commit.sh` and
   `.claude/hooks/scriptanalyzer-on-edit.sh`, local Claude Code hooks that run
   the Pester suite before commits and PSScriptAnalyzer on edited `.ps1`/`.psm1`
