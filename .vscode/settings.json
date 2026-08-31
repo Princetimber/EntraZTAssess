@@ -31,5 +31,6 @@
   "powershell.scriptAnalysis.settingsPath": "${workspaceFolder}/PSScriptAnalyzerSettings.psd1",
 
   "powershell.cwd": "${workspaceFolder}",
-  "powershell.helpCompletion": "BlockComment"
+  "powershell.helpCompletion": "BlockComment",
+  "claudeCode.useTerminal": true
 }
