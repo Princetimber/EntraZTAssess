@@ -57,7 +57,7 @@ function Invoke-ZTAssessIdentityCollection {
                     totalLegacyCount  = ($signIns | Measure-Object).Count
                     countsByClientApp = @($aggregate)
                 }
-            }.GetNewClosure()
+            }
         }
     )
 

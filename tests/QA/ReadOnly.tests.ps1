@@ -124,6 +124,34 @@ Describe 'Read-only enforcement' -Tag 'QA', 'ReadOnly' {
     }
 }
 
+Describe 'Collector script block scoping' -Tag 'QA' {
+
+    It 'Should not call GetNewClosure() on collector Fetch script blocks' {
+        # GetNewClosure() rebinds a script block to a new anonymous dynamic
+        # module, detaching it from the module it was defined in. A detached
+        # Fetch block can no longer resolve private module functions such as
+        # Invoke-ZTAssessGraphRequest or Write-ToLog by name, and fails at
+        # invocation time with "term ... is not recognized" - silently
+        # degrading every dependent check to NotAssessed with no real
+        # diagnostic. None of the collector spec tables need it: the
+        # variables they close over (e.g. $userSelect, $deviceSelect,
+        # $lookbackStart) are assigned once, outside any loop, before the
+        # $specs array is built, so plain lexical scoping already captures
+        # them correctly.
+        $projectPath = "$($PSScriptRoot)/../.." | Convert-Path
+        $collectionFiles = @(Get-ChildItem -Path (Join-Path $projectPath 'source/Private') -Filter 'Invoke-ZTAssess*Collection.ps1')
+
+        $offenders = foreach ($file in $collectionFiles) {
+            $content = Get-Content -LiteralPath $file.FullName -Raw
+            if ($content -match '\.GetNewClosure\(\)') {
+                $file.FullName
+            }
+        }
+
+        $offenders | Should -BeNullOrEmpty -Because 'GetNewClosure() detaches a Fetch script block from the module, breaking private function resolution at invocation time'
+    }
+}
+
 Describe 'Secure execution' -Tag 'QA', 'Security' {
 
     It 'Should not use Invoke-Expression anywhere in the module' {
