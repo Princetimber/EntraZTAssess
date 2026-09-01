@@ -5,59 +5,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- Fixed a bug where the `managedDevices` (`Devices`), `users` and
-  `legacyAuthSignIns` (`Identity`) collectors always failed with `The term
-  'Invoke-ZTAssessGraphRequest'/'Write-ToLog' is not recognized`, silently
-  degrading every dependent check to `NotAssessed` with a misleading
-  "requires permissions and licence" reason regardless of the account's
-  actual permissions or licensing. The cause was `.GetNewClosure()` on each
-  collector's `Fetch` script block, which rebinds it to a new anonymous
-  dynamic module and detaches it from `Get-EntraZTAssess`, making the
-  module's private functions unresolvable by name at invocation time.
-  Removed the unnecessary `.GetNewClosure()` calls in
-  `Invoke-ZTAssessCoreCollection.ps1`, `Invoke-ZTAssessIdentityCollection.ps1`,
-  and `Invoke-ZTAssessDeviceCollection.ps1` (the captured variables are
-  assigned once outside any loop, so plain lexical scoping already closes
-  over them correctly), and added a QA regression test
-  (`tests/QA/ReadOnly.tests.ps1` → "Collector script block scoping") that
-  fails the build if `.GetNewClosure()` reappears on a collector `Fetch`
-  block.
-
-- Fixed the `riskDetectionsSummary` (`Monitoring`) collector returning a
-  `400 Bad Request`: its `/identityProtection/riskDetections` query included
-  `$top=999`, but that endpoint only documents `$filter` and `$select`
-  support (default page size 20, max 500) and rejects `$top`. Removed
-  `$top` from the query; pagination via `@odata.nextLink` is unaffected.
-
-### Changed
-
-- Relaxed the Documentation Maintenance policy in `CLAUDE.md`, `AGENTS.md`,
-  `docs/PermissionsGuidance.md`, and the `entraztassess-repo-patterns`/
-  `fix-and-pr` Claude Code skills: `AGENTS.md` now only needs updating when
-  a change actually affects the module boundaries, security rules, or
-  testing patterns it documents, rather than on every change.
-
-### Removed
-
-- Removed `.github/copilot-instructions.md` (GitHub Copilot is no longer
-  used for this repository) and dropped its references from `CLAUDE.md`,
-  `AGENTS.md`, `docs/PermissionsGuidance.md`, and the
-  `entraztassess-repo-patterns`/`fix-and-pr` Claude Code skills' Documentation
-  Maintenance checklists.
+## [0.4.0] - 2026-09-01
 
 ### Added
-
-- Documented `.vscode/settings.json`'s `claudeCode.useTerminal` setting and
-  the `.claude/hooks/` scripts in `AGENTS.md`, which had missed both
-  changes despite `CLAUDE.md`'s mandatory documentation-sync policy.
-
-- Added `.claude/hooks/pester-pre-commit.sh` and
-  `.claude/hooks/scriptanalyzer-on-edit.sh`, local Claude Code hooks that run
-  the Pester suite before commits and PSScriptAnalyzer on edited `.ps1`/`.psm1`
-  files respectively, so contributors using Claude Code get the same
-  lint/test feedback loop this repository's `CLAUDE.md` already mandates.
 
 - Added `docs/RequiredRoles.md`, a consolidated reference for the Entra ID
   directory roles (Privileged Role Administrator, Application/Cloud
@@ -69,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Cross-linked from `README.md`, `docs/Authentication.md`, `CLAUDE.md`, and
   `AGENTS.md`, and added to the Documentation Maintenance sync list in
   `CLAUDE.md`/`AGENTS.md` so future role changes keep it current.
+
+- Added `.claude/hooks/pester-pre-commit.sh` and
+  `.claude/hooks/scriptanalyzer-on-edit.sh`, local Claude Code hooks that run
+  the Pester suite before commits and PSScriptAnalyzer on edited `.ps1`/`.psm1`
+  files respectively, so contributors using Claude Code get the same
+  lint/test feedback loop this repository's `CLAUDE.md` already mandates.
+  Documented in `AGENTS.md`, along with the `.vscode/settings.json`
+  `claudeCode.useTerminal` setting below, which had missed both changes
+  despite `CLAUDE.md`'s mandatory documentation-sync policy.
+
+- Added a QA regression test (`tests/QA/ReadOnly.tests.ps1` → "Collector
+  script block scoping") that fails the build if `.GetNewClosure()`
+  reappears on a collector `Fetch` block (see Fixed, below).
 
 ### Changed
 
@@ -92,6 +55,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the device-code prompt bug, the release pipeline never having actually
   auto-published before) rather than implying "hardening" was a completed
   state.
+
+- Relaxed the Documentation Maintenance policy in `CLAUDE.md`, `AGENTS.md`,
+  `docs/PermissionsGuidance.md`, and the `entraztassess-repo-patterns`/
+  `fix-and-pr` Claude Code skills: `AGENTS.md` now only needs updating when
+  a change actually affects the module boundaries, security rules, or
+  testing patterns it documents, rather than on every change.
+
+### Removed
+
+- Removed `.github/copilot-instructions.md` (GitHub Copilot is no longer
+  used for this repository) and dropped its references from `CLAUDE.md`,
+  `AGENTS.md`, `docs/PermissionsGuidance.md`, and the
+  `entraztassess-repo-patterns`/`fix-and-pr` Claude Code skills' Documentation
+  Maintenance checklists.
+
+### Fixed
+
+- Fixed a bug where the `managedDevices` (`Devices`), `users` and
+  `legacyAuthSignIns` (`Identity`) collectors always failed with `The term
+  'Invoke-ZTAssessGraphRequest'/'Write-ToLog' is not recognized`, silently
+  degrading every dependent check to `NotAssessed` with a misleading
+  "requires permissions and licence" reason regardless of the account's
+  actual permissions or licensing. The cause was `.GetNewClosure()` on each
+  collector's `Fetch` script block, which rebinds it to a new anonymous
+  dynamic module and detaches it from `Get-EntraZTAssess`, making the
+  module's private functions unresolvable by name at invocation time.
+  Removed the unnecessary `.GetNewClosure()` calls in
+  `Invoke-ZTAssessCoreCollection.ps1`, `Invoke-ZTAssessIdentityCollection.ps1`,
+  and `Invoke-ZTAssessDeviceCollection.ps1` (the captured variables are
+  assigned once outside any loop, so plain lexical scoping already closes
+  over them correctly).
+
+- Fixed the `riskDetectionsSummary` (`Monitoring`) collector returning a
+  `400 Bad Request`: its `/identityProtection/riskDetections` query included
+  `$top=999`, but that endpoint only documents `$filter` and `$select`
+  support (default page size 20, max 500) and rejects `$top`. Removed
+  `$top` from the query; pagination via `@odata.nextLink` is unaffected.
 
 ## [0.3.3] - 2026-08-21
 
