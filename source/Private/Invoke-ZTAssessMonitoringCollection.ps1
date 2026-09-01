@@ -25,7 +25,9 @@ function Invoke-ZTAssessMonitoringCollection {
         @{
             Name  = 'riskDetectionsSummary'
             Fetch = {
-                $detections = Invoke-ZTAssessGraphRequest -Uri '/v1.0/identityProtection/riskDetections?$select=riskEventType,riskLevel,riskState&$top=999' -All
+                # riskDetections only documents $filter and $select support; $top is not an
+                # accepted query parameter here and causes a 400 Bad Request.
+                $detections = Invoke-ZTAssessGraphRequest -Uri '/v1.0/identityProtection/riskDetections?$select=riskEventType,riskLevel,riskState' -All
 
                 $byType = $detections | Group-Object -Property riskEventType |
                     ForEach-Object { [pscustomobject]@{ riskEventType = $_.Name; count = $_.Count } }
@@ -44,8 +46,8 @@ function Invoke-ZTAssessMonitoringCollection {
             Fetch = {
                 $sample = Invoke-ZTAssessGraphRequest -Uri '/v1.0/auditLogs/directoryAudits?$top=1'
                 [pscustomobject]@{
-                    available        = (@($sample).Count -gt 0)
-                    sampledActivity  = if (@($sample).Count -gt 0) { $sample[0].activityDisplayName } else { $null }
+                    available       = (@($sample).Count -gt 0)
+                    sampledActivity = if (@($sample).Count -gt 0) { $sample[0].activityDisplayName } else { $null }
                 }
             }
         }

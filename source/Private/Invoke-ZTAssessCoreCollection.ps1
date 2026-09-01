@@ -41,7 +41,7 @@ function Invoke-ZTAssessCoreCollection {
                     Write-ToLog -Message 'User collection with signInActivity failed; retrying without it (staleness checks become NotAssessed).' -Level WARN -NoConsole
                     Invoke-ZTAssessGraphRequest -Uri "/v1.0/users?`$select=$userSelect&`$top=999" -All
                 }
-            }.GetNewClosure()
+            }
         }
         @{
             Name  = 'groups'

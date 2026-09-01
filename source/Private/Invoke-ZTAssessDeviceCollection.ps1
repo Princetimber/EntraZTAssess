@@ -27,7 +27,7 @@ function Invoke-ZTAssessDeviceCollection {
     $specs = @(
         @{
             Name  = 'managedDevices'
-            Fetch = { Invoke-ZTAssessGraphRequest -Uri "/v1.0/deviceManagement/managedDevices?`$select=$deviceSelect&`$top=999" -All }.GetNewClosure()
+            Fetch = { Invoke-ZTAssessGraphRequest -Uri "/v1.0/deviceManagement/managedDevices?`$select=$deviceSelect&`$top=999" -All }
         }
         @{
             Name  = 'entraDevices'

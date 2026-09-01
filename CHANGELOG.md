@@ -5,6 +5,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed a bug where the `managedDevices` (`Devices`), `users` and
+  `legacyAuthSignIns` (`Identity`) collectors always failed with `The term
+  'Invoke-ZTAssessGraphRequest'/'Write-ToLog' is not recognized`, silently
+  degrading every dependent check to `NotAssessed` with a misleading
+  "requires permissions and licence" reason regardless of the account's
+  actual permissions or licensing. The cause was `.GetNewClosure()` on each
+  collector's `Fetch` script block, which rebinds it to a new anonymous
+  dynamic module and detaches it from `Get-EntraZTAssess`, making the
+  module's private functions unresolvable by name at invocation time.
+  Removed the unnecessary `.GetNewClosure()` calls in
+  `Invoke-ZTAssessCoreCollection.ps1`, `Invoke-ZTAssessIdentityCollection.ps1`,
+  and `Invoke-ZTAssessDeviceCollection.ps1` (the captured variables are
+  assigned once outside any loop, so plain lexical scoping already closes
+  over them correctly), and added a QA regression test
+  (`tests/QA/ReadOnly.tests.ps1` → "Collector script block scoping") that
+  fails the build if `.GetNewClosure()` reappears on a collector `Fetch`
+  block.
+
+- Fixed the `riskDetectionsSummary` (`Monitoring`) collector returning a
+  `400 Bad Request`: its `/identityProtection/riskDetections` query included
+  `$top=999`, but that endpoint only documents `$filter` and `$select`
+  support (default page size 20, max 500) and rejects `$top`. Removed
+  `$top` from the query; pagination via `@odata.nextLink` is unaffected.
+
 ### Changed
 
 - Relaxed the Documentation Maintenance policy in `CLAUDE.md`, `AGENTS.md`,
